@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIMS API Documentation</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.10.3/swagger-ui.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        .swagger-ui .topbar {
+            background-color: #1a365d;
+        }
+        .swagger-ui .topbar .download-url-wrapper .select-label {
+            color: #fff;
+        }
+        .swagger-ui .info .title {
+            color: #1a365d;
+        }
+        .swagger-ui .opblock.opblock-post {
+            border-color: #49cc90;
+            background: rgba(73, 204, 144, .1);
+        }
+        .swagger-ui .opblock.opblock-get {
+            border-color: #61affe;
+            background: rgba(97, 175, 254, .1);
+        }
+        .swagger-ui .opblock.opblock-put {
+            border-color: #fca130;
+            background: rgba(252, 161, 48, .1);
+        }
+        .swagger-ui .opblock.opblock-delete {
+            border-color: #f93e3e;
+            background: rgba(249, 62, 62, .1);
+        }
+        .custom-header {
+            background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
+            color: white;
+            padding: 20px 40px;
+            text-align: center;
+        }
+        .custom-header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+        }
+        .custom-header p {
+            margin: 0;
+            opacity: 0.9;
+        }
+        .version-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="custom-header">
+        <h1>HIMS - Hospital Information Management System <span class="version-badge">v1.0.0</span></h1>
+        <p>Comprehensive API Documentation for Healthcare Management</p>
+    </div>
+    <div id="swagger-ui"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.10.3/swagger-ui-bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.10.3/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            const ui = SwaggerUIBundle({
+                url: "/api-docs/openapi.yaml",
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout",
+                persistAuthorization: true,
+                displayRequestDuration: true,
+                filter: true,
+                tryItOutEnabled: true,
+                syntaxHighlight: {
+                    activate: true,
+                    theme: "monokai"
+                },
+                tagsSorter: "alpha",
+                operationsSorter: "alpha"
+            });
+            window.ui = ui;
+        };
+    </script>
+</body>
+</html>

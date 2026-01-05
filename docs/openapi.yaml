@@ -1,0 +1,5682 @@
+openapi: 3.0.3
+info:
+  title: HIMS - Hospital Information Management System API
+  description: |
+    ## Overview
+    HIMS is an enterprise-grade Hospital Information Management System providing comprehensive
+    clinical and administrative workflows for healthcare facilities.
+
+    ## Authentication
+    All API endpoints (except `/api/login` and patient portal public routes) require Bearer token authentication.
+
+    ### Getting a Token
+    1. Call `POST /api/login` with email and password
+    2. Use the returned token in the `Authorization` header: `Bearer <token>`
+
+    ## Multi-Tenancy
+    The system supports multiple hospitals. Users can switch between hospitals they have access to using
+    the `/api/switch-hospital` endpoint.
+
+    ## Response Format
+    All responses follow a consistent format:
+    ```json
+    {
+      "success": true,
+      "data": { ... },
+      "message": "Operation successful"
+    }
+    ```
+
+    ## Rate Limiting
+    - Authenticated users: 60 requests per minute
+    - Unauthenticated: 10 requests per minute
+
+  version: 1.0.0
+  contact:
+    name: HIMS Support
+    email: support@hims.example.com
+  license:
+    name: Proprietary
+    url: https://hims.example.com/license
+
+servers:
+  - url: https://hims.linkswitchcommunications.com/api
+    description: Production Server
+  - url: http://localhost:8000/api
+    description: Local Development
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Hospitals
+    description: Hospital management (Super Admin only)
+  - name: Patients
+    description: Patient registration and management
+  - name: Appointments
+    description: Appointment scheduling and management
+  - name: OPD
+    description: Outpatient Department operations
+  - name: IPD
+    description: Inpatient Department and admissions
+  - name: Doctors
+    description: Doctor management
+  - name: Departments
+    description: Department management
+  - name: Laboratory
+    description: Lab tests and orders
+  - name: Radiology
+    description: Radiology imaging and reports
+  - name: Operation Theater
+    description: Surgery scheduling and procedures
+  - name: Pharmacy
+    description: Drug management and sales
+  - name: Inventory
+    description: Stock and procurement management
+  - name: Billing
+    description: Services, bills, and payments
+  - name: Birth & Death
+    description: Vital event registration
+  - name: MRD
+    description: Medical Records Department
+  - name: ABHA
+    description: Ayushman Bharat Health Account integration
+  - name: FHIR
+    description: FHIR R4 API for interoperability
+  - name: Notifications
+    description: SMS and email notification management
+  - name: RBAC
+    description: Role-based access control
+  - name: Patient Portal
+    description: Patient self-service portal
+  - name: Reports
+    description: Analytics and reporting
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ============================================
+  # AUTHENTICATION
+  # ============================================
+  /login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and get access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@hospital.com
+                password:
+                  type: string
+                  format: password
+                  example: password123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  token:
+                    type: string
+                    example: "1|abc123xyz..."
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      description: Revoke current access token
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /user:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user
+      description: Get authenticated user details
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/User'
+
+  /change-password:
+    post:
+      tags:
+        - Authentication
+      summary: Change password
+      description: Change current user's password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - current_password
+                - new_password
+                - new_password_confirmation
+              properties:
+                current_password:
+                  type: string
+                new_password:
+                  type: string
+                  minLength: 8
+                new_password_confirmation:
+                  type: string
+      responses:
+        '200':
+          description: Password changed successfully
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /switch-hospital:
+    post:
+      tags:
+        - Authentication
+      summary: Switch hospital
+      description: Switch to a different hospital context
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - hospital_id
+              properties:
+                hospital_id:
+                  type: integer
+                  example: 1
+      responses:
+        '200':
+          description: Hospital switched successfully
+
+  # ============================================
+  # HOSPITALS (Super Admin)
+  # ============================================
+  /hospitals:
+    get:
+      tags:
+        - Hospitals
+      summary: List all hospitals
+      description: Get list of all hospitals (Super Admin only)
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by name
+      responses:
+        '200':
+          description: List of hospitals
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      tags:
+        - Hospitals
+      summary: Create hospital
+      description: Create a new hospital (Super Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HospitalInput'
+      responses:
+        '201':
+          description: Hospital created
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /hospitals/stats:
+    get:
+      tags:
+        - Hospitals
+      summary: Hospital statistics
+      description: Get statistics across all hospitals
+      responses:
+        '200':
+          description: Statistics data
+
+  /hospitals/{hospital}:
+    get:
+      tags:
+        - Hospitals
+      summary: Get hospital details
+      parameters:
+        - $ref: '#/components/parameters/HospitalId'
+      responses:
+        '200':
+          description: Hospital details
+    put:
+      tags:
+        - Hospitals
+      summary: Update hospital
+      parameters:
+        - $ref: '#/components/parameters/HospitalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HospitalInput'
+      responses:
+        '200':
+          description: Hospital updated
+    delete:
+      tags:
+        - Hospitals
+      summary: Delete hospital
+      parameters:
+        - $ref: '#/components/parameters/HospitalId'
+      responses:
+        '200':
+          description: Hospital deleted
+
+  # ============================================
+  # DASHBOARD
+  # ============================================
+  /dashboard:
+    get:
+      tags:
+        - Reports
+      summary: Dashboard statistics
+      description: Get today's dashboard statistics
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  patients_today:
+                    type: integer
+                  opd_visits_today:
+                    type: integer
+                  ipd_admissions_active:
+                    type: integer
+                  pending_lab_orders:
+                    type: integer
+
+  # ============================================
+  # PATIENTS
+  # ============================================
+  /patients:
+    get:
+      tags:
+        - Patients
+      summary: List patients
+      description: Get paginated list of patients with filtering
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by name, CR number, or mobile
+        - name: class_id
+          in: query
+          schema:
+            type: integer
+          description: Filter by patient class
+        - name: gender
+          in: query
+          schema:
+            type: string
+            enum: [male, female, other]
+        - name: is_vip
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of patients
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Patient'
+    post:
+      tags:
+        - Patients
+      summary: Create patient
+      description: Register a new patient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientInput'
+      responses:
+        '201':
+          description: Patient created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Patient'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /patients/{patient}:
+    get:
+      tags:
+        - Patients
+      summary: Get patient details
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      responses:
+        '200':
+          description: Patient details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Patient'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+        - Patients
+      summary: Update patient
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientInput'
+      responses:
+        '200':
+          description: Patient updated
+    delete:
+      tags:
+        - Patients
+      summary: Delete patient
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      responses:
+        '200':
+          description: Patient deleted
+
+  /patients/{patient}/visits:
+    get:
+      tags:
+        - Patients
+      summary: Get patient OPD visits
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      responses:
+        '200':
+          description: List of OPD visits
+
+  /patients/{patient}/admissions:
+    get:
+      tags:
+        - Patients
+      summary: Get patient IPD admissions
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      responses:
+        '200':
+          description: List of IPD admissions
+
+  /patients/{patient}/vaccinations:
+    get:
+      tags:
+        - Patients
+      summary: Get patient vaccinations
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      responses:
+        '200':
+          description: List of vaccinations
+
+  /patients/{patient}/history:
+    get:
+      tags:
+        - Patients
+      summary: Get complete patient history
+      description: Get combined history including OPD, IPD, bills, lab, vaccinations
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      responses:
+        '200':
+          description: Patient history
+
+  /patients/{patient}/client-documents:
+    get:
+      tags:
+        - Patients
+      summary: Get client documents
+      description: Get documents for cashless/insurance patients
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      responses:
+        '200':
+          description: Client documents
+
+  /patients/{patient}/mark-vip:
+    post:
+      tags:
+        - Patients
+      summary: Mark patient as VIP
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_vip:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: Patient VIP status updated
+
+  /patients/{patient}/mark-urgent:
+    post:
+      tags:
+        - Patients
+      summary: Mark patient as urgent
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      responses:
+        '200':
+          description: Patient marked as urgent
+
+  /patients/{patient}/upload-document:
+    post:
+      tags:
+        - Patients
+      summary: Upload patient document
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                document:
+                  type: string
+                  format: binary
+                document_type:
+                  type: string
+                  example: "ID Proof"
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Document uploaded
+
+  /patients-search:
+    get:
+      tags:
+        - Patients
+      summary: Advanced patient search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query (CR No, name, mobile, company number)
+      responses:
+        '200':
+          description: Search results
+
+  # ============================================
+  # DOCTORS
+  # ============================================
+  /doctors:
+    get:
+      tags:
+        - Doctors
+      summary: List doctors
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - name: department_id
+          in: query
+          schema:
+            type: integer
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of doctors
+    post:
+      tags:
+        - Doctors
+      summary: Create doctor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoctorInput'
+      responses:
+        '201':
+          description: Doctor created
+
+  /doctors/{doctor}:
+    get:
+      tags:
+        - Doctors
+      summary: Get doctor details
+      parameters:
+        - name: doctor
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Doctor details
+    put:
+      tags:
+        - Doctors
+      summary: Update doctor
+      parameters:
+        - name: doctor
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoctorInput'
+      responses:
+        '200':
+          description: Doctor updated
+    delete:
+      tags:
+        - Doctors
+      summary: Delete doctor
+      parameters:
+        - name: doctor
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Doctor deleted
+
+  # ============================================
+  # DEPARTMENTS
+  # ============================================
+  /departments:
+    get:
+      tags:
+        - Departments
+      summary: List departments
+      responses:
+        '200':
+          description: List of departments
+    post:
+      tags:
+        - Departments
+      summary: Create department
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepartmentInput'
+      responses:
+        '201':
+          description: Department created
+
+  /departments/{department}:
+    get:
+      tags:
+        - Departments
+      summary: Get department
+      parameters:
+        - name: department
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Department details
+    put:
+      tags:
+        - Departments
+      summary: Update department
+      parameters:
+        - name: department
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepartmentInput'
+      responses:
+        '200':
+          description: Department updated
+    delete:
+      tags:
+        - Departments
+      summary: Delete department
+      parameters:
+        - name: department
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Department deleted
+
+  # ============================================
+  # APPOINTMENTS
+  # ============================================
+  /appointments:
+    get:
+      tags:
+        - Appointments
+      summary: List appointments
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: doctor_id
+          in: query
+          schema:
+            type: integer
+        - name: department_id
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [scheduled, confirmed, checked_in, completed, cancelled, no_show]
+      responses:
+        '200':
+          description: List of appointments
+    post:
+      tags:
+        - Appointments
+      summary: Create appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentInput'
+      responses:
+        '201':
+          description: Appointment created
+
+  /appointments/{appointment}:
+    get:
+      tags:
+        - Appointments
+      summary: Get appointment
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+      responses:
+        '200':
+          description: Appointment details
+    put:
+      tags:
+        - Appointments
+      summary: Update appointment
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentInput'
+      responses:
+        '200':
+          description: Appointment updated
+    delete:
+      tags:
+        - Appointments
+      summary: Delete appointment
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+      responses:
+        '200':
+          description: Appointment deleted
+
+  /appointments/{appointment}/confirm:
+    post:
+      tags:
+        - Appointments
+      summary: Confirm appointment
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+      responses:
+        '200':
+          description: Appointment confirmed
+
+  /appointments/{appointment}/check-in:
+    post:
+      tags:
+        - Appointments
+      summary: Check-in patient
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+      responses:
+        '200':
+          description: Patient checked in
+
+  /appointments/{appointment}/convert-to-opd:
+    post:
+      tags:
+        - Appointments
+      summary: Convert to OPD visit
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chief_complaints:
+                  type: string
+      responses:
+        '200':
+          description: Converted to OPD visit
+
+  /appointments/{appointment}/no-show:
+    post:
+      tags:
+        - Appointments
+      summary: Mark as no-show
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+      responses:
+        '200':
+          description: Marked as no-show
+
+  /appointments/{appointment}/reschedule:
+    post:
+      tags:
+        - Appointments
+      summary: Reschedule appointment
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - appointment_date
+                - appointment_time
+              properties:
+                appointment_date:
+                  type: string
+                  format: date
+                appointment_time:
+                  type: string
+                  format: time
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Appointment rescheduled
+
+  /appointments/{appointment}/cancel:
+    post:
+      tags:
+        - Appointments
+      summary: Cancel appointment
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - cancel_reason_id
+              properties:
+                cancel_reason_id:
+                  type: integer
+                remarks:
+                  type: string
+      responses:
+        '200':
+          description: Appointment cancelled
+
+  /appointments/doctor/{doctor}/schedule:
+    get:
+      tags:
+        - Appointments
+      summary: Get doctor's schedule
+      parameters:
+        - name: doctor
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Doctor's schedule
+
+  /appointments/doctor/{doctor}/available-slots:
+    get:
+      tags:
+        - Appointments
+      summary: Get available slots
+      parameters:
+        - name: doctor
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Available time slots
+
+  /appointments/doctor/{doctor}/duty-schedule:
+    get:
+      tags:
+        - Appointments
+      summary: Get doctor duty schedule
+      parameters:
+        - name: doctor
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Duty schedule
+
+  /appointments/doctor/{doctor}/available-time-slots:
+    get:
+      tags:
+        - Appointments
+      summary: Get available time slots
+      parameters:
+        - name: doctor
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Available time slots
+
+  /appointments/patient/{patient}:
+    get:
+      tags:
+        - Appointments
+      summary: Get patient appointments
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      responses:
+        '200':
+          description: Patient's appointments
+
+  /appointments-transfer:
+    post:
+      tags:
+        - Appointments
+      summary: Transfer appointments to doctor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - from_doctor_id
+                - to_doctor_id
+                - date
+              properties:
+                from_doctor_id:
+                  type: integer
+                to_doctor_id:
+                  type: integer
+                date:
+                  type: string
+                  format: date
+                appointment_ids:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        '200':
+          description: Appointments transferred
+
+  /appointments-bulk:
+    post:
+      tags:
+        - Appointments
+      summary: Bulk create appointments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                appointments:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/AppointmentInput'
+      responses:
+        '201':
+          description: Appointments created
+
+  # ============================================
+  # OPD VISITS
+  # ============================================
+  /opd-visits:
+    get:
+      tags:
+        - OPD
+      summary: List OPD visits
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: doctor_id
+          in: query
+          schema:
+            type: integer
+        - name: department_id
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [waiting, in_consultation, completed, cancelled]
+        - name: class_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of OPD visits
+    post:
+      tags:
+        - OPD
+      summary: Create OPD visit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpdVisitInput'
+      responses:
+        '201':
+          description: OPD visit created
+
+  /opd-visits/{opdVisit}:
+    get:
+      tags:
+        - OPD
+      summary: Get OPD visit
+      parameters:
+        - $ref: '#/components/parameters/OpdVisitId'
+      responses:
+        '200':
+          description: OPD visit details
+    put:
+      tags:
+        - OPD
+      summary: Update OPD visit
+      parameters:
+        - $ref: '#/components/parameters/OpdVisitId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpdVisitInput'
+      responses:
+        '200':
+          description: OPD visit updated
+    delete:
+      tags:
+        - OPD
+      summary: Delete OPD visit
+      parameters:
+        - $ref: '#/components/parameters/OpdVisitId'
+      responses:
+        '200':
+          description: OPD visit deleted
+
+  /opd-visits/{opdVisit}/start-consultation:
+    post:
+      tags:
+        - OPD
+      summary: Start consultation
+      description: Mark OPD visit as in consultation
+      parameters:
+        - $ref: '#/components/parameters/OpdVisitId'
+      responses:
+        '200':
+          description: Consultation started
+
+  /opd-visits/{opdVisit}/complete-consultation:
+    post:
+      tags:
+        - OPD
+      summary: Complete consultation
+      parameters:
+        - $ref: '#/components/parameters/OpdVisitId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                diagnosis:
+                  type: string
+                advice:
+                  type: string
+                follow_up_date:
+                  type: string
+                  format: date
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Consultation completed
+
+  /opd-visits/{opdVisit}/add-investigation:
+    post:
+      tags:
+        - OPD
+      summary: Add investigation
+      parameters:
+        - $ref: '#/components/parameters/OpdVisitId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - investigation_type
+              properties:
+                investigation_type:
+                  type: string
+                  enum: [pathology, radiology, procedure]
+                lab_test_id:
+                  type: integer
+                service_id:
+                  type: integer
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Investigation added
+
+  /opd-visits/{opdVisit}/add-service:
+    post:
+      tags:
+        - OPD
+      summary: Add service
+      parameters:
+        - $ref: '#/components/parameters/OpdVisitId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - service_id
+              properties:
+                service_id:
+                  type: integer
+                quantity:
+                  type: integer
+                  default: 1
+                rate:
+                  type: number
+                discount:
+                  type: number
+      responses:
+        '200':
+          description: Service added
+
+  /opd-visits/{opdVisit}/payment:
+    post:
+      tags:
+        - OPD
+      summary: Record payment
+      parameters:
+        - $ref: '#/components/parameters/OpdVisitId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+                - payment_mode_id
+              properties:
+                amount:
+                  type: number
+                payment_mode_id:
+                  type: integer
+                reference_number:
+                  type: string
+                remarks:
+                  type: string
+      responses:
+        '200':
+          description: Payment recorded
+
+  /opd-visits/{opdVisit}/case-paper:
+    get:
+      tags:
+        - OPD
+      summary: Get case paper
+      parameters:
+        - $ref: '#/components/parameters/OpdVisitId'
+      responses:
+        '200':
+          description: Case paper data
+
+  /opd-visits/{opdVisit}/receipt:
+    get:
+      tags:
+        - OPD
+      summary: Get receipt
+      parameters:
+        - $ref: '#/components/parameters/OpdVisitId'
+      responses:
+        '200':
+          description: Receipt data
+
+  /opd-visits/patient/{patient}/history:
+    get:
+      tags:
+        - OPD
+      summary: Get patient OPD history
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      responses:
+        '200':
+          description: Patient OPD history
+
+  /opd-visits/doctor/{doctor}/queue:
+    get:
+      tags:
+        - OPD
+      summary: Get doctor's queue
+      description: Get today's waiting and in-consultation patients
+      parameters:
+        - name: doctor
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Doctor's queue
+
+  # ============================================
+  # IPD ADMISSIONS
+  # ============================================
+  /ipd-admissions:
+    get:
+      tags:
+        - IPD
+      summary: List IPD admissions
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [admitted, discharged, transferred, deceased]
+        - name: ward_id
+          in: query
+          schema:
+            type: integer
+        - name: doctor_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of IPD admissions
+    post:
+      tags:
+        - IPD
+      summary: Create IPD admission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IpdAdmissionInput'
+      responses:
+        '201':
+          description: Patient admitted
+
+  /ipd-admissions-summary:
+    get:
+      tags:
+        - IPD
+      summary: IPD summary
+      description: Get IPD dashboard summary
+      responses:
+        '200':
+          description: IPD summary statistics
+
+  /ipd-admissions-bed-availability:
+    get:
+      tags:
+        - IPD
+      summary: Bed availability
+      description: Get bed availability across wards
+      responses:
+        '200':
+          description: Bed availability data
+
+  /ipd-admissions-available-beds/{wardId}:
+    get:
+      tags:
+        - IPD
+      summary: Available beds in ward
+      parameters:
+        - name: wardId
+          in: path
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Available beds
+
+  /ipd-admissions-doctor-patients:
+    get:
+      tags:
+        - IPD
+      summary: Doctor's IPD patients
+      parameters:
+        - name: doctor_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Doctor's patient list
+
+  /ipd-admissions/{admission}:
+    get:
+      tags:
+        - IPD
+      summary: Get admission details
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      responses:
+        '200':
+          description: Admission details
+    put:
+      tags:
+        - IPD
+      summary: Update admission
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IpdAdmissionInput'
+      responses:
+        '200':
+          description: Admission updated
+    delete:
+      tags:
+        - IPD
+      summary: Delete admission
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      responses:
+        '200':
+          description: Admission deleted
+
+  /ipd-admissions/{admission}/transfer-bed:
+    post:
+      tags:
+        - IPD
+      summary: Transfer bed
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - to_bed_id
+              properties:
+                to_bed_id:
+                  type: integer
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Bed transferred
+
+  /ipd-admissions/{admission}/progress-notes:
+    get:
+      tags:
+        - IPD
+      summary: Get progress notes
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      responses:
+        '200':
+          description: Progress notes
+    post:
+      tags:
+        - IPD
+      summary: Add progress note
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - notes
+              properties:
+                notes:
+                  type: string
+                vital_signs:
+                  type: object
+      responses:
+        '201':
+          description: Progress note added
+
+  /ipd-admissions/{admission}/nursing-charts:
+    get:
+      tags:
+        - IPD
+      summary: Get nursing charts
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      responses:
+        '200':
+          description: Nursing charts
+    post:
+      tags:
+        - IPD
+      summary: Add nursing chart
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                temperature:
+                  type: number
+                pulse:
+                  type: integer
+                blood_pressure_systolic:
+                  type: integer
+                blood_pressure_diastolic:
+                  type: integer
+                respiratory_rate:
+                  type: integer
+                spo2:
+                  type: integer
+                intake:
+                  type: string
+                output:
+                  type: string
+                notes:
+                  type: string
+      responses:
+        '201':
+          description: Nursing chart added
+
+  /ipd-admissions/{admission}/services:
+    get:
+      tags:
+        - IPD
+      summary: Get IPD services
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      responses:
+        '200':
+          description: IPD services
+    post:
+      tags:
+        - IPD
+      summary: Add IPD service
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - service_id
+              properties:
+                service_id:
+                  type: integer
+                quantity:
+                  type: integer
+                rate:
+                  type: number
+                discount:
+                  type: number
+                notes:
+                  type: string
+      responses:
+        '201':
+          description: Service added
+
+  /ipd-admissions/{admission}/medications:
+    get:
+      tags:
+        - IPD
+      summary: Get medications
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      responses:
+        '200':
+          description: Medications list
+    post:
+      tags:
+        - IPD
+      summary: Add medication
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - drug_id
+                - dosage
+                - frequency
+              properties:
+                drug_id:
+                  type: integer
+                dosage:
+                  type: string
+                frequency:
+                  type: string
+                route:
+                  type: string
+                duration:
+                  type: string
+                instructions:
+                  type: string
+      responses:
+        '201':
+          description: Medication added
+
+  /ipd-admissions/{admission}/medications/{medication}:
+    put:
+      tags:
+        - IPD
+      summary: Update medication
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+        - name: medication
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [active, discontinued, completed]
+      responses:
+        '200':
+          description: Medication updated
+
+  /ipd-admissions/{admission}/investigations:
+    get:
+      tags:
+        - IPD
+      summary: Get investigations
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      responses:
+        '200':
+          description: Investigations list
+    post:
+      tags:
+        - IPD
+      summary: Add investigation
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - test_type
+                - test_id
+              properties:
+                test_type:
+                  type: string
+                  enum: [lab, radiology]
+                test_id:
+                  type: integer
+                urgency:
+                  type: string
+                  enum: [routine, urgent, stat]
+                notes:
+                  type: string
+      responses:
+        '201':
+          description: Investigation added
+
+  /ipd-admissions/{admission}/advance-payments:
+    get:
+      tags:
+        - IPD
+      summary: Get advance payments
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      responses:
+        '200':
+          description: Advance payments
+    post:
+      tags:
+        - IPD
+      summary: Collect advance
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+                - payment_mode_id
+              properties:
+                amount:
+                  type: number
+                payment_mode_id:
+                  type: integer
+                reference_number:
+                  type: string
+                remarks:
+                  type: string
+      responses:
+        '201':
+          description: Advance collected
+
+  /ipd-admissions/{admission}/running-bill:
+    get:
+      tags:
+        - IPD
+      summary: Get running bill
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      responses:
+        '200':
+          description: Running bill details
+
+  /ipd-admissions/{admission}/initiate-discharge:
+    post:
+      tags:
+        - IPD
+      summary: Initiate discharge
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                discharge_type:
+                  type: string
+                  enum: [normal, lama, absconded, deceased, referred]
+                discharge_summary:
+                  type: string
+      responses:
+        '200':
+          description: Discharge initiated
+
+  /ipd-admissions/{admission}/complete-discharge:
+    post:
+      tags:
+        - IPD
+      summary: Complete discharge
+      parameters:
+        - $ref: '#/components/parameters/AdmissionId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                final_diagnosis:
+                  type: string
+                discharge_advice:
+                  type: string
+                follow_up_date:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Discharge completed
+
+  # ============================================
+  # WARDS & BEDS
+  # ============================================
+  /wards:
+    get:
+      tags:
+        - IPD
+      summary: List wards
+      responses:
+        '200':
+          description: List of wards
+    post:
+      tags:
+        - IPD
+      summary: Create ward
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WardInput'
+      responses:
+        '201':
+          description: Ward created
+
+  /wards/{ward}:
+    get:
+      tags:
+        - IPD
+      summary: Get ward
+      parameters:
+        - name: ward
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Ward details
+    put:
+      tags:
+        - IPD
+      summary: Update ward
+      parameters:
+        - name: ward
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WardInput'
+      responses:
+        '200':
+          description: Ward updated
+    delete:
+      tags:
+        - IPD
+      summary: Delete ward
+      parameters:
+        - name: ward
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Ward deleted
+
+  /beds:
+    get:
+      tags:
+        - IPD
+      summary: List beds
+      parameters:
+        - name: ward_id
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [available, occupied, maintenance]
+      responses:
+        '200':
+          description: List of beds
+    post:
+      tags:
+        - IPD
+      summary: Create bed
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BedInput'
+      responses:
+        '201':
+          description: Bed created
+
+  /beds/available:
+    get:
+      tags:
+        - IPD
+      summary: Get available beds
+      parameters:
+        - name: ward_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Available beds
+
+  # ============================================
+  # LABORATORY
+  # ============================================
+  /lab-categories:
+    get:
+      tags:
+        - Laboratory
+      summary: List lab categories
+      responses:
+        '200':
+          description: Lab categories
+    post:
+      tags:
+        - Laboratory
+      summary: Create lab category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Category created
+
+  /lab-tests:
+    get:
+      tags:
+        - Laboratory
+      summary: List lab tests
+      parameters:
+        - name: category_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lab tests
+    post:
+      tags:
+        - Laboratory
+      summary: Create lab test
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabTestInput'
+      responses:
+        '201':
+          description: Test created
+
+  /lab-orders:
+    get:
+      tags:
+        - Laboratory
+      summary: List lab orders
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, in_progress, completed, cancelled]
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Lab orders
+    post:
+      tags:
+        - Laboratory
+      summary: Create lab order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabOrderInput'
+      responses:
+        '201':
+          description: Order created
+
+  /lab-orders/{order}:
+    get:
+      tags:
+        - Laboratory
+      summary: Get lab order
+      parameters:
+        - name: order
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Order details
+
+  /lab-orders/{order}/results:
+    post:
+      tags:
+        - Laboratory
+      summary: Enter lab results
+      parameters:
+        - name: order
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                results:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      test_id:
+                        type: integer
+                      result_value:
+                        type: string
+                      unit:
+                        type: string
+                      reference_range:
+                        type: string
+                      is_abnormal:
+                        type: boolean
+      responses:
+        '200':
+          description: Results entered
+
+  # ============================================
+  # RADIOLOGY
+  # ============================================
+  /radiology/modalities:
+    get:
+      tags:
+        - Radiology
+      summary: List modalities
+      responses:
+        '200':
+          description: Radiology modalities
+    post:
+      tags:
+        - Radiology
+      summary: Create modality
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - code
+              properties:
+                name:
+                  type: string
+                  example: "X-Ray"
+                code:
+                  type: string
+                  example: "XR"
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Modality created
+
+  /radiology/tests:
+    get:
+      tags:
+        - Radiology
+      summary: List radiology tests
+      parameters:
+        - name: modality_id
+          in: query
+          schema:
+            type: integer
+        - name: body_part
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Radiology tests
+    post:
+      tags:
+        - Radiology
+      summary: Create radiology test
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RadiologyTestInput'
+      responses:
+        '201':
+          description: Test created
+
+  /radiology/orders:
+    get:
+      tags:
+        - Radiology
+      summary: List radiology orders
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, in_progress, completed, cancelled]
+        - name: modality_id
+          in: query
+          schema:
+            type: integer
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Radiology orders
+    post:
+      tags:
+        - Radiology
+      summary: Create radiology order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RadiologyOrderInput'
+      responses:
+        '201':
+          description: Order created
+
+  /radiology/orders/worklist:
+    get:
+      tags:
+        - Radiology
+      summary: Get worklist
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: modality_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Technician worklist
+
+  /radiology/orders/{order}:
+    get:
+      tags:
+        - Radiology
+      summary: Get radiology order
+      parameters:
+        - name: order
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Order details
+
+  /radiology/orders/{order}/status:
+    post:
+      tags:
+        - Radiology
+      summary: Update order status
+      parameters:
+        - name: order
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [in_progress, completed, cancelled]
+                cancel_reason:
+                  type: string
+      responses:
+        '200':
+          description: Status updated
+
+  /radiology/reports:
+    get:
+      tags:
+        - Radiology
+      summary: List radiology reports
+      responses:
+        '200':
+          description: Radiology reports
+    post:
+      tags:
+        - Radiology
+      summary: Create radiology report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RadiologyReportInput'
+      responses:
+        '201':
+          description: Report created
+
+  /radiology/reports/pending:
+    get:
+      tags:
+        - Radiology
+      summary: Get pending reports
+      responses:
+        '200':
+          description: Pending reports
+
+  /radiology/reports/{report}:
+    get:
+      tags:
+        - Radiology
+      summary: Get report
+      parameters:
+        - name: report
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Report details
+    put:
+      tags:
+        - Radiology
+      summary: Update report
+      parameters:
+        - name: report
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RadiologyReportInput'
+      responses:
+        '200':
+          description: Report updated
+
+  /radiology/reports/{report}/verify:
+    post:
+      tags:
+        - Radiology
+      summary: Verify report
+      parameters:
+        - name: report
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Report verified
+
+  /radiology/reports/{report}/upload-image:
+    post:
+      tags:
+        - Radiology
+      summary: Upload image
+      parameters:
+        - name: report
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                image_type:
+                  type: string
+      responses:
+        '200':
+          description: Image uploaded
+
+  /radiology/reports/{report}/pdf:
+    get:
+      tags:
+        - Radiology
+      summary: Generate PDF
+      parameters:
+        - name: report
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: PDF generated
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  # ============================================
+  # OPERATION THEATER
+  # ============================================
+  /ot/theaters:
+    get:
+      tags:
+        - Operation Theater
+      summary: List operation theaters
+      responses:
+        '200':
+          description: Operation theaters
+    post:
+      tags:
+        - Operation Theater
+      summary: Create operation theater
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                location:
+                  type: string
+                capacity:
+                  type: integer
+                equipment:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Theater created
+
+  /ot/theaters-availability:
+    get:
+      tags:
+        - Operation Theater
+      summary: Check OT availability
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OT availability
+
+  /ot/surgery-types:
+    get:
+      tags:
+        - Operation Theater
+      summary: List surgery types
+      parameters:
+        - name: department_id
+          in: query
+          schema:
+            type: integer
+        - name: complexity
+          in: query
+          schema:
+            type: string
+            enum: [minor, moderate, major, complex]
+      responses:
+        '200':
+          description: Surgery types
+    post:
+      tags:
+        - Operation Theater
+      summary: Create surgery type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SurgeryTypeInput'
+      responses:
+        '201':
+          description: Surgery type created
+
+  /ot/schedules:
+    get:
+      tags:
+        - Operation Theater
+      summary: List OT schedules
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: ot_id
+          in: query
+          schema:
+            type: integer
+        - name: surgeon_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OT schedules
+    post:
+      tags:
+        - Operation Theater
+      summary: Schedule surgery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtScheduleInput'
+      responses:
+        '201':
+          description: Surgery scheduled
+
+  /ot/schedules/today:
+    get:
+      tags:
+        - Operation Theater
+      summary: Today's schedule
+      responses:
+        '200':
+          description: Today's OT schedule
+
+  /ot/schedules/{schedule}:
+    get:
+      tags:
+        - Operation Theater
+      summary: Get schedule
+      parameters:
+        - name: schedule
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Schedule details
+    put:
+      tags:
+        - Operation Theater
+      summary: Update schedule
+      parameters:
+        - name: schedule
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtScheduleInput'
+      responses:
+        '200':
+          description: Schedule updated
+
+  /ot/schedules/{schedule}/status:
+    post:
+      tags:
+        - Operation Theater
+      summary: Update schedule status
+      parameters:
+        - name: schedule
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [scheduled, confirmed, in_progress, completed, postponed, cancelled]
+      responses:
+        '200':
+          description: Status updated
+
+  /ot/schedules/{schedule}/checklist:
+    post:
+      tags:
+        - Operation Theater
+      summary: Update pre-op checklist
+      parameters:
+        - name: schedule
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                consent_signed:
+                  type: boolean
+                blood_available:
+                  type: boolean
+                fasting_confirmed:
+                  type: boolean
+                pre_medication_given:
+                  type: boolean
+                site_marking_done:
+                  type: boolean
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Checklist updated
+
+  /ot/schedules/{schedule}/start:
+    post:
+      tags:
+        - Operation Theater
+      summary: Start procedure
+      parameters:
+        - name: schedule
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actual_start_time:
+                  type: string
+                  format: date-time
+                anesthetist_id:
+                  type: integer
+      responses:
+        '200':
+          description: Procedure started
+
+  /ot/procedures/{procedure}:
+    get:
+      tags:
+        - Operation Theater
+      summary: Get procedure
+      parameters:
+        - name: procedure
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Procedure details
+    put:
+      tags:
+        - Operation Theater
+      summary: Update procedure
+      parameters:
+        - name: procedure
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                findings:
+                  type: string
+                complications:
+                  type: string
+      responses:
+        '200':
+          description: Procedure updated
+
+  /ot/procedures/{procedure}/complete:
+    post:
+      tags:
+        - Operation Theater
+      summary: Complete procedure
+      parameters:
+        - name: procedure
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                end_time:
+                  type: string
+                  format: date-time
+                findings:
+                  type: string
+                post_op_instructions:
+                  type: string
+      responses:
+        '200':
+          description: Procedure completed
+
+  /ot/procedures/{procedure}/consumables:
+    post:
+      tags:
+        - Operation Theater
+      summary: Add consumables
+      parameters:
+        - name: procedure
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - item_id
+                - quantity
+              properties:
+                item_id:
+                  type: integer
+                quantity:
+                  type: integer
+                is_implant:
+                  type: boolean
+                serial_number:
+                  type: string
+      responses:
+        '200':
+          description: Consumable added
+
+  /ot/procedures/{procedure}/anesthesia:
+    post:
+      tags:
+        - Operation Theater
+      summary: Update anesthesia record
+      parameters:
+        - name: procedure
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                anesthesia_type:
+                  type: string
+                  enum: [general, spinal, epidural, local, regional]
+                drugs_used:
+                  type: array
+                  items:
+                    type: object
+                monitoring_data:
+                  type: object
+      responses:
+        '200':
+          description: Anesthesia record updated
+
+  /ot/procedures/{procedure}/ot-notes:
+    get:
+      tags:
+        - Operation Theater
+      summary: Get OT notes
+      parameters:
+        - name: procedure
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OT notes
+
+  # ============================================
+  # PHARMACY
+  # ============================================
+  /drug-categories:
+    get:
+      tags:
+        - Pharmacy
+      summary: List drug categories
+      responses:
+        '200':
+          description: Drug categories
+    post:
+      tags:
+        - Pharmacy
+      summary: Create drug category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Category created
+
+  /drugs:
+    get:
+      tags:
+        - Pharmacy
+      summary: List drugs
+      parameters:
+        - name: category_id
+          in: query
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Drugs list
+    post:
+      tags:
+        - Pharmacy
+      summary: Create drug
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DrugInput'
+      responses:
+        '201':
+          description: Drug created
+
+  /drug-batches:
+    get:
+      tags:
+        - Pharmacy
+      summary: List drug batches
+      parameters:
+        - name: drug_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Drug batches
+    post:
+      tags:
+        - Pharmacy
+      summary: Create drug batch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DrugBatchInput'
+      responses:
+        '201':
+          description: Batch created
+
+  /pharmacy-sales:
+    get:
+      tags:
+        - Pharmacy
+      summary: List pharmacy sales
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Pharmacy sales
+    post:
+      tags:
+        - Pharmacy
+      summary: Create pharmacy sale
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PharmacySaleInput'
+      responses:
+        '201':
+          description: Sale created
+
+  # ============================================
+  # INVENTORY
+  # ============================================
+  /inventory/stores:
+    get:
+      tags:
+        - Inventory
+      summary: List stores
+      responses:
+        '200':
+          description: Stores list
+    post:
+      tags:
+        - Inventory
+      summary: Create store
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                location:
+                  type: string
+                in_charge_id:
+                  type: integer
+      responses:
+        '201':
+          description: Store created
+
+  /inventory/item-categories:
+    get:
+      tags:
+        - Inventory
+      summary: List item categories
+      responses:
+        '200':
+          description: Item categories
+    post:
+      tags:
+        - Inventory
+      summary: Create item category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                parent_id:
+                  type: integer
+      responses:
+        '201':
+          description: Category created
+
+  /inventory/items:
+    get:
+      tags:
+        - Inventory
+      summary: List items
+      parameters:
+        - name: category_id
+          in: query
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Items list
+    post:
+      tags:
+        - Inventory
+      summary: Create item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemInput'
+      responses:
+        '201':
+          description: Item created
+
+  /inventory/items/low-stock:
+    get:
+      tags:
+        - Inventory
+      summary: Low stock items
+      responses:
+        '200':
+          description: Low stock items
+
+  /inventory/items/expiring:
+    get:
+      tags:
+        - Inventory
+      summary: Expiring items
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        '200':
+          description: Expiring items
+
+  /inventory/items/{item}/stock:
+    get:
+      tags:
+        - Inventory
+      summary: Get item stock
+      parameters:
+        - name: item
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Stock details
+
+  /inventory/suppliers:
+    get:
+      tags:
+        - Inventory
+      summary: List suppliers
+      responses:
+        '200':
+          description: Suppliers list
+    post:
+      tags:
+        - Inventory
+      summary: Create supplier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierInput'
+      responses:
+        '201':
+          description: Supplier created
+
+  /inventory/indents:
+    get:
+      tags:
+        - Inventory
+      summary: List indents
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, submitted, approved, rejected, fulfilled]
+      responses:
+        '200':
+          description: Indents list
+    post:
+      tags:
+        - Inventory
+      summary: Create indent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IndentInput'
+      responses:
+        '201':
+          description: Indent created
+
+  /inventory/indents/{indent}/submit:
+    post:
+      tags:
+        - Inventory
+      summary: Submit indent
+      parameters:
+        - name: indent
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Indent submitted
+
+  /inventory/indents/{indent}/approve:
+    post:
+      tags:
+        - Inventory
+      summary: Approve indent
+      parameters:
+        - name: indent
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Indent approved
+
+  /inventory/indents/{indent}/reject:
+    post:
+      tags:
+        - Inventory
+      summary: Reject indent
+      parameters:
+        - name: indent
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Indent rejected
+
+  /inventory/indents/{indent}/fulfill:
+    post:
+      tags:
+        - Inventory
+      summary: Fulfill indent
+      parameters:
+        - name: indent
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Indent fulfilled
+
+  /inventory/purchase-orders:
+    get:
+      tags:
+        - Inventory
+      summary: List purchase orders
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, approved, ordered, partial, received, cancelled]
+      responses:
+        '200':
+          description: Purchase orders
+    post:
+      tags:
+        - Inventory
+      summary: Create purchase order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseOrderInput'
+      responses:
+        '201':
+          description: PO created
+
+  /inventory/purchase-orders/{purchaseOrder}/approve:
+    post:
+      tags:
+        - Inventory
+      summary: Approve PO
+      parameters:
+        - name: purchaseOrder
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: PO approved
+
+  /inventory/purchase-orders/{purchaseOrder}/receive:
+    post:
+      tags:
+        - Inventory
+      summary: Receive goods
+      parameters:
+        - name: purchaseOrder
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      item_id:
+                        type: integer
+                      received_quantity:
+                        type: integer
+                      batch_number:
+                        type: string
+                      expiry_date:
+                        type: string
+                        format: date
+      responses:
+        '200':
+          description: Goods received
+
+  /inventory/purchase-orders/{purchaseOrder}/cancel:
+    post:
+      tags:
+        - Inventory
+      summary: Cancel PO
+      parameters:
+        - name: purchaseOrder
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: PO cancelled
+
+  # ============================================
+  # BILLING
+  # ============================================
+  /services:
+    get:
+      tags:
+        - Billing
+      summary: List services
+      parameters:
+        - name: department_id
+          in: query
+          schema:
+            type: integer
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Services list
+    post:
+      tags:
+        - Billing
+      summary: Create service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceInput'
+      responses:
+        '201':
+          description: Service created
+
+  /services/{service}/revise-rate:
+    post:
+      tags:
+        - Billing
+      summary: Revise service rate
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - new_rate
+                - effective_from
+              properties:
+                new_rate:
+                  type: number
+                effective_from:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Rate revised
+
+  /services-get-rate:
+    get:
+      tags:
+        - Billing
+      summary: Get service rate
+      parameters:
+        - name: service_id
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: class_id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Service rate
+
+  /bills:
+    get:
+      tags:
+        - Billing
+      summary: List bills
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, partial, paid, cancelled]
+      responses:
+        '200':
+          description: Bills list
+    post:
+      tags:
+        - Billing
+      summary: Create bill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BillInput'
+      responses:
+        '201':
+          description: Bill created
+
+  /payments:
+    get:
+      tags:
+        - Billing
+      summary: List payments
+      responses:
+        '200':
+          description: Payments list
+    post:
+      tags:
+        - Billing
+      summary: Record payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentInput'
+      responses:
+        '201':
+          description: Payment recorded
+
+  /payment-modes:
+    get:
+      tags:
+        - Billing
+      summary: List payment modes
+      responses:
+        '200':
+          description: Payment modes
+    post:
+      tags:
+        - Billing
+      summary: Create payment mode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                is_active:
+                  type: boolean
+      responses:
+        '201':
+          description: Payment mode created
+
+  # ============================================
+  # BIRTH & DEATH REGISTRATION
+  # ============================================
+  /birth-registrations:
+    get:
+      tags:
+        - Birth & Death
+      summary: List birth registrations
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Birth registrations
+    post:
+      tags:
+        - Birth & Death
+      summary: Register birth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BirthRegistrationInput'
+      responses:
+        '201':
+          description: Birth registered
+
+  /birth-registrations/{registration}:
+    get:
+      tags:
+        - Birth & Death
+      summary: Get birth registration
+      parameters:
+        - name: registration
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Registration details
+    put:
+      tags:
+        - Birth & Death
+      summary: Update birth registration
+      parameters:
+        - name: registration
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BirthRegistrationInput'
+      responses:
+        '200':
+          description: Registration updated
+
+  /birth-registrations/{registration}/issue-certificate:
+    post:
+      tags:
+        - Birth & Death
+      summary: Issue birth certificate
+      parameters:
+        - name: registration
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Certificate issued
+
+  /birth-registrations/{registration}/govt-register:
+    post:
+      tags:
+        - Birth & Death
+      summary: Register with government
+      parameters:
+        - name: registration
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Registered with government
+
+  /death-registrations:
+    get:
+      tags:
+        - Birth & Death
+      summary: List death registrations
+      responses:
+        '200':
+          description: Death registrations
+    post:
+      tags:
+        - Birth & Death
+      summary: Register death
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeathRegistrationInput'
+      responses:
+        '201':
+          description: Death registered
+
+  /death-registrations/{registration}/issue-certificate:
+    post:
+      tags:
+        - Birth & Death
+      summary: Issue death certificate
+      parameters:
+        - name: registration
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Certificate issued
+
+  # ============================================
+  # MRD - Medical Records Department
+  # ============================================
+  /mrd/patients/{patient}/documents:
+    get:
+      tags:
+        - MRD
+      summary: Get patient documents
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      responses:
+        '200':
+          description: Patient documents
+    post:
+      tags:
+        - MRD
+      summary: Upload document
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                document:
+                  type: string
+                  format: binary
+                document_type:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Document uploaded
+
+  /mrd/patients/{patient}/file-movements:
+    get:
+      tags:
+        - MRD
+      summary: Get file movements
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      responses:
+        '200':
+          description: File movements
+
+  /mrd/patients/{patient}/issue-file:
+    post:
+      tags:
+        - MRD
+      summary: Issue file
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - issued_to
+                - purpose
+              properties:
+                issued_to:
+                  type: string
+                purpose:
+                  type: string
+                expected_return_date:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: File issued
+
+  /mrd/file-movements/{movement}/return:
+    post:
+      tags:
+        - MRD
+      summary: Return file
+      parameters:
+        - name: movement
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: File returned
+
+  /mrd/record-requests:
+    get:
+      tags:
+        - MRD
+      summary: List record requests
+      responses:
+        '200':
+          description: Record requests
+    post:
+      tags:
+        - MRD
+      summary: Create record request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - patient_id
+                - requester_name
+                - purpose
+              properties:
+                patient_id:
+                  type: integer
+                requester_name:
+                  type: string
+                purpose:
+                  type: string
+                records_needed:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Request created
+
+  /mrd/record-requests/{recordRequest}/process:
+    post:
+      tags:
+        - MRD
+      summary: Process record request
+      parameters:
+        - name: recordRequest
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [approved, rejected]
+                remarks:
+                  type: string
+      responses:
+        '200':
+          description: Request processed
+
+  /mrd/patients/{patient}/consents:
+    get:
+      tags:
+        - MRD
+      summary: Get patient consents
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      responses:
+        '200':
+          description: Patient consents
+    post:
+      tags:
+        - MRD
+      summary: Record consent
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - consent_type
+                - consent_given
+              properties:
+                consent_type:
+                  type: string
+                consent_given:
+                  type: boolean
+                witness_name:
+                  type: string
+      responses:
+        '200':
+          description: Consent recorded
+
+  /mrd/patients/{patient}/diagnoses:
+    get:
+      tags:
+        - MRD
+      summary: Get patient diagnoses
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      responses:
+        '200':
+          description: Patient diagnoses
+    post:
+      tags:
+        - MRD
+      summary: Add diagnosis
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - icd_code
+              properties:
+                icd_code:
+                  type: string
+                description:
+                  type: string
+                is_primary:
+                  type: boolean
+      responses:
+        '200':
+          description: Diagnosis added
+
+  /mrd/patients/{patient}/complete-record:
+    get:
+      tags:
+        - MRD
+      summary: Get complete record
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      responses:
+        '200':
+          description: Complete medical record
+
+  # ============================================
+  # ABHA / ABDM Integration
+  # ============================================
+  /abha/generate-aadhaar-otp:
+    post:
+      tags:
+        - ABHA
+      summary: Generate Aadhaar OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - aadhaar_number
+              properties:
+                aadhaar_number:
+                  type: string
+                  example: "123456789012"
+      responses:
+        '200':
+          description: OTP sent
+
+  /abha/verify-aadhaar-otp:
+    post:
+      tags:
+        - ABHA
+      summary: Verify Aadhaar OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - transaction_id
+                - otp
+              properties:
+                transaction_id:
+                  type: string
+                otp:
+                  type: string
+      responses:
+        '200':
+          description: OTP verified
+
+  /abha/create-abha:
+    post:
+      tags:
+        - ABHA
+      summary: Create ABHA ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - transaction_id
+              properties:
+                transaction_id:
+                  type: string
+                health_id:
+                  type: string
+      responses:
+        '200':
+          description: ABHA created
+
+  /abha/link-patient/{patient}:
+    post:
+      tags:
+        - ABHA
+      summary: Link ABHA to patient
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - abha_number
+              properties:
+                abha_number:
+                  type: string
+      responses:
+        '200':
+          description: ABHA linked
+
+  /abha/patient/{patient}:
+    get:
+      tags:
+        - ABHA
+      summary: Get patient ABHA
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      responses:
+        '200':
+          description: Patient ABHA details
+
+  /abha/share-records/{patient}:
+    post:
+      tags:
+        - ABHA
+      summary: Share health records
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                record_types:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Records shared
+
+  /abha/consents/{patient}:
+    get:
+      tags:
+        - ABHA
+      summary: Get consent requests
+      parameters:
+        - $ref: '#/components/parameters/PatientId'
+      responses:
+        '200':
+          description: Consent requests
+
+  /abha/consents/{consent}/process:
+    post:
+      tags:
+        - ABHA
+      summary: Process consent
+      parameters:
+        - name: consent
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [granted, denied]
+      responses:
+        '200':
+          description: Consent processed
+
+  # ============================================
+  # FHIR R4 API
+  # ============================================
+  /fhir/r4/metadata:
+    get:
+      tags:
+        - FHIR
+      summary: Capability statement
+      description: Get FHIR server capability statement
+      responses:
+        '200':
+          description: Capability statement
+
+  /fhir/r4/Patient:
+    get:
+      tags:
+        - FHIR
+      summary: Search patients
+      parameters:
+        - name: _id
+          in: query
+          schema:
+            type: string
+        - name: identifier
+          in: query
+          schema:
+            type: string
+        - name: name
+          in: query
+          schema:
+            type: string
+        - name: gender
+          in: query
+          schema:
+            type: string
+        - name: birthdate
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: FHIR Bundle of Patient resources
+
+  /fhir/r4/Patient/{id}:
+    get:
+      tags:
+        - FHIR
+      summary: Read patient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: FHIR Patient resource
+
+  /fhir/r4/Observation:
+    get:
+      tags:
+        - FHIR
+      summary: Search observations
+      parameters:
+        - name: patient
+          in: query
+          schema:
+            type: string
+        - name: code
+          in: query
+          schema:
+            type: string
+        - name: date
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: FHIR Bundle of Observation resources
+
+  /fhir/r4/DiagnosticReport:
+    get:
+      tags:
+        - FHIR
+      summary: Search diagnostic reports
+      parameters:
+        - name: patient
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: FHIR Bundle of DiagnosticReport resources
+
+  /fhir/r4/MedicationRequest:
+    get:
+      tags:
+        - FHIR
+      summary: Search medication requests
+      parameters:
+        - name: patient
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: FHIR Bundle of MedicationRequest resources
+
+  # ============================================
+  # HL7 Messages
+  # ============================================
+  /hl7/messages:
+    get:
+      tags:
+        - FHIR
+      summary: List HL7 messages
+      responses:
+        '200':
+          description: HL7 messages
+    post:
+      tags:
+        - FHIR
+      summary: Process HL7 message
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: Message processed
+
+  # ============================================
+  # ICD Codes
+  # ============================================
+  /icd-codes/search:
+    get:
+      tags:
+        - MRD
+      summary: Search ICD codes
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ICD codes
+
+  # ============================================
+  # NOTIFICATIONS
+  # ============================================
+  /notifications/gateways:
+    get:
+      tags:
+        - Notifications
+      summary: List SMS gateways
+      responses:
+        '200':
+          description: SMS gateways
+    post:
+      tags:
+        - Notifications
+      summary: Create SMS gateway
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SmsGatewayInput'
+      responses:
+        '201':
+          description: Gateway created
+
+  /notifications/gateways/{gateway}:
+    put:
+      tags:
+        - Notifications
+      summary: Update SMS gateway
+      parameters:
+        - name: gateway
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SmsGatewayInput'
+      responses:
+        '200':
+          description: Gateway updated
+
+  /notifications/gateways/{gateway}/test:
+    post:
+      tags:
+        - Notifications
+      summary: Test SMS gateway
+      parameters:
+        - name: gateway
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone_number
+              properties:
+                phone_number:
+                  type: string
+      responses:
+        '200':
+          description: Test SMS sent
+
+  /notifications/templates:
+    get:
+      tags:
+        - Notifications
+      summary: List notification templates
+      responses:
+        '200':
+          description: Templates
+    post:
+      tags:
+        - Notifications
+      summary: Create template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationTemplateInput'
+      responses:
+        '201':
+          description: Template created
+
+  /notifications/templates/{template}:
+    put:
+      tags:
+        - Notifications
+      summary: Update template
+      parameters:
+        - name: template
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationTemplateInput'
+      responses:
+        '200':
+          description: Template updated
+
+  /notifications/logs:
+    get:
+      tags:
+        - Notifications
+      summary: Get notification logs
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, sent, failed]
+      responses:
+        '200':
+          description: Notification logs
+
+  /notifications/send:
+    post:
+      tags:
+        - Notifications
+      summary: Send notification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - recipient
+                - template_id
+              properties:
+                type:
+                  type: string
+                  enum: [sms, email]
+                recipient:
+                  type: string
+                template_id:
+                  type: integer
+                variables:
+                  type: object
+      responses:
+        '200':
+          description: Notification sent
+
+  # ============================================
+  # RBAC - Role Based Access Control
+  # ============================================
+  /roles:
+    get:
+      tags:
+        - RBAC
+      summary: List roles
+      responses:
+        '200':
+          description: Roles list
+    post:
+      tags:
+        - RBAC
+      summary: Create role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleInput'
+      responses:
+        '201':
+          description: Role created
+
+  /roles/permissions:
+    get:
+      tags:
+        - RBAC
+      summary: Get all permissions
+      description: Get all permissions grouped by module
+      responses:
+        '200':
+          description: Permissions list
+
+  /roles/{role}:
+    get:
+      tags:
+        - RBAC
+      summary: Get role
+      parameters:
+        - name: role
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Role details
+    put:
+      tags:
+        - RBAC
+      summary: Update role
+      parameters:
+        - name: role
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleInput'
+      responses:
+        '200':
+          description: Role updated
+    delete:
+      tags:
+        - RBAC
+      summary: Delete role
+      parameters:
+        - name: role
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Role deleted
+
+  /roles/assign-to-user:
+    post:
+      tags:
+        - RBAC
+      summary: Assign roles to user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - role_ids
+              properties:
+                user_id:
+                  type: integer
+                role_ids:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        '200':
+          description: Roles assigned
+
+  # ============================================
+  # PATIENT PORTAL
+  # ============================================
+  /patient-portal/register:
+    post:
+      tags:
+        - Patient Portal
+      summary: Register patient
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mobile
+                - patient_id
+              properties:
+                mobile:
+                  type: string
+                patient_id:
+                  type: integer
+      responses:
+        '200':
+          description: OTP sent
+
+  /patient-portal/login:
+    post:
+      tags:
+        - Patient Portal
+      summary: Patient login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mobile
+                - otp
+              properties:
+                mobile:
+                  type: string
+                otp:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+
+  /patient-portal/verify-otp:
+    post:
+      tags:
+        - Patient Portal
+      summary: Verify OTP
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mobile
+                - otp
+              properties:
+                mobile:
+                  type: string
+                otp:
+                  type: string
+      responses:
+        '200':
+          description: OTP verified
+
+  /patient-portal/resend-otp:
+    post:
+      tags:
+        - Patient Portal
+      summary: Resend OTP
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mobile
+              properties:
+                mobile:
+                  type: string
+      responses:
+        '200':
+          description: OTP resent
+
+  /patient-portal/logout:
+    post:
+      tags:
+        - Patient Portal
+      summary: Patient logout
+      security:
+        - PatientAuth: []
+      responses:
+        '200':
+          description: Logged out
+
+  /patient-portal/profile:
+    get:
+      tags:
+        - Patient Portal
+      summary: Get profile
+      security:
+        - PatientAuth: []
+      responses:
+        '200':
+          description: Patient profile
+    put:
+      tags:
+        - Patient Portal
+      summary: Update profile
+      security:
+        - PatientAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Profile updated
+
+  /patient-portal/appointment-requests:
+    get:
+      tags:
+        - Patient Portal
+      summary: List appointment requests
+      security:
+        - PatientAuth: []
+      responses:
+        '200':
+          description: Appointment requests
+    post:
+      tags:
+        - Patient Portal
+      summary: Request appointment
+      security:
+        - PatientAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - department_id
+                - preferred_date
+              properties:
+                department_id:
+                  type: integer
+                doctor_id:
+                  type: integer
+                preferred_date:
+                  type: string
+                  format: date
+                preferred_time:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        '201':
+          description: Request created
+
+  /patient-portal/appointment-requests/{appointmentRequest}/cancel:
+    post:
+      tags:
+        - Patient Portal
+      summary: Cancel appointment request
+      security:
+        - PatientAuth: []
+      parameters:
+        - name: appointmentRequest
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Request cancelled
+
+  /patient-portal/appointments:
+    get:
+      tags:
+        - Patient Portal
+      summary: Get appointments
+      security:
+        - PatientAuth: []
+      responses:
+        '200':
+          description: Patient appointments
+
+  /patient-portal/lab-reports:
+    get:
+      tags:
+        - Patient Portal
+      summary: Get lab reports
+      security:
+        - PatientAuth: []
+      responses:
+        '200':
+          description: Lab reports
+
+  /patient-portal/prescriptions:
+    get:
+      tags:
+        - Patient Portal
+      summary: Get prescriptions
+      security:
+        - PatientAuth: []
+      responses:
+        '200':
+          description: Prescriptions
+
+  /patient-portal/bills:
+    get:
+      tags:
+        - Patient Portal
+      summary: Get bills
+      security:
+        - PatientAuth: []
+      responses:
+        '200':
+          description: Billing history
+
+  /patient-portal/feedback:
+    post:
+      tags:
+        - Patient Portal
+      summary: Submit feedback
+      security:
+        - PatientAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - rating
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                doctor_id:
+                  type: integer
+                department_id:
+                  type: integer
+                comments:
+                  type: string
+      responses:
+        '200':
+          description: Feedback submitted
+
+  /patient-portal/my-feedback:
+    get:
+      tags:
+        - Patient Portal
+      summary: Get my feedback
+      security:
+        - PatientAuth: []
+      responses:
+        '200':
+          description: Submitted feedback
+
+  # ============================================
+  # REPORTS
+  # ============================================
+  /reports/patient-summary:
+    get:
+      tags:
+        - Reports
+      summary: Patient summary report
+      parameters:
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Patient summary
+
+  /reports/revenue:
+    get:
+      tags:
+        - Reports
+      summary: Revenue report
+      parameters:
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Revenue report
+
+  /reports/department-wise:
+    get:
+      tags:
+        - Reports
+      summary: Department-wise report
+      parameters:
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Department-wise report
+
+# ============================================
+# COMPONENTS
+# ============================================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum Token
+      description: Staff user authentication
+    PatientAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum Token
+      description: Patient portal authentication
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+      description: Page number
+    PerPageParam:
+      name: per_page
+      in: query
+      schema:
+        type: integer
+        default: 15
+        maximum: 100
+      description: Items per page
+    HospitalId:
+      name: hospital
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Hospital ID
+    PatientId:
+      name: patient
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Patient ID
+    AppointmentId:
+      name: appointment
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Appointment ID
+    OpdVisitId:
+      name: opdVisit
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: OPD Visit ID
+    AdmissionId:
+      name: admission
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: IPD Admission ID
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Unauthenticated."
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: "Resource not found"
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: "The given data was invalid."
+              errors:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+
+    PaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items: {}
+        links:
+          type: object
+          properties:
+            first:
+              type: string
+            last:
+              type: string
+            prev:
+              type: string
+              nullable: true
+            next:
+              type: string
+              nullable: true
+        meta:
+          type: object
+          properties:
+            current_page:
+              type: integer
+            from:
+              type: integer
+            last_page:
+              type: integer
+            per_page:
+              type: integer
+            to:
+              type: integer
+            total:
+              type: integer
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        current_hospital_id:
+          type: integer
+        is_super_admin:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    HospitalInput:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: "City General Hospital"
+        address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        country:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        website:
+          type: string
+        logo:
+          type: string
+        is_active:
+          type: boolean
+
+    Patient:
+      type: object
+      properties:
+        id:
+          type: integer
+        cr_number:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [male, female, other]
+        mobile:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        blood_group:
+          type: string
+        class_id:
+          type: integer
+        is_vip:
+          type: boolean
+        is_urgent:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    PatientInput:
+      type: object
+      required:
+        - first_name
+        - gender
+        - mobile
+      properties:
+        first_name:
+          type: string
+          example: "John"
+        last_name:
+          type: string
+          example: "Doe"
+        date_of_birth:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [male, female, other]
+        mobile:
+          type: string
+          example: "9876543210"
+        email:
+          type: string
+          format: email
+        address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        pincode:
+          type: string
+        blood_group:
+          type: string
+          enum: [A+, A-, B+, B-, AB+, AB-, O+, O-]
+        class_id:
+          type: integer
+        emergency_contact_name:
+          type: string
+        emergency_contact_phone:
+          type: string
+
+    DoctorInput:
+      type: object
+      required:
+        - name
+        - department_id
+      properties:
+        name:
+          type: string
+        department_id:
+          type: integer
+        specialization:
+          type: string
+        qualification:
+          type: string
+        registration_number:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        consultation_fee:
+          type: number
+        is_active:
+          type: boolean
+
+    DepartmentInput:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+        is_active:
+          type: boolean
+
+    AppointmentInput:
+      type: object
+      required:
+        - patient_id
+        - doctor_id
+        - appointment_date
+        - appointment_time
+      properties:
+        patient_id:
+          type: integer
+        doctor_id:
+          type: integer
+        department_id:
+          type: integer
+        appointment_date:
+          type: string
+          format: date
+        appointment_time:
+          type: string
+          format: time
+        appointment_type:
+          type: string
+          enum: [new, followup]
+        purpose:
+          type: string
+        notes:
+          type: string
+
+    OpdVisitInput:
+      type: object
+      required:
+        - patient_id
+        - doctor_id
+      properties:
+        patient_id:
+          type: integer
+        doctor_id:
+          type: integer
+        department_id:
+          type: integer
+        class_id:
+          type: integer
+        registration_purpose:
+          type: string
+          enum: [normal, emergency, followup]
+        visit_type:
+          type: string
+          enum: [new, followup]
+        chief_complaints:
+          type: string
+        reference_doctor_id:
+          type: integer
+        appointment_id:
+          type: integer
+
+    IpdAdmissionInput:
+      type: object
+      required:
+        - patient_id
+        - admitting_doctor_id
+        - ward_id
+        - bed_id
+      properties:
+        patient_id:
+          type: integer
+        admitting_doctor_id:
+          type: integer
+        treating_doctor_id:
+          type: integer
+        ward_id:
+          type: integer
+        bed_id:
+          type: integer
+        admission_type:
+          type: string
+          enum: [emergency, elective, transfer]
+        chief_complaints:
+          type: string
+        provisional_diagnosis:
+          type: string
+        reference_doctor_id:
+          type: integer
+        opd_visit_id:
+          type: integer
+
+    WardInput:
+      type: object
+      required:
+        - name
+        - department_id
+      properties:
+        name:
+          type: string
+        department_id:
+          type: integer
+        floor:
+          type: string
+        total_beds:
+          type: integer
+        is_active:
+          type: boolean
+
+    BedInput:
+      type: object
+      required:
+        - ward_id
+        - bed_number
+      properties:
+        ward_id:
+          type: integer
+        bed_number:
+          type: string
+        bed_type:
+          type: string
+          enum: [general, semi_private, private, icu, nicu]
+        rate_per_day:
+          type: number
+        is_active:
+          type: boolean
+
+    LabTestInput:
+      type: object
+      required:
+        - name
+        - category_id
+      properties:
+        name:
+          type: string
+        category_id:
+          type: integer
+        code:
+          type: string
+        description:
+          type: string
+        sample_type:
+          type: string
+        rate:
+          type: number
+        turnaround_time:
+          type: string
+        reference_range:
+          type: string
+
+    LabOrderInput:
+      type: object
+      required:
+        - patient_id
+        - tests
+      properties:
+        patient_id:
+          type: integer
+        doctor_id:
+          type: integer
+        opd_visit_id:
+          type: integer
+        ipd_admission_id:
+          type: integer
+        tests:
+          type: array
+          items:
+            type: object
+            properties:
+              test_id:
+                type: integer
+        urgency:
+          type: string
+          enum: [routine, urgent, stat]
+        notes:
+          type: string
+
+    RadiologyTestInput:
+      type: object
+      required:
+        - name
+        - modality_id
+      properties:
+        name:
+          type: string
+        modality_id:
+          type: integer
+        code:
+          type: string
+        body_part:
+          type: string
+        preparation:
+          type: string
+        rate:
+          type: number
+        duration_minutes:
+          type: integer
+
+    RadiologyOrderInput:
+      type: object
+      required:
+        - patient_id
+        - tests
+      properties:
+        patient_id:
+          type: integer
+        referring_doctor_id:
+          type: integer
+        opd_visit_id:
+          type: integer
+        ipd_admission_id:
+          type: integer
+        tests:
+          type: array
+          items:
+            type: object
+            properties:
+              test_id:
+                type: integer
+        urgency:
+          type: string
+          enum: [routine, urgent, stat]
+        clinical_history:
+          type: string
+
+    RadiologyReportInput:
+      type: object
+      required:
+        - order_id
+        - findings
+        - impression
+      properties:
+        order_id:
+          type: integer
+        detail_id:
+          type: integer
+        findings:
+          type: string
+        impression:
+          type: string
+        recommendations:
+          type: string
+
+    SurgeryTypeInput:
+      type: object
+      required:
+        - name
+        - department_id
+      properties:
+        name:
+          type: string
+        department_id:
+          type: integer
+        code:
+          type: string
+        complexity:
+          type: string
+          enum: [minor, moderate, major, complex]
+        duration_minutes:
+          type: integer
+        rate:
+          type: number
+
+    OtScheduleInput:
+      type: object
+      required:
+        - patient_id
+        - operation_theater_id
+        - surgery_type_id
+        - surgeon_id
+        - scheduled_date
+        - start_time
+      properties:
+        patient_id:
+          type: integer
+        ipd_admission_id:
+          type: integer
+        operation_theater_id:
+          type: integer
+        surgery_type_id:
+          type: integer
+        surgeon_id:
+          type: integer
+        assistant_surgeon_id:
+          type: integer
+        anesthetist_id:
+          type: integer
+        scheduled_date:
+          type: string
+          format: date
+        start_time:
+          type: string
+          format: time
+        estimated_duration:
+          type: integer
+        notes:
+          type: string
+
+    DrugInput:
+      type: object
+      required:
+        - name
+        - category_id
+      properties:
+        name:
+          type: string
+        generic_name:
+          type: string
+        category_id:
+          type: integer
+        manufacturer:
+          type: string
+        unit:
+          type: string
+        strength:
+          type: string
+        form:
+          type: string
+          enum: [tablet, capsule, syrup, injection, cream, drops]
+        mrp:
+          type: number
+        is_active:
+          type: boolean
+
+    DrugBatchInput:
+      type: object
+      required:
+        - drug_id
+        - batch_number
+        - quantity
+        - expiry_date
+      properties:
+        drug_id:
+          type: integer
+        batch_number:
+          type: string
+        quantity:
+          type: integer
+        manufacturing_date:
+          type: string
+          format: date
+        expiry_date:
+          type: string
+          format: date
+        purchase_rate:
+          type: number
+        mrp:
+          type: number
+
+    PharmacySaleInput:
+      type: object
+      required:
+        - items
+      properties:
+        patient_id:
+          type: integer
+        prescription_id:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              drug_id:
+                type: integer
+              batch_id:
+                type: integer
+              quantity:
+                type: integer
+              rate:
+                type: number
+        discount:
+          type: number
+        payment_mode_id:
+          type: integer
+
+    ItemInput:
+      type: object
+      required:
+        - name
+        - category_id
+      properties:
+        name:
+          type: string
+        category_id:
+          type: integer
+        code:
+          type: string
+        unit:
+          type: string
+        reorder_level:
+          type: integer
+        is_active:
+          type: boolean
+
+    SupplierInput:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        contact_person:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        address:
+          type: string
+        gstin:
+          type: string
+        pan:
+          type: string
+        is_active:
+          type: boolean
+
+    IndentInput:
+      type: object
+      required:
+        - from_store_id
+        - to_store_id
+        - items
+      properties:
+        from_store_id:
+          type: integer
+        to_store_id:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              item_id:
+                type: integer
+              quantity:
+                type: integer
+        remarks:
+          type: string
+
+    PurchaseOrderInput:
+      type: object
+      required:
+        - supplier_id
+        - store_id
+        - items
+      properties:
+        supplier_id:
+          type: integer
+        store_id:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              item_id:
+                type: integer
+              quantity:
+                type: integer
+              rate:
+                type: number
+        remarks:
+          type: string
+
+    ServiceInput:
+      type: object
+      required:
+        - name
+        - rate
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        department_id:
+          type: integer
+        service_type:
+          type: string
+        rate:
+          type: number
+        is_active:
+          type: boolean
+
+    BillInput:
+      type: object
+      required:
+        - patient_id
+        - items
+      properties:
+        patient_id:
+          type: integer
+        opd_visit_id:
+          type: integer
+        ipd_admission_id:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              service_id:
+                type: integer
+              quantity:
+                type: integer
+              rate:
+                type: number
+              discount:
+                type: number
+        discount:
+          type: number
+        remarks:
+          type: string
+
+    PaymentInput:
+      type: object
+      required:
+        - bill_id
+        - amount
+        - payment_mode_id
+      properties:
+        bill_id:
+          type: integer
+        amount:
+          type: number
+        payment_mode_id:
+          type: integer
+        reference_number:
+          type: string
+        remarks:
+          type: string
+
+    BirthRegistrationInput:
+      type: object
+      required:
+        - child_name
+        - gender
+        - date_of_birth
+        - time_of_birth
+        - mother_id
+      properties:
+        child_name:
+          type: string
+        gender:
+          type: string
+          enum: [male, female]
+        date_of_birth:
+          type: string
+          format: date
+        time_of_birth:
+          type: string
+          format: time
+        place_of_birth:
+          type: string
+        mother_id:
+          type: integer
+        father_name:
+          type: string
+        ipd_admission_id:
+          type: integer
+        attending_doctor_id:
+          type: integer
+        birth_weight:
+          type: number
+        birth_type:
+          type: string
+          enum: [single, twin, triplet, multiple]
+        delivery_type:
+          type: string
+          enum: [normal, cesarean, assisted]
+
+    DeathRegistrationInput:
+      type: object
+      required:
+        - patient_id
+        - date_of_death
+        - time_of_death
+        - cause_of_death
+      properties:
+        patient_id:
+          type: integer
+        date_of_death:
+          type: string
+          format: date
+        time_of_death:
+          type: string
+          format: time
+        place_of_death:
+          type: string
+        cause_of_death:
+          type: string
+        manner_of_death:
+          type: string
+          enum: [natural, accident, suicide, homicide, undetermined]
+        ipd_admission_id:
+          type: integer
+        certifying_doctor_id:
+          type: integer
+        autopsy_performed:
+          type: boolean
+
+    SmsGatewayInput:
+      type: object
+      required:
+        - name
+        - provider
+      properties:
+        name:
+          type: string
+        provider:
+          type: string
+          enum: [msg91, textlocal, twilio]
+        api_key:
+          type: string
+        sender_id:
+          type: string
+        is_active:
+          type: boolean
+        is_default:
+          type: boolean
+        config:
+          type: object
+
+    NotificationTemplateInput:
+      type: object
+      required:
+        - name
+        - type
+        - content
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [sms, email]
+        event:
+          type: string
+        subject:
+          type: string
+        content:
+          type: string
+        variables:
+          type: array
+          items:
+            type: string
+        is_active:
+          type: boolean
+
+    RoleInput:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        display_name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: integer
