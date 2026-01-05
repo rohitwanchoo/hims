@@ -505,6 +505,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('claude-assistant')->group(function () {
         Route::post('/chat', [ClaudeAssistantController::class, 'chat']);
         Route::get('/models', [ClaudeAssistantController::class, 'models']);
+        Route::post('/get-file', [ClaudeAssistantController::class, 'getFile']);
+        Route::post('/apply-changes', [ClaudeAssistantController::class, 'applyChanges']);
+        Route::post('/preview-diff', [ClaudeAssistantController::class, 'previewDiff']);
+        Route::get('/list-files', [ClaudeAssistantController::class, 'listFiles']);
+        Route::get('/search-files', [ClaudeAssistantController::class, 'searchFiles']);
     });
 });
 

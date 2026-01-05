@@ -137,12 +137,14 @@ const fetchPatients = async (page = 1) => {
                 gender: gender.value
             }
         });
-        patients.value = response.data.data;
+        // Handle both response formats: {data: [...]} or {success: true, data: {data: [...]}}
+        const paginationData = response.data.data || response.data;
+        patients.value = paginationData.data || [];
         Object.assign(pagination, {
-            current_page: response.data.current_page,
-            last_page: response.data.last_page,
-            prev_page_url: response.data.prev_page_url,
-            next_page_url: response.data.next_page_url
+            current_page: paginationData.current_page || 1,
+            last_page: paginationData.last_page || 1,
+            prev_page_url: paginationData.prev_page_url,
+            next_page_url: paginationData.next_page_url
         });
     } catch (error) {
         console.error('Failed to fetch patients:', error);

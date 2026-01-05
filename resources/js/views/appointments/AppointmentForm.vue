@@ -438,13 +438,21 @@ const fetchData = async () => {
             axios.get('/api/reference-doctors')
         ]);
 
-        patients.value = patientsRes.data.data || patientsRes.data || [];
-        doctors.value = doctorsRes.data.data || doctorsRes.data || [];
-        departments.value = departmentsRes.data.data || departmentsRes.data || [];
-        skillSets.value = skillSetsRes.data.data || skillSetsRes.data || [];
-        doctorGroups.value = groupsRes.data.data || groupsRes.data || [];
-        patientClasses.value = classesRes.data.data || classesRes.data || [];
-        referenceDoctors.value = refDoctorsRes.data.data || refDoctorsRes.data || [];
+        // Handle nested response format: {success: true, data: {data: [...]}} or {data: [...]}
+        const extractData = (res) => {
+            if (res.data?.data?.data) return res.data.data.data; // {success, data: {data: []}}
+            if (Array.isArray(res.data?.data)) return res.data.data;
+            if (Array.isArray(res.data)) return res.data;
+            return [];
+        };
+
+        patients.value = extractData(patientsRes);
+        doctors.value = extractData(doctorsRes);
+        departments.value = extractData(departmentsRes);
+        skillSets.value = extractData(skillSetsRes);
+        doctorGroups.value = extractData(groupsRes);
+        patientClasses.value = extractData(classesRes);
+        referenceDoctors.value = extractData(refDoctorsRes);
 
         console.log('Patients loaded:', patients.value.length);
         console.log('Doctors loaded:', doctors.value.length);

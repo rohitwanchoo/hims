@@ -123,7 +123,10 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(ssh-keyscan:*)",
-      "Bash(~/.ssh/known_hosts)"
+      "Bash(~/.ssh/known_hosts)",
+      "Bash(echo \"=== Testing Claude Assistant Chat ===\" curl -s -X POST \"$BASE_URL/claude-assistant/chat\" -H \"Authorization: Bearer $TOKEN\" -H \"Accept: application/json\" -H \"Content-Type: application/json\" -d '{\"\"\"\"message\"\"\"\": \"\"\"\"Hello! Can you tell me what you are capable of?\"\"\"\"}')",
+      "Bash(tee:*)",
+      "Bash(npm run dev:*)"
     ]
   }
 }

@@ -22,6 +22,14 @@
                                 <option value="other">Other</option>
                             </select>
                         </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Patient Type</label>
+                            <select class="form-select" v-model="form.patient_type">
+                                <option value="">Select</option>
+                                <option value="Staff">Staff</option>
+                                <option value="Doctor">Doctor</option>
+                            </select>
+                        </div>
                         <div class="col-md-4">
                             <label class="form-label">Mobile</label>
                             <input type="text" class="form-control" v-model="form.mobile">
@@ -77,6 +85,7 @@ const form = reactive({
     age: null,
     age_unit: 'years',
     gender: '',
+    patient_type: '',
     mobile: '',
     email: '',
     blood_group: '',
