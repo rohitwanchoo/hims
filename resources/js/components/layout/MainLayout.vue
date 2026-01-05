@@ -284,6 +284,9 @@
 
         <!-- Sidebar Overlay (Mobile) -->
         <div class="sidebar-overlay" :class="{ 'show': sidebarOpen }" @click="sidebarOpen = false"></div>
+
+        <!-- Claude AI Assistant Widget -->
+        <ClaudeAssistant />
     </div>
 </template>
 
@@ -291,6 +294,7 @@
 import { ref, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
+import ClaudeAssistant from '../ClaudeAssistant.vue';
 
 const router = useRouter();
 const route = useRoute();

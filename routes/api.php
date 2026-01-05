@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\MrdController;
 use App\Http\Controllers\Api\PatientPortalController;
 use App\Http\Controllers\Api\AbhaController;
 use App\Http\Controllers\Api\FhirController;
+use App\Http\Controllers\Api\ClaudeAssistantController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -497,6 +498,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ICD Code Lookup
     Route::get('/icd-codes/search', [FhirController::class, 'searchIcdCodes']);
+
+    // ============================================
+    // Claude AI Development Assistant
+    // ============================================
+    Route::prefix('claude-assistant')->group(function () {
+        Route::post('/chat', [ClaudeAssistantController::class, 'chat']);
+        Route::get('/models', [ClaudeAssistantController::class, 'models']);
+    });
 });
 
 // ============================================
