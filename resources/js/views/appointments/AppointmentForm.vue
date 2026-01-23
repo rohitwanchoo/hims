@@ -104,9 +104,9 @@
                                 <div class="col-12" v-if="selectedPatient">
                                     <div class="alert alert-info mb-0 py-2">
                                         <small>
-                                            <strong>Mobile:</strong> {{ selectedPatient.mobile_number || 'N/A' }} |
-                                            <strong>Gender:</strong> {{ selectedPatient.gender_relation?.gender_name || 'N/A' }} |
-                                            <strong>Age:</strong> {{ selectedPatient.age || 'N/A' }} yrs
+                                            <strong>Mobile:</strong> {{ selectedPatient.mobile_number || selectedPatient.mobile || 'N/A' }} |
+                                            <strong>Gender:</strong> {{ selectedPatient.gender_relation?.gender_name || selectedPatient.genderRelation?.gender_name || 'N/A' }} |
+                                            <strong>Age:</strong> {{ selectedPatient.age || selectedPatient.age_years || 'N/A' }} yrs
                                         </small>
                                     </div>
                                 </div>
@@ -273,11 +273,11 @@
                                          class="time-slot"
                                          :class="{
                                              'selected': selectedSlot === slot.start_time,
-                                             'unavailable': !slot.available,
-                                             'limited': slot.available && (slot.max_patients - slot.booked) <= 1
+                                             'unavailable': !slot.available || isSlotInPast(slot),
+                                             'limited': slot.available && !isSlotInPast(slot) && (slot.max_patients - slot.booked) <= 1
                                          }"
                                          @click="selectSlot(slot)"
-                                         :title="slot.available ? `${slot.max_patients - slot.booked} of ${slot.max_patients} slots available` : 'Fully booked'">
+                                         :title="isSlotInPast(slot) ? 'Time has passed' : (slot.available ? `${slot.max_patients - slot.booked} of ${slot.max_patients} slots available` : 'Fully booked')">
                                         <div class="slot-header">
                                             <div class="slot-time">
                                                 <i class="bi bi-clock me-1"></i>
@@ -285,6 +285,7 @@
                                             </div>
                                             <div class="slot-status-icon">
                                                 <i v-if="selectedSlot === slot.start_time" class="bi bi-check-circle-fill text-primary"></i>
+                                                <i v-else-if="isSlotInPast(slot)" class="bi bi-clock-history text-muted"></i>
                                                 <i v-else-if="!slot.available" class="bi bi-lock-fill text-danger"></i>
                                                 <i v-else-if="(slot.max_patients - slot.booked) <= 1" class="bi bi-exclamation-circle-fill text-warning"></i>
                                                 <i v-else class="bi bi-circle text-success"></i>
@@ -293,16 +294,21 @@
                                         <div class="slot-availability">
                                             <div class="availability-bar">
                                                 <div class="availability-progress"
-                                                     :style="{ width: ((slot.booked / slot.max_patients) * 100) + '%' }"
+                                                     :style="{ width: isSlotInPast(slot) ? '100%' : ((slot.booked / slot.max_patients) * 100) + '%' }"
                                                      :class="{
-                                                         'bg-danger': !slot.available,
-                                                         'bg-warning': slot.available && (slot.max_patients - slot.booked) <= 1,
-                                                         'bg-success': slot.available && (slot.max_patients - slot.booked) > 1
+                                                         'bg-secondary': isSlotInPast(slot),
+                                                         'bg-danger': !isSlotInPast(slot) && !slot.available,
+                                                         'bg-warning': !isSlotInPast(slot) && slot.available && (slot.max_patients - slot.booked) <= 1,
+                                                         'bg-success': !isSlotInPast(slot) && slot.available && (slot.max_patients - slot.booked) > 1
                                                      }">
                                                 </div>
                                             </div>
                                             <div class="slot-info mt-1">
-                                                <small v-if="slot.available" class="text-success">
+                                                <small v-if="isSlotInPast(slot)" class="text-muted">
+                                                    <i class="bi bi-clock-history me-1"></i>
+                                                    Time Passed
+                                                </small>
+                                                <small v-else-if="slot.available" class="text-success">
                                                     <i class="bi bi-person-check-fill me-1"></i>
                                                     {{ slot.max_patients - slot.booked }}/{{ slot.max_patients }} available
                                                 </small>
@@ -627,6 +633,11 @@ const fetchData = async () => {
             });
             selectedSlot.value = appt.slot_start_time;
 
+            // Set patient search value to display the selected patient
+            if (appt.patient) {
+                patientSearch.value = `${appt.patient.pcd} - ${appt.patient.patient_name}`;
+            }
+
             // Fetch slots for the date
             if (appt.doctor_id && appt.appointment_date) {
                 await fetchTimeSlots();
@@ -761,8 +772,30 @@ const fetchDoctorSchedule = async () => {
     }
 };
 
+const isSlotInPast = (slot) => {
+    // Only check if appointment is for today
+    const selectedDate = form.appointment_date;
+    const today = new Date().toISOString().split('T')[0];
+
+    if (selectedDate !== today) {
+        return false; // Future dates are never in the past
+    }
+
+    // Get current time
+    const now = new Date();
+    const currentHours = now.getHours();
+    const currentMinutes = now.getMinutes();
+    const currentTimeInMinutes = currentHours * 60 + currentMinutes;
+
+    // Parse slot start time
+    const [slotHours, slotMinutes] = slot.start_time.split(':').map(Number);
+    const slotTimeInMinutes = slotHours * 60 + slotMinutes;
+
+    return slotTimeInMinutes < currentTimeInMinutes;
+};
+
 const selectSlot = (slot) => {
-    if (!slot.available) return;
+    if (!slot.available || isSlotInPast(slot)) return;
 
     selectedSlot.value = slot.start_time;
     form.slot_number = slot.slot_number;

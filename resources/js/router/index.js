@@ -30,6 +30,14 @@ import OpdList from '../views/opd/OpdList.vue';
 import OpdForm from '../views/opd/OpdForm.vue';
 import OpdConsultation from '../views/opd/OpdConsultation.vue';
 
+// Doctor Workbench
+import DoctorWorkbench from '../views/doctor-workbench/DoctorWorkbench.vue';
+
+// Consultation Forms
+import ConsultationFormList from '../views/consultation-forms/ConsultationFormList.vue';
+import ConsultationFormBuilder from '../views/consultation-forms/ConsultationFormBuilder.vue';
+import ConsultationForm from '../views/consultation-forms/ConsultationForm.vue';
+
 // IPD
 import IpdList from '../views/ipd/IpdList.vue';
 import IpdForm from '../views/ipd/IpdForm.vue';
@@ -302,6 +310,38 @@ const routes = [
                 path: 'opd/:id/consultation',
                 name: 'opd.consultation',
                 component: OpdConsultation
+            },
+            // Doctor Workbench
+            {
+                path: 'doctor-workbench',
+                name: 'doctor-workbench',
+                component: DoctorWorkbench
+            },
+            // Consultation Forms
+            {
+                path: 'consultation-forms',
+                name: 'consultation-forms',
+                component: ConsultationFormList
+            },
+            {
+                path: 'consultation-forms/create',
+                name: 'consultation-forms.create',
+                component: ConsultationFormBuilder
+            },
+            {
+                path: 'consultation-forms/:formId/edit',
+                name: 'consultation-forms.edit',
+                component: ConsultationFormBuilder
+            },
+            {
+                path: 'consultation/:opdId',
+                name: 'consultation.fill',
+                component: ConsultationForm
+            },
+            {
+                path: 'consultation/:opdId/:recordId',
+                name: 'consultation.edit',
+                component: ConsultationForm
             },
             // IPD
             {

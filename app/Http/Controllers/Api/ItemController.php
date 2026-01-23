@@ -128,18 +128,18 @@ class ItemController extends Controller
 
     public function lowStock(Request $request)
     {
-        $query = Item::with(['category', 'stock' => function ($q) {
+        $query = Item::with(['category', 'stocks' => function ($q) {
             $q->select('item_id')
                 ->selectRaw('SUM(quantity) as total_quantity')
                 ->groupBy('item_id');
         }])
             ->where('is_active', true)
-            ->whereHas('stock', function ($q) {
+            ->whereHas('stocks', function ($q) {
                 $q->havingRaw('SUM(quantity) <= ?', [0]);
             });
 
         $items = $query->get()->filter(function ($item) {
-            $totalStock = $item->stock->sum('total_quantity');
+            $totalStock = $item->stocks->sum('total_quantity');
             return $totalStock <= $item->reorder_level;
         });
 

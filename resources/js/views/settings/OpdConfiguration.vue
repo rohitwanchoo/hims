@@ -437,7 +437,15 @@
                                 <strong>Require Payment Before Consultation</strong>
                             </label>
                         </div>
-                        <small class="text-muted d-block">Patient must complete payment before seeing doctor</small>
+                        <small class="text-muted d-block mb-4">Patient must complete payment before seeing doctor</small>
+
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" v-model="config.show_continue_consultation_button" id="showContinueConsultBtn">
+                            <label class="form-check-label" for="showContinueConsultBtn">
+                                <strong>Show Continue Consultation Button</strong>
+                            </label>
+                        </div>
+                        <small class="text-muted d-block">Display "Continue Consultation" button in OPD list for in-consultation visits</small>
                     </div>
                 </div>
             </div>
@@ -477,7 +485,8 @@ const config = ref({
     mandatory_vitals: false,
     mandatory_chief_complaint: true,
     allow_multiple_visits_per_day: false,
-    require_payment_before_consultation: false
+    require_payment_before_consultation: false,
+    show_continue_consultation_button: true
 });
 
 onMounted(async () => {

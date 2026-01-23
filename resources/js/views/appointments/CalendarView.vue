@@ -372,19 +372,20 @@ const monthDays = computed(() => {
     for (let i = startingDayOfWeek - 1; i >= 0; i--) {
         const day = prevMonthLastDay - i;
         const date = new Date(year, month - 1, day);
+        const dateStr = formatDateToYMD(date);
         days.push({
             day,
-            date: date.toISOString().split('T')[0],
+            date: dateStr,
             currentMonth: false,
             isToday: false,
-            appointments: getAppointmentsForDate(date.toISOString().split('T')[0])
+            appointments: getAppointmentsForDate(dateStr)
         });
     }
 
     // Current month days
     for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month, day);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = formatDateToYMD(date);
         days.push({
             day,
             date: dateStr,
@@ -398,12 +399,13 @@ const monthDays = computed(() => {
     const remainingDays = 42 - days.length;
     for (let day = 1; day <= remainingDays; day++) {
         const date = new Date(year, month + 1, day);
+        const dateStr = formatDateToYMD(date);
         days.push({
             day,
-            date: date.toISOString().split('T')[0],
+            date: dateStr,
             currentMonth: false,
             isToday: false,
-            appointments: getAppointmentsForDate(date.toISOString().split('T')[0])
+            appointments: getAppointmentsForDate(dateStr)
         });
     }
 
@@ -421,7 +423,7 @@ const weekDays = computed(() => {
     for (let i = 0; i < 7; i++) {
         const date = new Date(startOfWeek);
         date.setDate(startOfWeek.getDate() + i);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = formatDateToYMD(date);
         days.push({
             day: date.getDate(),
             dayName: weekdays[date.getDay()],
@@ -435,7 +437,7 @@ const weekDays = computed(() => {
 });
 
 const dayAppointments = computed(() => {
-    const dateStr = currentDate.value.toISOString().split('T')[0];
+    const dateStr = formatDateToYMD(currentDate.value);
     return getAppointmentsForDate(dateStr);
 });
 
@@ -448,17 +450,17 @@ const fetchAppointments = async () => {
         if (view.value === 'month') {
             const year = currentDate.value.getFullYear();
             const month = currentDate.value.getMonth();
-            startDate = new Date(year, month, 1).toISOString().split('T')[0];
-            endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
+            startDate = formatDateToYMD(new Date(year, month, 1));
+            endDate = formatDateToYMD(new Date(year, month + 1, 0));
         } else if (view.value === 'week') {
             const start = new Date(currentDate.value);
             start.setDate(start.getDate() - start.getDay());
-            startDate = start.toISOString().split('T')[0];
+            startDate = formatDateToYMD(start);
             const end = new Date(start);
             end.setDate(start.getDate() + 6);
-            endDate = end.toISOString().split('T')[0];
+            endDate = formatDateToYMD(end);
         } else {
-            startDate = endDate = currentDate.value.toISOString().split('T')[0];
+            startDate = endDate = formatDateToYMD(currentDate.value);
         }
 
         const params = {
@@ -472,7 +474,7 @@ const fetchAppointments = async () => {
         }
 
         const response = await axios.get('/api/appointments', { params });
-        const responseData = response.data.data?.data || response.data.data || response.data;
+        const responseData = response.data.appointments || response.data.data?.data || response.data.data || response.data;
         appointments.value = Array.isArray(responseData) ? responseData : [];
 
     } catch (error) {
@@ -491,6 +493,14 @@ const fetchDepartments = async () => {
     } catch (error) {
         console.error('Error fetching departments:', error);
     }
+};
+
+// Helper function to format date without timezone conversion
+const formatDateToYMD = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 };
 
 const getAppointmentsForDate = (dateStr) => {

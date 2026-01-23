@@ -189,8 +189,10 @@ class RadiologyOrderController extends Controller
             });
         }
 
-        $worklist = $query->orderBy('order.priority', 'desc')
+        $worklist = $query->join('radiology_orders', 'radiology_order_details.radiology_order_id', '=', 'radiology_orders.radiology_order_id')
+            ->orderBy('radiology_orders.priority', 'desc')
             ->orderBy('scheduled_datetime')
+            ->select('radiology_order_details.*')
             ->get();
 
         return response()->json(['worklist' => $worklist]);

@@ -45,6 +45,7 @@ class OpdConfiguration extends Model
         'mandatory_chief_complaint',
         'allow_multiple_visits_per_day',
         'require_payment_before_consultation',
+        'show_continue_consultation_button',
         'is_active',
     ];
 
@@ -63,6 +64,7 @@ class OpdConfiguration extends Model
         'mandatory_chief_complaint' => 'boolean',
         'allow_multiple_visits_per_day' => 'boolean',
         'require_payment_before_consultation' => 'boolean',
+        'show_continue_consultation_button' => 'boolean',
         'is_active' => 'boolean',
     ];
 

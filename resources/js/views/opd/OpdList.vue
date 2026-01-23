@@ -249,7 +249,7 @@
                                             @click="startConsultation(visit)" title="Start Consultation">
                                         <i class="bi bi-play-fill"></i>
                                     </button>
-                                    <button v-if="visit.status === 'in_consultation'" class="btn btn-success"
+                                    <button v-if="visit.status === 'in_consultation' && opdConfig.show_continue_consultation_button" class="btn btn-success"
                                             @click="openConsultation(visit)" title="Continue Consultation">
                                         <i class="bi bi-pencil"></i>
                                     </button>
@@ -363,6 +363,9 @@ const lastUpdated = ref('');
 const selectedVisit = ref(null);
 const cancelReasonId = ref('');
 const cancelModal = ref(null);
+const opdConfig = ref({
+    show_continue_consultation_button: true
+});
 let cancelModalInstance = null;
 let refreshInterval = null;
 
@@ -596,7 +599,19 @@ const getWaitTime = (visit) => {
 };
 
 // Auto-refresh every 30 seconds
+const fetchOpdConfig = async () => {
+    try {
+        const response = await axios.get('/api/opd-configuration');
+        if (response.data.config) {
+            opdConfig.value = { ...opdConfig.value, ...response.data.config };
+        }
+    } catch (error) {
+        console.error('Error loading OPD configuration:', error);
+    }
+};
+
 onMounted(() => {
+    fetchOpdConfig();
     fetchData();
     fetchVisits();
     refreshInterval = setInterval(fetchVisits, 30000);

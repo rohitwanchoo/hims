@@ -228,6 +228,30 @@ class Patient extends Model
         return $this->hasMany(Appointment::class, 'patient_id', 'patient_id');
     }
 
+    /**
+     * Doctors assigned to this patient
+     */
+    public function assignedDoctors()
+    {
+        return $this->belongsToMany(
+            Doctor::class,
+            'doctor_patient_assignments',
+            'patient_id',
+            'doctor_id'
+        )
+        ->withPivot(['assigned_date', 'status', 'opd_id'])
+        ->withTimestamps();
+    }
+
+    /**
+     * Latest OPD visit for this patient
+     */
+    public function latestOpdVisit()
+    {
+        return $this->hasOne(OpdVisit::class, 'patient_id', 'patient_id')
+            ->latest('visit_date');
+    }
+
     // Accessors for frontend compatibility
     public function getMobileNumberAttribute()
     {

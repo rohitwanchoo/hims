@@ -36,7 +36,10 @@ use App\Http\Controllers\Api\CityController;
 use App\Http\Controllers\Api\AreaController;
 use App\Http\Controllers\Api\QualificationController;
 use App\Http\Controllers\Api\ConsultMasterController;
+use App\Http\Controllers\Api\DoctorWorkbenchController;
+use App\Http\Controllers\Api\ConsultationFormController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -44,6 +47,14 @@ Route::post('/login', [AuthController::class, 'login']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
+    // Test route to verify routing works
+    Route::get('/test-simple', function() {
+        return response()->json([
+            'message' => 'Route works!',
+            'user' => Auth::user() ? Auth::user()->full_name : 'Not authenticated'
+        ]);
+    });
+
     // Auth routes
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
@@ -184,6 +195,39 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('opd-visits/{opdVisit}/receipt', [\App\Http\Controllers\Api\OpdVisitController::class, 'receipt']);
     Route::get('opd-visits/patient/{patient}/history', [\App\Http\Controllers\Api\OpdVisitController::class, 'patientHistory']);
     Route::get('opd-visits/doctor/{doctor}/queue', [\App\Http\Controllers\Api\OpdVisitController::class, 'doctorQueue']);
+
+    // Doctor Workbench
+    Route::get('doctor-workbench', [\App\Http\Controllers\Api\DoctorWorkbenchController::class, 'index'])->name('doctor-workbench.index');
+    Route::get('doctor-workbench/queue', [\App\Http\Controllers\Api\DoctorWorkbenchController::class, 'queue'])->name('doctor-workbench.queue');
+    Route::get('doctor-workbench/consultation/{opdId}', [\App\Http\Controllers\Api\DoctorWorkbenchController::class, 'consultation'])->name('doctor-workbench.consultation');
+    Route::post('doctor-workbench/consultation/{opdId}/start', [\App\Http\Controllers\Api\DoctorWorkbenchController::class, 'startConsultation'])->name('doctor-workbench.start');
+    Route::get('doctor-workbench/patient/{patientId}/history', [\App\Http\Controllers\Api\DoctorWorkbenchController::class, 'patientHistory'])->name('doctor-workbench.history');
+
+    // Debug endpoints
+    Route::get('debug/user-role', [\App\Http\Controllers\Api\DoctorWorkbenchController::class, 'debugUserRole']);
+    Route::get('debug/workbench-data', [\App\Http\Controllers\Api\DoctorWorkbenchController::class, 'debugWorkbenchData']);
+
+    // Consultation Forms - Dynamic Form Builder
+    Route::get('consultation-forms', [ConsultationFormController::class, 'index']);
+    Route::post('consultation-forms', [ConsultationFormController::class, 'store']);
+    Route::get('consultation-forms/default', [ConsultationFormController::class, 'getDefaultForm']);
+    Route::get('consultation-forms/{formId}', [ConsultationFormController::class, 'show']);
+    Route::put('consultation-forms/{formId}', [ConsultationFormController::class, 'update']);
+    Route::delete('consultation-forms/{formId}', [ConsultationFormController::class, 'destroy']);
+
+    // Consultation Form Fields
+    Route::post('consultation-forms/{formId}/fields', [ConsultationFormController::class, 'storeField']);
+    Route::put('consultation-forms/{formId}/fields/{fieldId}', [ConsultationFormController::class, 'updateField']);
+    Route::delete('consultation-forms/{formId}/fields/{fieldId}', [ConsultationFormController::class, 'deleteField']);
+    Route::post('consultation-forms/{formId}/fields/{fieldId}/toggle-visibility', [ConsultationFormController::class, 'toggleFieldVisibility']);
+    Route::post('consultation-forms/{formId}/fields/{fieldId}/duplicate', [ConsultationFormController::class, 'duplicateField']);
+    Route::post('consultation-forms/{formId}/fields/reorder', [ConsultationFormController::class, 'reorderFields']);
+
+    // Consultation Records
+    Route::post('consultation-records', [ConsultationFormController::class, 'storeRecord']);
+    Route::get('consultation-records/{recordId}', [ConsultationFormController::class, 'getRecord']);
+    Route::put('consultation-records/{recordId}', [ConsultationFormController::class, 'updateRecord']);
+    Route::get('consultation-records/patient/{patientId}', [ConsultationFormController::class, 'getPatientRecords']);
 
     // Skill Sets (Doctor Specialties)
     Route::apiResource('skill-sets', \App\Http\Controllers\Api\SkillSetController::class);

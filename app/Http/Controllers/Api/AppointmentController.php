@@ -26,13 +26,17 @@ class AppointmentController extends Controller
             'referenceDoctor',
         ]);
 
-        // Filter by date (default: today)
-        $date = $request->date ?? now()->toDateString();
-        $query->whereDate('appointment_date', $date);
-
-        // Filter by date range
-        if ($request->from_date && $request->to_date) {
+        // Filter by date range (calendar view uses start_date/end_date)
+        if ($request->start_date && $request->end_date) {
+            $query->whereBetween('appointment_date', [$request->start_date, $request->end_date]);
+        } elseif ($request->from_date && $request->to_date) {
             $query->whereBetween('appointment_date', [$request->from_date, $request->to_date]);
+        } elseif ($request->date) {
+            // Filter by single date
+            $query->whereDate('appointment_date', $request->date);
+        } else {
+            // Default: today
+            $query->whereDate('appointment_date', now()->toDateString());
         }
 
         // Filter by doctor
@@ -70,9 +74,9 @@ class AppointmentController extends Controller
             });
         }
 
-        $appointments = $query->orderBy('appointment_date')
-            ->orderBy('slot_number')
-            ->orderBy('appointment_time')
+        $appointments = $query->orderBy('appointment_date', 'desc')
+            ->orderBy('slot_number', 'desc')
+            ->orderBy('appointment_time', 'desc')
             ->get();
 
         // Summary counts
@@ -168,8 +172,23 @@ class AppointmentController extends Controller
             }
 
             // Generate appointment number
-            $todayCount = Appointment::whereDate('created_at', now()->toDateString())->count();
-            $appointmentNumber = 'APT' . now()->format('Ymd') . str_pad($todayCount + 1, 4, '0', STR_PAD_LEFT);
+            $today = now()->format('Ymd');
+            $prefix = 'APT' . $today;
+
+            // Find the last appointment number for today
+            $lastAppointment = Appointment::where('appointment_number', 'like', $prefix . '%')
+                ->orderBy('appointment_number', 'desc')
+                ->first();
+
+            if ($lastAppointment) {
+                // Extract the sequence number and increment
+                $lastNumber = intval(substr($lastAppointment->appointment_number, -4));
+                $nextNumber = $lastNumber + 1;
+            } else {
+                $nextNumber = 1;
+            }
+
+            $appointmentNumber = $prefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
             // Create appointment
             $appointment = Appointment::create([
@@ -214,7 +233,7 @@ class AppointmentController extends Controller
     public function show(string $id)
     {
         $appointment = Appointment::with([
-            'patient',
+            'patient.genderRelation',
             'doctor',
             'department',
             'skillSet',

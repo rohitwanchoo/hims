@@ -121,8 +121,10 @@
                     <thead>
                         <tr>
                             <th>Slot</th>
+                            <th>Date</th>
                             <th>Time</th>
                             <th>Patient</th>
+                            <th>Mobile</th>
                             <th>Doctor</th>
                             <th>Type</th>
                             <th>Mode</th>
@@ -133,7 +135,7 @@
                     </thead>
                     <tbody>
                         <tr v-if="loading">
-                            <td colspan="9" class="text-center py-5">
+                            <td colspan="11" class="text-center py-5">
                                 <div class="spinner-border text-primary" role="status">
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
@@ -141,14 +143,17 @@
                             </td>
                         </tr>
                         <tr v-else-if="appointments.length === 0">
-                            <td colspan="9" class="text-center py-5">
+                            <td colspan="11" class="text-center py-5">
                                 <i class="bi bi-calendar-x text-muted" style="font-size: 3rem;"></i>
                                 <p class="text-muted mt-2 mb-0">No appointments found for this date</p>
                             </td>
                         </tr>
-                        <tr v-for="apt in appointments" :key="apt.appointment_id" :class="getRowClass(apt.status)">
+                        <tr v-for="apt in appointments" :key="apt.appointment_id" :class="getRowClass(apt.status, apt)">
                             <td>
                                 <span class="badge badge-soft-secondary">{{ apt.slot_number || '-' }}</span>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">{{ formatDate(apt.appointment_date) }}</div>
                             </td>
                             <td>
                                 <div class="fw-semibold">{{ formatTime(apt.appointment_time) }}</div>
@@ -166,6 +171,9 @@
                                         <span v-if="apt.priority === 'emergency'" class="badge badge-soft-danger ms-1">Emergency</span>
                                     </div>
                                 </div>
+                            </td>
+                            <td>
+                                <span class="text-nowrap">{{ apt.patient?.mobile || '-' }}</span>
                             </td>
                             <td>
                                 <div class="fw-medium">{{ apt.doctor?.full_name }}</div>
@@ -204,15 +212,18 @@
                                     <router-link :to="`/appointments/${apt.appointment_id}`" class="btn btn-sm btn-soft-primary" title="View">
                                         <i class="bi bi-eye"></i>
                                     </router-link>
-                                    <button v-if="apt.status === 'scheduled'" class="btn btn-sm btn-soft-success" @click="confirmAppointment(apt)" title="Mark Arrived">
+                                    <button v-if="apt.status === 'scheduled' && !isAppointmentInPast(apt)" class="btn btn-sm btn-soft-success" @click="confirmAppointment(apt)" title="Mark Arrived">
                                         <i class="bi bi-check-lg"></i>
                                     </button>
-                                    <button v-if="['scheduled', 'confirmed'].includes(apt.status) && !apt.opd_id" class="btn btn-sm btn-soft-info" @click="convertToOpd(apt)" title="Convert to OPD">
+                                    <button v-if="['scheduled', 'confirmed'].includes(apt.status) && !apt.opd_id && !isAppointmentInPast(apt)" class="btn btn-sm btn-soft-info" @click="convertToOpd(apt)" title="Convert to OPD">
                                         <i class="bi bi-arrow-right-circle"></i>
                                     </button>
-                                    <button v-if="['scheduled', 'confirmed'].includes(apt.status)" class="btn btn-sm btn-soft-danger" @click="openCancelModal(apt)" title="Cancel">
+                                    <button v-if="['scheduled', 'confirmed'].includes(apt.status) && !isAppointmentInPast(apt)" class="btn btn-sm btn-soft-danger" @click="openCancelModal(apt)" title="Cancel">
                                         <i class="bi bi-x-lg"></i>
                                     </button>
+                                    <span v-if="isAppointmentInPast(apt) && ['scheduled', 'confirmed'].includes(apt.status)" class="badge badge-soft-secondary" title="Time has passed">
+                                        <i class="bi bi-clock-history"></i> Past
+                                    </span>
                                 </div>
                             </td>
                         </tr>
@@ -441,7 +452,31 @@ const formatTime = (time) => {
     return `${hour}:${minutes} ${ampm}`;
 };
 
-const getRowClass = (status) => {
+const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+
+    // Extract just the date part if it's a datetime string
+    const datePart = typeof dateStr === 'string' ? dateStr.split('T')[0] : dateStr;
+
+    // Parse the date parts manually to avoid timezone issues
+    const [year, month, day] = datePart.split('-').map(Number);
+
+    if (!year || !month || !day) return '-';
+
+    const date = new Date(year, month - 1, day);
+
+    const options = {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    };
+    return date.toLocaleDateString('en-US', options);
+};
+
+const getRowClass = (status, appointment) => {
+    if (isAppointmentInPast(appointment) && ['scheduled', 'confirmed'].includes(status)) {
+        return 'table-row-past';
+    }
     if (status === 'confirmed') return 'table-row-success';
     if (status === 'cancelled') return 'table-row-danger';
     return '';
@@ -482,6 +517,35 @@ const getBookingModeLabel = (mode) => {
         'online': 'Online'
     };
     return labels[mode] || mode;
+};
+
+const isAppointmentInPast = (appointment) => {
+    // Check if appointment date is in the past
+    const appointmentDate = appointment.appointment_date;
+    const today = new Date().toISOString().split('T')[0];
+
+    if (appointmentDate < today) {
+        return true; // Past date
+    }
+
+    if (appointmentDate > today) {
+        return false; // Future date
+    }
+
+    // Same date - check time
+    if (!appointment.appointment_time) {
+        return false; // No time set, allow actions
+    }
+
+    const now = new Date();
+    const currentHours = now.getHours();
+    const currentMinutes = now.getMinutes();
+    const currentTimeInMinutes = currentHours * 60 + currentMinutes;
+
+    const [aptHours, aptMinutes] = appointment.appointment_time.split(':').map(Number);
+    const aptTimeInMinutes = aptHours * 60 + aptMinutes;
+
+    return aptTimeInMinutes < currentTimeInMinutes;
 };
 
 const confirmAppointment = async (apt) => {
@@ -577,6 +641,12 @@ onMounted(() => {
 
 .table-row-danger {
     background-color: var(--danger-light) !important;
+}
+
+.table-row-past {
+    background-color: #f8f9fa !important;
+    opacity: 0.7;
+    color: #6c757d;
 }
 
 .stats-row {

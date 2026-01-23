@@ -52,4 +52,43 @@ class Doctor extends Model
     {
         return $this->hasMany(IpdAdmission::class, 'doctor_id', 'doctor_id');
     }
+
+    /**
+     * Patients assigned to this doctor
+     */
+    public function assignedPatients()
+    {
+        return $this->belongsToMany(
+            Patient::class,
+            'doctor_patient_assignments',
+            'doctor_id',
+            'patient_id'
+        )
+        ->withPivot(['assigned_date', 'status', 'opd_id'])
+        ->withTimestamps()
+        ->wherePivot('status', 'active');
+    }
+
+    /**
+     * All patient assignments (including historical)
+     */
+    public function patientAssignments()
+    {
+        return $this->hasMany(DoctorPatientAssignment::class, 'doctor_id', 'doctor_id');
+    }
+
+    /**
+     * Today's OPD visits
+     */
+    public function todaysVisits()
+    {
+        return $this->opdVisits()
+            ->whereDate('visit_date', today())
+            ->orderBy('token_number');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 }

@@ -24,6 +24,14 @@
                         </router-link>
                     </li>
 
+                    <!-- Doctor Workbench (No submenu) -->
+                    <li class="nav-item">
+                        <router-link class="nav-link" to="/doctor-workbench" active-class="active">
+                            <i class="bi bi-clipboard2-pulse"></i>
+                            <span>Doctor Workbench</span>
+                        </router-link>
+                    </li>
+
                     <!-- Menu Sections with Submenus -->
                     <li class="nav-item has-submenu" v-for="section in menuSections" :key="section.id">
                         <a
@@ -239,7 +247,8 @@ const menuSections = [
             { path: '/doctors', label: 'Doctors' },
             { path: '/departments', label: 'Departments' },
             { path: '/opd', label: 'OPD Visits' },
-            { path: '/ipd', label: 'IPD Admissions' }
+            { path: '/ipd', label: 'IPD Admissions' },
+            { path: '/consultation-forms', label: 'Consultation Forms' }
         ]
     },
     {
@@ -352,6 +361,7 @@ const userInitials = computed(() => {
 const pageTitle = computed(() => {
     const titles = {
         '/': 'Dashboard',
+        '/doctor-workbench': 'Doctor Workbench',
         '/masters/reception/prefix': 'Prefix Master',
         '/masters/reception/gender': 'Gender Master',
         '/masters/reception/blood-group': 'Blood Group Master',
