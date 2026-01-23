@@ -119,6 +119,8 @@ class Patient extends Model
         'is_active' => 'boolean',
     ];
 
+    protected $appends = ['mobile_number', 'age'];
+
     public function prefix()
     {
         return $this->belongsTo(Prefix::class, 'prefix_id', 'prefix_id');
@@ -224,5 +226,16 @@ class Patient extends Model
     public function appointments()
     {
         return $this->hasMany(Appointment::class, 'patient_id', 'patient_id');
+    }
+
+    // Accessors for frontend compatibility
+    public function getMobileNumberAttribute()
+    {
+        return $this->mobile ?? $this->permanent_mobile;
+    }
+
+    public function getAgeAttribute($value)
+    {
+        return $this->age_years ?? $value;
     }
 }

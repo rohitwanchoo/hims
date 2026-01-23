@@ -72,7 +72,7 @@
                                                         <div class="patient-details">
                                                             <span class="badge bg-secondary me-1">{{ p.pcd }}</span>
                                                             <small class="text-muted">
-                                                                {{ p.gender?.gender_name || 'N/A' }} | {{ p.age_years || p.age || 'N/A' }} yrs
+                                                                {{ p.gender_relation?.gender_name || 'N/A' }} | {{ p.age || 'N/A' }} yrs
                                                             </small>
                                                         </div>
                                                     </div>
@@ -104,9 +104,9 @@
                                 <div class="col-12" v-if="selectedPatient">
                                     <div class="alert alert-info mb-0 py-2">
                                         <small>
-                                            <strong>Mobile:</strong> {{ selectedPatient.mobile || selectedPatient.permanent_mobile || 'N/A' }} |
-                                            <strong>Gender:</strong> {{ selectedPatient.gender?.gender_name || 'N/A' }} |
-                                            <strong>Age:</strong> {{ selectedPatient.age_years || selectedPatient.age || 'N/A' }} yrs
+                                            <strong>Mobile:</strong> {{ selectedPatient.mobile_number || 'N/A' }} |
+                                            <strong>Gender:</strong> {{ selectedPatient.gender_relation?.gender_name || 'N/A' }} |
+                                            <strong>Age:</strong> {{ selectedPatient.age || 'N/A' }} yrs
                                         </small>
                                     </div>
                                 </div>
