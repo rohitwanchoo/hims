@@ -104,7 +104,7 @@
                                 <div class="col-12" v-if="selectedPatient">
                                     <div class="alert alert-info mb-0 py-2">
                                         <small>
-                                            <strong>Phone:</strong> {{ selectedPatient.mobile_number || 'N/A' }} |
+                                            <strong>Mobile:</strong> {{ selectedPatient.mobile_number || 'N/A' }} |
                                             <strong>Gender:</strong> {{ selectedPatient.gender || 'N/A' }} |
                                             <strong>Age:</strong> {{ selectedPatient.age || 'N/A' }}
                                         </small>
