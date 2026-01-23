@@ -269,10 +269,10 @@
                                 </div>
 
                                 <div v-else class="time-slots-grid">
-                                    <div v-for="slot in timeSlots" :key="slot.slot_number"
+                                    <div v-for="slot in timeSlots" :key="slot.start_time"
                                          class="time-slot"
                                          :class="{
-                                             'selected': selectedSlot === slot.slot_number,
+                                             'selected': selectedSlot === slot.start_time,
                                              'unavailable': !slot.available,
                                              'limited': slot.available && (slot.max_patients - slot.booked) <= 1
                                          }"
@@ -284,7 +284,7 @@
                                                 {{ formatTime(slot.start_time) }}
                                             </div>
                                             <div class="slot-status-icon">
-                                                <i v-if="selectedSlot === slot.slot_number" class="bi bi-check-circle-fill text-primary"></i>
+                                                <i v-if="selectedSlot === slot.start_time" class="bi bi-check-circle-fill text-primary"></i>
                                                 <i v-else-if="!slot.available" class="bi bi-lock-fill text-danger"></i>
                                                 <i v-else-if="(slot.max_patients - slot.booked) <= 1" class="bi bi-exclamation-circle-fill text-warning"></i>
                                                 <i v-else class="bi bi-circle text-success"></i>
@@ -625,7 +625,7 @@ const fetchData = async () => {
                 notes: appt.notes || '',
                 status: appt.status
             });
-            selectedSlot.value = appt.slot_number;
+            selectedSlot.value = appt.slot_start_time;
 
             // Fetch slots for the date
             if (appt.doctor_id && appt.appointment_date) {
@@ -764,7 +764,7 @@ const fetchDoctorSchedule = async () => {
 const selectSlot = (slot) => {
     if (!slot.available) return;
 
-    selectedSlot.value = slot.slot_number;
+    selectedSlot.value = slot.start_time;
     form.slot_number = slot.slot_number;
     form.slot_start_time = slot.start_time;
     form.slot_end_time = slot.end_time;
