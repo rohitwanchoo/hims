@@ -48,7 +48,7 @@
                                                 @input="filterPatients"
                                                 @focus="showPatientDropdown = true"
                                                 @blur="hidePatientDropdown"
-                                                placeholder="Search by name or PCD..."
+                                                placeholder="Search by name or UHID..."
                                                 autocomplete="off"
                                             />
                                             <button
