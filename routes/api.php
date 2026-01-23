@@ -22,6 +22,20 @@ use App\Http\Controllers\Api\PatientPortalController;
 use App\Http\Controllers\Api\AbhaController;
 use App\Http\Controllers\Api\FhirController;
 use App\Http\Controllers\Api\ClaudeAssistantController;
+use App\Http\Controllers\Api\PrefixController;
+use App\Http\Controllers\Api\GenderController;
+use App\Http\Controllers\Api\BloodGroupController;
+use App\Http\Controllers\Api\PatientTypeController;
+use App\Http\Controllers\Api\MaritalStatusController;
+use App\Http\Controllers\Api\ReferenceDoctorController;
+use App\Http\Controllers\Api\InsuranceCompanyController;
+use App\Http\Controllers\Api\CountryController;
+use App\Http\Controllers\Api\StateController;
+use App\Http\Controllers\Api\DistrictController;
+use App\Http\Controllers\Api\CityController;
+use App\Http\Controllers\Api\AreaController;
+use App\Http\Controllers\Api\QualificationController;
+use App\Http\Controllers\Api\ConsultMasterController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -63,10 +77,79 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('patients/{patient}/vaccinations', [\App\Http\Controllers\Api\PatientController::class, 'vaccinations']);
     Route::get('patients/{patient}/history', [\App\Http\Controllers\Api\PatientController::class, 'history']);
     Route::get('patients/{patient}/client-documents', [\App\Http\Controllers\Api\PatientController::class, 'clientDocuments']);
+    Route::get('patients/{patient}/documents', [\App\Http\Controllers\Api\PatientController::class, 'documents']);
     Route::post('patients/{patient}/mark-vip', [\App\Http\Controllers\Api\PatientController::class, 'markVip']);
     Route::post('patients/{patient}/mark-urgent', [\App\Http\Controllers\Api\PatientController::class, 'markUrgent']);
     Route::post('patients/{patient}/upload-document', [\App\Http\Controllers\Api\PatientController::class, 'uploadDocument']);
+    Route::delete('patient-documents/{document}', [\App\Http\Controllers\Api\PatientController::class, 'deleteDocument']);
     Route::get('patients-search', [\App\Http\Controllers\Api\PatientController::class, 'search']);
+
+    // Prefixes (Master > Reception)
+    Route::apiResource('prefixes', PrefixController::class);
+    Route::get('prefixes-active', [PrefixController::class, 'active']);
+
+    // Genders (Master > Reception)
+    Route::apiResource('genders', GenderController::class);
+    Route::get('genders-active', [GenderController::class, 'active']);
+
+    // Blood Groups (Master > Reception)
+    Route::apiResource('blood-groups', BloodGroupController::class);
+    Route::get('blood-groups-active', [BloodGroupController::class, 'active']);
+
+    // Patient Types (Master > Reception)
+    Route::apiResource('patient-types', PatientTypeController::class);
+    Route::get('patient-types-active', [PatientTypeController::class, 'active']);
+
+    // Marital Statuses (Master > Reception)
+    Route::apiResource('marital-statuses', MaritalStatusController::class);
+    Route::get('marital-statuses-active', [MaritalStatusController::class, 'active']);
+
+    // Reference Doctors (Master > Reception)
+    Route::apiResource('reference-doctors', ReferenceDoctorController::class);
+    Route::get('reference-doctors-active', [ReferenceDoctorController::class, 'active']);
+
+    // Insurance Companies (Master > Reception)
+    Route::apiResource('insurance-companies', InsuranceCompanyController::class);
+    Route::get('insurance-companies-active', [InsuranceCompanyController::class, 'active']);
+
+    // Qualifications (Master > Reception)
+    Route::apiResource('qualifications', QualificationController::class);
+    Route::get('qualifications-active', [QualificationController::class, 'active']);
+
+    // Consult Masters (Master > Reception) - Doctor Availability Setup
+    Route::apiResource('consult-masters', ConsultMasterController::class);
+    Route::get('consult-masters-active', [ConsultMasterController::class, 'active']);
+    Route::get('consult-masters/doctors-by-department/{departmentId}', [ConsultMasterController::class, 'doctorsByDepartment']);
+    Route::get('consult-masters/doctor-schedules/{doctorId}', [ConsultMasterController::class, 'doctorSchedules']);
+    Route::post('consult-masters/available-slots', [ConsultMasterController::class, 'availableSlots']);
+    Route::post('consult-masters/preview-slots', [ConsultMasterController::class, 'previewSlots']);
+
+    // Countries (Master > Address)
+    Route::apiResource('countries', CountryController::class);
+    Route::get('countries-active', [CountryController::class, 'active']);
+    Route::get('countries-default', [CountryController::class, 'getDefault']);
+
+    // States (Master > Address)
+    Route::apiResource('states', StateController::class);
+    Route::get('states-active', [StateController::class, 'active']);
+    Route::get('states-default', [StateController::class, 'getDefault']);
+    Route::get('states/{state}/hierarchy', [StateController::class, 'getWithHierarchy']);
+
+    // Districts (Master > Address)
+    Route::apiResource('districts', DistrictController::class);
+    Route::get('districts-active', [DistrictController::class, 'active']);
+
+    // Cities/Talukas (Master > Address)
+    Route::apiResource('cities', CityController::class);
+    Route::get('cities-active', [CityController::class, 'active']);
+
+    // Areas/Villages (Master > Address)
+    Route::apiResource('areas', AreaController::class);
+    Route::get('areas-active', [AreaController::class, 'active']);
+    Route::get('areas/{area}/hierarchy', [AreaController::class, 'getHierarchy']);
+    Route::get('areas-search-hierarchy', [AreaController::class, 'searchWithHierarchy']);
+    Route::get('areas-by-state', [AreaController::class, 'getByState']);
+    Route::get('areas-by-country', [AreaController::class, 'getByCountry']);
 
     // Doctors
     Route::apiResource('doctors', \App\Http\Controllers\Api\DoctorController::class);
@@ -166,9 +249,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('payments', \App\Http\Controllers\Api\PaymentController::class);
 
     // OPD Masters
-    // Reference Doctors
-    Route::apiResource('reference-doctors', \App\Http\Controllers\Api\ReferenceDoctorController::class);
-
     // Clients (TPA/Insurance/Corporate)
     Route::apiResource('clients', \App\Http\Controllers\Api\ClientController::class);
 

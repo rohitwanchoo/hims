@@ -738,64 +738,109 @@ class AppointmentController extends Controller
 
         $doctor = Doctor::findOrFail($doctorId);
 
-        // Get configured time slots for this day
-        $timeSlots = OpdTimeSlot::where(function ($query) use ($doctorId, $doctor) {
-                $query->where('doctor_id', $doctorId)
-                      ->orWhere(function ($q) use ($doctor) {
-                          $q->whereNull('doctor_id')
-                            ->where('department_id', $doctor->department_id);
-                      });
-            })
-            ->where('day_of_week', $dayOfWeek)
-            ->where('is_active', true)
-            ->orderBy('start_time')
+        // Try to use new ConsultMaster system first
+        $consultMasters = \App\Models\ConsultMaster::forDoctor($doctorId)
+            ->forDate($date)
+            ->active()
             ->get();
 
-        if ($timeSlots->isEmpty()) {
-            return response()->json([
-                'doctor_id' => $doctorId,
-                'date' => $date,
-                'day' => $dayOfWeek,
-                'message' => 'No time slots configured for this day',
-                'slots' => [],
-            ]);
-        }
+        // Fallback to legacy OpdTimeSlot if no ConsultMaster schedules found
+        if ($consultMasters->isEmpty()) {
+            $timeSlots = OpdTimeSlot::where(function ($query) use ($doctorId, $doctor) {
+                    $query->where('doctor_id', $doctorId)
+                          ->orWhere(function ($q) use ($doctor) {
+                              $q->whereNull('doctor_id')
+                                ->where('department_id', $doctor->department_id);
+                          });
+                })
+                ->where('day_of_week', $dayOfWeek)
+                ->where('is_active', true)
+                ->orderBy('start_time')
+                ->get();
 
-        // Get existing appointments for this date
-        $existingAppointments = Appointment::where('doctor_id', $doctorId)
-            ->whereDate('appointment_date', $date)
-            ->whereNotIn('status', ['cancelled', 'no_show'])
-            ->get();
-
-        // Generate available slots
-        $availableSlots = [];
-        foreach ($timeSlots as $timeSlot) {
-            $start = strtotime($timeSlot->start_time);
-            $end = strtotime($timeSlot->end_time);
-            $duration = $timeSlot->slot_duration_minutes * 60;
-            $slotNumber = 1;
-
-            while ($start + $duration <= $end) {
-                $slotTime = date('H:i:s', $start);
-                $slotEndTime = date('H:i:s', $start + $duration);
-
-                // Count bookings for this slot
-                $bookingsInSlot = $existingAppointments->filter(function ($apt) use ($slotTime, $slotEndTime) {
-                    return $apt->appointment_time >= $slotTime && $apt->appointment_time < $slotEndTime;
-                })->count();
-
-                $availableSlots[] = [
-                    'slot_number' => $slotNumber,
-                    'start_time' => $slotTime,
-                    'end_time' => $slotEndTime,
-                    'booked' => $bookingsInSlot,
-                    'max_patients' => $timeSlot->max_patients_per_slot,
-                    'available' => $bookingsInSlot < $timeSlot->max_patients_per_slot,
-                ];
-
-                $start += $duration;
-                $slotNumber++;
+            if ($timeSlots->isEmpty()) {
+                return response()->json([
+                    'doctor_id' => $doctorId,
+                    'date' => $date,
+                    'day' => $dayOfWeek,
+                    'message' => 'No time slots configured for this day',
+                    'slots' => [],
+                ]);
             }
+
+            // Get existing appointments for this date
+            $existingAppointments = Appointment::where('doctor_id', $doctorId)
+                ->whereDate('appointment_date', $date)
+                ->whereNotIn('status', ['cancelled', 'no_show'])
+                ->get();
+
+            // Generate available slots from legacy system
+            $availableSlots = [];
+            foreach ($timeSlots as $timeSlot) {
+                $start = strtotime($timeSlot->start_time);
+                $end = strtotime($timeSlot->end_time);
+                $duration = $timeSlot->slot_duration_minutes * 60;
+                $slotNumber = 1;
+
+                while ($start + $duration <= $end) {
+                    $slotTime = date('H:i:s', $start);
+                    $slotEndTime = date('H:i:s', $start + $duration);
+
+                    // Count bookings for this slot
+                    $bookingsInSlot = $existingAppointments->filter(function ($apt) use ($slotTime, $slotEndTime) {
+                        return $apt->appointment_time >= $slotTime && $apt->appointment_time < $slotEndTime;
+                    })->count();
+
+                    $availableSlots[] = [
+                        'slot_number' => $slotNumber,
+                        'start_time' => $slotTime,
+                        'end_time' => $slotEndTime,
+                        'booked' => $bookingsInSlot,
+                        'max_patients' => $timeSlot->max_patients_per_slot,
+                        'available' => $bookingsInSlot < $timeSlot->max_patients_per_slot,
+                    ];
+
+                    $start += $duration;
+                    $slotNumber++;
+                }
+            }
+        } else {
+            // Use new ConsultMaster system
+            $existingAppointments = Appointment::where('doctor_id', $doctorId)
+                ->whereDate('appointment_date', $date)
+                ->whereNotIn('status', ['cancelled', 'no_show'])
+                ->get();
+
+            $availableSlots = [];
+            $slotNumber = 1;
+            foreach ($consultMasters as $schedule) {
+                $slots = $schedule->time_slots ?? $schedule->generateTimeSlots();
+
+                foreach ($slots as $slot) {
+                    $slotTime = $slot['start'] . ':00';
+
+                    // Count bookings for this slot
+                    $bookingsInSlot = $existingAppointments->where('appointment_time', $slotTime)->count();
+
+                    $availableSlots[] = [
+                        'slot_number' => $slotNumber,
+                        'start_time' => $slotTime,
+                        'end_time' => $slot['end'] . ':00',
+                        'label' => $slot['label'],
+                        'time_period' => $schedule->time_period,
+                        'booked' => $bookingsInSlot,
+                        'max_patients' => $schedule->max_patients_per_slot,
+                        'available' => $bookingsInSlot < $schedule->max_patients_per_slot,
+                        'schedule_id' => $schedule->consult_master_id,
+                    ];
+                    $slotNumber++;
+                }
+            }
+
+            // Sort by time
+            usort($availableSlots, function ($a, $b) {
+                return strcmp($a['start_time'], $b['start_time']);
+            });
         }
 
         return response()->json([

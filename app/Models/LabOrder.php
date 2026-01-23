@@ -13,19 +13,23 @@ class LabOrder extends Model
 
     protected $fillable = [
         'hospital_id',
+        'order_number',
         'patient_id',
-        'doctor_id',
-        'visit_id',
-        'admission_id',
+        'opd_id',
+        'ipd_id',
         'order_date',
-        'status',
+        'referred_by',
+        'priority',
+        'clinical_notes',
         'total_amount',
-        'notes',
+        'status',
+        'completed_at',
         'created_by',
     ];
 
     protected $casts = [
         'order_date' => 'date',
+        'completed_at' => 'datetime',
         'total_amount' => 'decimal:2',
     ];
 
@@ -34,19 +38,19 @@ class LabOrder extends Model
         return $this->belongsTo(Patient::class, 'patient_id', 'patient_id');
     }
 
-    public function doctor()
+    public function referredBy()
     {
-        return $this->belongsTo(Doctor::class, 'doctor_id', 'doctor_id');
+        return $this->belongsTo(Doctor::class, 'referred_by', 'doctor_id');
     }
 
     public function opdVisit()
     {
-        return $this->belongsTo(OpdVisit::class, 'visit_id', 'visit_id');
+        return $this->belongsTo(OpdVisit::class, 'opd_id', 'visit_id');
     }
 
     public function ipdAdmission()
     {
-        return $this->belongsTo(IpdAdmission::class, 'admission_id', 'admission_id');
+        return $this->belongsTo(IpdAdmission::class, 'ipd_id', 'admission_id');
     }
 
     public function details()

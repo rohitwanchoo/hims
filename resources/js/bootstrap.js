@@ -17,13 +17,14 @@ axios.interceptors.request.use(
 );
 
 // Handle 401 responses
+// Note: Router instance not available here, will be handled in App.vue
 axios.interceptors.response.use(
     response => response,
     error => {
         if (error.response?.status === 401) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/login';
+            // Don't auto-redirect here - let the application handle it
+            // This prevents page flashing issues
+            console.error('Unauthorized request:', error.config?.url);
         }
         return Promise.reject(error);
     }

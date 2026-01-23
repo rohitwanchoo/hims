@@ -19,19 +19,17 @@
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h6 class="mb-0"><i class="bi bi-person me-2"></i>Patient Information</h6>
                             <div class="btn-group btn-group-sm">
-                                <button type="button" class="btn" :class="patientMode === 'existing' ? 'btn-primary' : 'btn-outline-primary'"
-                                        @click="patientMode = 'existing'">
+                                <button type="button" class="btn btn-primary">
                                     Existing Patient
                                 </button>
-                                <button type="button" class="btn" :class="patientMode === 'new' ? 'btn-primary' : 'btn-outline-primary'"
-                                        @click="patientMode = 'new'">
-                                    New Patient
+                                <button type="button" class="btn btn-outline-primary" @click="createNewPatient">
+                                    <i class="bi bi-plus-circle me-1"></i>New Patient
                                 </button>
                             </div>
                         </div>
                         <div class="card-body">
                             <!-- Existing Patient Search -->
-                            <div v-if="patientMode === 'existing'">
+                            <div>
                                 <div class="row g-3">
                                     <div class="col-md-8">
                                         <label class="form-label">Search Patient <span class="text-danger">*</span></label>
@@ -72,75 +70,27 @@
                                 <!-- Selected Patient Info -->
                                 <div v-if="selectedPatient" class="alert alert-success mt-3 mb-0">
                                     <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <strong>{{ selectedPatient.patient_name }}</strong>
-                                            <span class="badge bg-primary ms-2">{{ selectedPatient.pcd }}</span>
-                                            <div class="small mt-1">
-                                                <i class="bi bi-phone me-1"></i> {{ selectedPatient.mobile || 'N/A' }} |
-                                                <i class="bi bi-gender-ambiguous me-1"></i> {{ selectedPatient.gender }} |
-                                                <i class="bi bi-calendar me-1"></i> {{ selectedPatient.age }} {{ selectedPatient.age_unit }}
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <strong class="fs-6">{{ selectedPatient.patient_name || 'N/A' }}</strong>
+                                                <span class="badge bg-primary ms-2">{{ selectedPatient.pcd || 'N/A' }}</span>
+                                            </div>
+                                            <div class="small">
+                                                <div class="mb-1">
+                                                    <i class="bi bi-phone me-1"></i> {{ selectedPatient.mobile || 'N/A' }}
+                                                    <span class="mx-2">|</span>
+                                                    <i class="bi bi-gender-ambiguous me-1"></i> {{ selectedPatient.gender || 'N/A' }}
+                                                    <span class="mx-2">|</span>
+                                                    <i class="bi bi-calendar me-1"></i> {{ selectedPatient.age || 'N/A' }} {{ selectedPatient.age_unit || '' }}
+                                                </div>
+                                                <div v-if="selectedPatient.address">
+                                                    <i class="bi bi-geo-alt me-1"></i> {{ selectedPatient.address }}
+                                                </div>
                                             </div>
                                         </div>
                                         <button type="button" class="btn btn-sm btn-outline-danger" @click="clearPatient">
                                             <i class="bi bi-x"></i>
                                         </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- New Patient Form -->
-                            <div v-if="patientMode === 'new'">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Patient Name <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" v-model="newPatient.patient_name" required>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Gender <span class="text-danger">*</span></label>
-                                        <select class="form-select" v-model="newPatient.gender" required>
-                                            <option value="">Select</option>
-                                            <option value="male">Male</option>
-                                            <option value="female">Female</option>
-                                            <option value="other">Other</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Mobile</label>
-                                        <input type="tel" class="form-control" v-model="newPatient.mobile"
-                                               placeholder="10 digit mobile">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">Age <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" v-model="newPatient.age" min="0" required>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">Unit</label>
-                                        <select class="form-select" v-model="newPatient.age_unit">
-                                            <option value="years">Years</option>
-                                            <option value="months">Months</option>
-                                            <option value="days">Days</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Guardian Name</label>
-                                        <input type="text" class="form-control" v-model="newPatient.guardian_name">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Aadhaar (Optional)</label>
-                                        <input type="text" class="form-control" v-model="newPatient.aadhar_number"
-                                               placeholder="12 digit Aadhaar">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Address</label>
-                                        <input type="text" class="form-control" v-model="newPatient.address">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">City</label>
-                                        <input type="text" class="form-control" v-model="newPatient.city">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">PIN Code</label>
-                                        <input type="text" class="form-control" v-model="newPatient.pincode">
                                     </div>
                                 </div>
                             </div>
@@ -653,10 +603,46 @@ const formatDate = (date) => {
     });
 };
 
+// Redirect to patient creation form
+const createNewPatient = () => {
+    router.push('/patients/create?returnToOPD=true');
+};
+
+// Load patient from query parameter if coming from patient creation
+const loadPatientFromQuery = async () => {
+    const patientId = route.query.patient;
+    if (patientId) {
+        try {
+            const response = await axios.get(`/api/patients/${patientId}`);
+            const patientData = response.data.data || response.data;
+
+            if (patientData) {
+                // Format patient data to match expected structure
+                const formattedPatient = {
+                    ...patientData,
+                    patient_name: patientData.patient_name || [patientData.first_name, patientData.middle_name, patientData.last_name].filter(Boolean).join(' '),
+                    gender: patientData.genderRelation?.gender_name || patientData.gender || '',
+                    mobile: patientData.mobile || patientData.permanent_mobile || '',
+                    age: patientData.age_years || patientData.age || '',
+                    age_unit: patientData.age_years ? 'years' : (patientData.age_unit || 'years'),
+                    address: patientData.permanent_address || patientData.address || ''
+                };
+
+                await selectPatient(formattedPatient);
+            }
+        } catch (error) {
+            console.error('Error loading patient:', error);
+        }
+    }
+};
+
 // Watch visit type to check free followup
 watch(() => form.visit_type, () => {
     checkFreeFollowup();
 });
 
-onMounted(fetchData);
+onMounted(async () => {
+    await fetchData();
+    await loadPatientFromQuery();
+});
 </script>

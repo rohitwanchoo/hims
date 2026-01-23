@@ -136,7 +136,7 @@ return new class extends Migration
             $table->foreign('hospital_id')->references('hospital_id')->on('hospitals')->cascadeOnDelete();
             $table->foreign('patient_id')->references('patient_id')->on('patients')->cascadeOnDelete();
             $table->foreign('bill_id')->references('bill_id')->on('bills')->nullOnDelete();
-            $table->foreign('issued_by')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('issued_by')->references('user_id')->on('users')->nullOnDelete();
         });
 
         // Rate Change Requests (For doctor approval workflow)
@@ -158,8 +158,8 @@ return new class extends Migration
             $table->foreign('hospital_id')->references('hospital_id')->on('hospitals')->cascadeOnDelete();
             $table->foreign('opd_id')->references('opd_id')->on('opd_visits')->nullOnDelete();
             $table->foreign('service_id')->references('service_id')->on('services')->nullOnDelete();
-            $table->foreign('requested_by')->references('id')->on('users');
-            $table->foreign('approved_by')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('requested_by')->references('user_id')->on('users');
+            $table->foreign('approved_by')->references('user_id')->on('users')->nullOnDelete();
         });
 
         // OPD Time Slots (For slot-based appointments)

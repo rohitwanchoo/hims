@@ -50,7 +50,7 @@ class ReportController extends Controller
         ]);
     }
 
-    public function patientReport(Request $request)
+    public function patientSummary(Request $request)
     {
         $query = Patient::query();
 
@@ -79,7 +79,7 @@ class ReportController extends Controller
         ]);
     }
 
-    public function revenueReport(Request $request)
+    public function revenue(Request $request)
     {
         $fromDate = $request->from_date ?? now()->startOfMonth()->toDateString();
         $toDate = $request->to_date ?? now()->toDateString();
@@ -104,7 +104,7 @@ class ReportController extends Controller
         ]);
     }
 
-    public function departmentReport(Request $request)
+    public function departmentWise(Request $request)
     {
         return response()->json([
             'opd_by_department' => DB::table('opd_visits')

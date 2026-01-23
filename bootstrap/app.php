@@ -19,6 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'super_admin' => \App\Http\Middleware\SuperAdmin::class,
         ]);
+
+        // Configure authentication redirect - return null for API routes to get JSON 401
+        $middleware->redirectGuestsTo(fn ($request) => $request->expectsJson() ? null : '/login');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

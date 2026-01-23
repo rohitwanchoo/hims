@@ -2,32 +2,42 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToHospital;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class InsuranceCompany extends Model
 {
-    protected $primaryKey = 'company_id';
+    use HasFactory, BelongsToHospital;
+
+    protected $primaryKey = 'insurance_id';
 
     protected $fillable = [
+        'hospital_id',
         'company_name',
+        'company_code',
+        'address',
         'contact_person',
         'phone',
+        'mobile',
         'email',
-        'address',
-        'is_active',
+        'website',
+        'discount_percent',
+        'is_active'
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'discount_percent' => 'decimal:2'
     ];
+
+    public function getRouteKeyName()
+    {
+        return 'insurance_id';
+    }
 
     public function patients()
     {
-        return $this->hasMany(Patient::class, 'insurance_company_id', 'company_id');
-    }
-
-    public function claims()
-    {
-        return $this->hasMany(InsuranceClaim::class, 'company_id', 'company_id');
+        return $this->hasMany(Patient::class, 'insurance_company_id', 'insurance_id');
     }
 }

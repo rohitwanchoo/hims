@@ -56,7 +56,7 @@ class OpdConfigurationSeeder extends Seeder
 
         // Get doctor IDs and class IDs
         $doctors = DB::table('doctors')->where('hospital_id', $hospitalId)->get();
-        $classes = DB::table('classes')->where('hospital_id', $hospitalId)->get();
+        $classes = DB::table('classes')->get();
 
         // Create doctor OPD rates
         foreach ($doctors as $doctor) {

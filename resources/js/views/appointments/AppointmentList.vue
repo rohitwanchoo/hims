@@ -1,82 +1,70 @@
 <template>
     <div>
+        <!-- Page Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h5 class="mb-1">Appointments</h5>
+                <h4 class="mb-1">Appointments</h4>
                 <p class="text-muted mb-0">Manage patient appointments</p>
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-primary" @click="showTransferModal = true">
-                    <i class="bi bi-arrow-left-right me-1"></i> Transfer
+                    <i class="bi bi-arrow-left-right me-1"></i>Transfer
                 </button>
                 <router-link to="/appointments/create" class="btn btn-primary">
-                    <i class="bi bi-plus-lg me-1"></i> New Appointment
+                    <i class="bi bi-plus-lg me-1"></i>New Appointment
                 </router-link>
             </div>
         </div>
 
-        <!-- Summary Cards -->
-        <div class="row mb-4">
-            <div class="col-md-2">
-                <div class="card text-center">
-                    <div class="card-body py-3">
-                        <h4 class="mb-0">{{ summary.total }}</h4>
-                        <small class="text-muted">Total</small>
-                    </div>
+        <!-- Summary Stats Cards -->
+        <div class="stats-row mb-4">
+            <div class="stat-card primary">
+                <div class="stat-icon"><i class="bi bi-calendar-check"></i></div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ summary.total }}</div>
+                    <div class="stat-label">Total Appointments</div>
                 </div>
             </div>
-            <div class="col-md-2">
-                <div class="card text-center bg-warning bg-opacity-10">
-                    <div class="card-body py-3">
-                        <h4 class="mb-0 text-warning">{{ summary.scheduled }}</h4>
-                        <small class="text-muted">Scheduled</small>
-                    </div>
+            <div class="stat-card warning">
+                <div class="stat-icon"><i class="bi bi-clock"></i></div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ summary.scheduled }}</div>
+                    <div class="stat-label">Scheduled</div>
                 </div>
             </div>
-            <div class="col-md-2">
-                <div class="card text-center bg-info bg-opacity-10">
-                    <div class="card-body py-3">
-                        <h4 class="mb-0 text-info">{{ summary.confirmed }}</h4>
-                        <small class="text-muted">Arrived</small>
-                    </div>
+            <div class="stat-card info">
+                <div class="stat-icon"><i class="bi bi-person-check"></i></div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ summary.confirmed }}</div>
+                    <div class="stat-label">Arrived</div>
                 </div>
             </div>
-            <div class="col-md-2">
-                <div class="card text-center bg-primary bg-opacity-10">
-                    <div class="card-body py-3">
-                        <h4 class="mb-0 text-primary">{{ summary.checked_in }}</h4>
-                        <small class="text-muted">Checked In</small>
-                    </div>
+            <div class="stat-card success">
+                <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ summary.completed }}</div>
+                    <div class="stat-label">Completed</div>
                 </div>
             </div>
-            <div class="col-md-2">
-                <div class="card text-center bg-success bg-opacity-10">
-                    <div class="card-body py-3">
-                        <h4 class="mb-0 text-success">{{ summary.completed }}</h4>
-                        <small class="text-muted">Completed</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="card text-center bg-danger bg-opacity-10">
-                    <div class="card-body py-3">
-                        <h4 class="mb-0 text-danger">{{ summary.cancelled }}</h4>
-                        <small class="text-muted">Cancelled</small>
-                    </div>
+            <div class="stat-card danger">
+                <div class="stat-icon"><i class="bi bi-x-circle"></i></div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ summary.cancelled }}</div>
+                    <div class="stat-label">Cancelled</div>
                 </div>
             </div>
         </div>
 
-        <!-- Filters -->
-        <div class="card mb-3">
+        <!-- Filters Card -->
+        <div class="card mb-4">
             <div class="card-body">
-                <div class="row g-3">
+                <div class="row g-3 align-items-end">
                     <div class="col-md-2">
-                        <label class="form-label small">Date</label>
+                        <label class="form-label">Date</label>
                         <input type="date" class="form-control" v-model="filters.date" @change="fetchAppointments">
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label small">Doctor</label>
+                        <label class="form-label">Doctor</label>
                         <select class="form-select" v-model="filters.doctor_id" @change="fetchAppointments">
                             <option value="">All Doctors</option>
                             <option v-for="doc in doctors" :key="doc.doctor_id" :value="doc.doctor_id">
@@ -85,7 +73,7 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label small">Department</label>
+                        <label class="form-label">Department</label>
                         <select class="form-select" v-model="filters.department_id" @change="fetchAppointments">
                             <option value="">All Departments</option>
                             <option v-for="dept in departments" :key="dept.department_id" :value="dept.department_id">
@@ -94,7 +82,7 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label small">Status</label>
+                        <label class="form-label">Status</label>
                         <select class="form-select" v-model="filters.status" @change="fetchAppointments">
                             <option value="">All Status</option>
                             <option value="scheduled">Scheduled</option>
@@ -107,27 +95,30 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label small">Booking Mode</label>
-                        <select class="form-select" v-model="filters.booking_mode" @change="fetchAppointments">
-                            <option value="">All Modes</option>
-                            <option value="walk_in">Walk-in</option>
-                            <option value="telephonic">Telephonic</option>
-                            <option value="online">Online</option>
-                        </select>
+                        <label class="form-label">Search</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control" v-model="filters.search" @input="debounceSearch" placeholder="Patient/Mobile">
+                        </div>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label small">Search</label>
-                        <input type="text" class="form-control" v-model="filters.search" @input="debounceSearch" placeholder="Patient name/mobile">
+                        <button class="btn btn-light w-100" @click="resetFilters">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Reset
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Appointments Table -->
+        <!-- Appointments Table Card -->
         <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Appointment List</h5>
+                <span class="badge badge-soft-primary">{{ appointments.length }} appointments</span>
+            </div>
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
+                <table class="table mb-0">
+                    <thead>
                         <tr>
                             <th>Slot</th>
                             <th>Time</th>
@@ -137,52 +128,64 @@
                             <th>Mode</th>
                             <th>Status</th>
                             <th>OPD Reg.</th>
-                            <th width="150">Actions</th>
+                            <th class="text-center" width="150">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-if="loading">
-                            <td colspan="9" class="text-center py-4">
-                                <div class="spinner-border spinner-border-sm me-2"></div> Loading...
+                            <td colspan="9" class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="text-muted mt-2 mb-0">Loading appointments...</p>
                             </td>
                         </tr>
                         <tr v-else-if="appointments.length === 0">
-                            <td colspan="9" class="text-center py-4 text-muted">
-                                <i class="bi bi-calendar-x" style="font-size: 2rem;"></i>
-                                <p class="mb-0 mt-2">No appointments found for this date</p>
+                            <td colspan="9" class="text-center py-5">
+                                <i class="bi bi-calendar-x text-muted" style="font-size: 3rem;"></i>
+                                <p class="text-muted mt-2 mb-0">No appointments found for this date</p>
                             </td>
                         </tr>
-                        <tr v-for="apt in appointments" :key="apt.appointment_id" :class="{'table-success': apt.status === 'confirmed', 'table-danger': apt.status === 'cancelled'}">
+                        <tr v-for="apt in appointments" :key="apt.appointment_id" :class="getRowClass(apt.status)">
                             <td>
-                                <span class="badge bg-secondary">{{ apt.slot_number || '-' }}</span>
+                                <span class="badge badge-soft-secondary">{{ apt.slot_number || '-' }}</span>
                             </td>
                             <td>
                                 <div class="fw-semibold">{{ formatTime(apt.appointment_time) }}</div>
                                 <small class="text-muted">{{ apt.duration_minutes || 15 }} min</small>
                             </td>
                             <td>
-                                <div class="fw-semibold">{{ apt.patient?.patient_name }}</div>
-                                <small class="text-muted">{{ apt.patient?.pcd }}</small>
-                                <span v-if="apt.priority === 'urgent'" class="badge bg-warning ms-1">Urgent</span>
-                                <span v-if="apt.priority === 'emergency'" class="badge bg-danger ms-1">Emergency</span>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar avatar-sm avatar-soft-primary me-2">
+                                        {{ getInitials(apt.patient?.patient_name) }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold">{{ apt.patient?.patient_name }}</div>
+                                        <small class="text-muted">{{ apt.patient?.pcd }}</small>
+                                        <span v-if="apt.priority === 'urgent'" class="badge badge-soft-warning ms-1">Urgent</span>
+                                        <span v-if="apt.priority === 'emergency'" class="badge badge-soft-danger ms-1">Emergency</span>
+                                    </div>
+                                </div>
                             </td>
                             <td>
-                                <div>{{ apt.doctor?.full_name }}</div>
+                                <div class="fw-medium">{{ apt.doctor?.full_name }}</div>
                                 <small class="text-muted">{{ apt.department?.department_name }}</small>
                             </td>
                             <td>
-                                <span class="badge" :class="apt.service_type === 'followup' ? 'bg-info' : 'bg-primary'">
+                                <span class="badge" :class="apt.service_type === 'followup' ? 'badge-soft-info' : 'badge-soft-primary'">
                                     {{ apt.service_type === 'followup' ? 'Follow-up' : 'First Visit' }}
                                 </span>
                             </td>
                             <td>
-                                <i v-if="apt.booking_mode === 'online'" class="bi bi-globe text-primary" title="Online"></i>
-                                <i v-else-if="apt.booking_mode === 'telephonic'" class="bi bi-telephone text-success" title="Telephonic"></i>
-                                <i v-else class="bi bi-person-walking text-secondary" title="Walk-in"></i>
-                                <span class="ms-1 small">{{ getBookingModeLabel(apt.booking_mode) }}</span>
+                                <div class="d-flex align-items-center">
+                                    <i v-if="apt.booking_mode === 'online'" class="bi bi-globe text-primary me-1" title="Online"></i>
+                                    <i v-else-if="apt.booking_mode === 'telephonic'" class="bi bi-telephone text-success me-1" title="Telephonic"></i>
+                                    <i v-else class="bi bi-person-walking text-secondary me-1" title="Walk-in"></i>
+                                    <span class="small">{{ getBookingModeLabel(apt.booking_mode) }}</span>
+                                </div>
                             </td>
                             <td>
-                                <span class="badge" :class="getStatusClass(apt.status)">
+                                <span class="badge" :class="getStatusBadgeClass(apt.status)">
                                     {{ getStatusLabel(apt.status) }}
                                 </span>
                                 <div v-if="apt.arrived_at" class="small text-success mt-1">
@@ -190,28 +193,25 @@
                                 </div>
                             </td>
                             <td>
-                                <router-link v-if="apt.opd_id" :to="`/opd/${apt.opd_id}`" class="text-success">
+                                <router-link v-if="apt.opd_id" :to="`/opd/${apt.opd_id}`" class="badge badge-soft-success">
                                     <i class="bi bi-check-circle-fill me-1"></i>
                                     OPD #{{ apt.opd_visit?.opd_number || apt.opd_id }}
                                 </router-link>
                                 <span v-else class="text-muted">-</span>
                             </td>
                             <td>
-                                <div class="btn-group btn-group-sm">
-                                    <router-link :to="`/appointments/${apt.appointment_id}`" class="btn btn-outline-primary" title="View">
+                                <div class="table-actions justify-content-center">
+                                    <router-link :to="`/appointments/${apt.appointment_id}`" class="btn btn-sm btn-soft-primary" title="View">
                                         <i class="bi bi-eye"></i>
                                     </router-link>
-                                    <button v-if="apt.status === 'scheduled'" class="btn btn-outline-success" @click="confirmAppointment(apt)" title="Mark Arrived">
+                                    <button v-if="apt.status === 'scheduled'" class="btn btn-sm btn-soft-success" @click="confirmAppointment(apt)" title="Mark Arrived">
                                         <i class="bi bi-check-lg"></i>
                                     </button>
-                                    <button v-if="['scheduled', 'confirmed'].includes(apt.status) && !apt.opd_id" class="btn btn-outline-info" @click="convertToOpd(apt)" title="Convert to OPD">
+                                    <button v-if="['scheduled', 'confirmed'].includes(apt.status) && !apt.opd_id" class="btn btn-sm btn-soft-info" @click="convertToOpd(apt)" title="Convert to OPD">
                                         <i class="bi bi-arrow-right-circle"></i>
                                     </button>
-                                    <button v-if="['scheduled', 'confirmed'].includes(apt.status)" class="btn btn-outline-danger" @click="openCancelModal(apt)" title="Cancel">
+                                    <button v-if="['scheduled', 'confirmed'].includes(apt.status)" class="btn btn-sm btn-soft-danger" @click="openCancelModal(apt)" title="Cancel">
                                         <i class="bi bi-x-lg"></i>
-                                    </button>
-                                    <button v-if="['scheduled', 'confirmed'].includes(apt.status)" class="btn btn-outline-secondary" @click="markNoShow(apt)" title="No Show">
-                                        <i class="bi bi-person-x"></i>
                                     </button>
                                 </div>
                             </td>
@@ -226,16 +226,19 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Cancel Appointment</h5>
+                        <h5 class="modal-title"><i class="bi bi-x-circle me-2"></i>Cancel Appointment</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <p v-if="selectedAppointment">
-                            Cancel appointment for <strong>{{ selectedAppointment.patient?.patient_name }}</strong>
-                            with <strong>Dr. {{ selectedAppointment.doctor?.full_name }}</strong>?
-                        </p>
+                        <div class="alert alert-warning d-flex align-items-center" v-if="selectedAppointment">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <div>
+                                Cancel appointment for <strong>{{ selectedAppointment.patient?.patient_name }}</strong>
+                                with <strong>Dr. {{ selectedAppointment.doctor?.full_name }}</strong>?
+                            </div>
+                        </div>
                         <div class="mb-3">
-                            <label class="form-label">Cancel Reason</label>
+                            <label class="form-label">Cancel Reason <span class="text-danger">*</span></label>
                             <select class="form-select" v-model="cancelForm.cancel_reason_id">
                                 <option value="">Select reason...</option>
                                 <option v-for="reason in cancelReasons" :key="reason.cancel_reason_id" :value="reason.cancel_reason_id">
@@ -249,7 +252,7 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
                         <button type="button" class="btn btn-danger" @click="cancelAppointment" :disabled="cancelling">
                             <span v-if="cancelling" class="spinner-border spinner-border-sm me-1"></span>
                             Cancel Appointment
@@ -264,11 +267,11 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Transfer Appointments</h5>
+                        <h5 class="modal-title"><i class="bi bi-arrow-left-right me-2"></i>Transfer Appointments</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="text-muted">Transfer all appointments from one doctor to another for a specific date.</p>
+                        <p class="text-muted mb-4">Transfer all appointments from one doctor to another for a specific date.</p>
                         <div class="mb-3">
                             <label class="form-label">From Doctor <span class="text-danger">*</span></label>
                             <select class="form-select" v-model="transferForm.from_doctor_id" required>
@@ -297,7 +300,7 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
                         <button type="button" class="btn btn-primary" @click="transferAppointments" :disabled="transferring || !transferForm.from_doctor_id || !transferForm.to_doctor_id">
                             <span v-if="transferring" class="spinner-border spinner-border-sm me-1"></span>
                             Transfer Appointments
@@ -415,6 +418,20 @@ const debounceSearch = () => {
     searchTimeout = setTimeout(fetchAppointments, 500);
 };
 
+const resetFilters = () => {
+    filters.date = new Date().toISOString().split('T')[0];
+    filters.doctor_id = '';
+    filters.department_id = '';
+    filters.status = '';
+    filters.search = '';
+    fetchAppointments();
+};
+
+const getInitials = (name) => {
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+};
+
 const formatTime = (time) => {
     if (!time) return '-';
     const [hours, minutes] = time.split(':');
@@ -424,18 +441,24 @@ const formatTime = (time) => {
     return `${hour}:${minutes} ${ampm}`;
 };
 
-const getStatusClass = (status) => {
+const getRowClass = (status) => {
+    if (status === 'confirmed') return 'table-row-success';
+    if (status === 'cancelled') return 'table-row-danger';
+    return '';
+};
+
+const getStatusBadgeClass = (status) => {
     const classes = {
-        'scheduled': 'bg-warning',
-        'confirmed': 'bg-info',
-        'checked_in': 'bg-primary',
-        'in_consultation': 'bg-purple',
-        'completed': 'bg-success',
-        'cancelled': 'bg-danger',
-        'no_show': 'bg-secondary',
-        'transferred': 'bg-dark'
+        'scheduled': 'badge-soft-warning',
+        'confirmed': 'badge-soft-info',
+        'checked_in': 'badge-soft-primary',
+        'in_consultation': 'badge-soft-secondary',
+        'completed': 'badge-soft-success',
+        'cancelled': 'badge-soft-danger',
+        'no_show': 'badge-soft-secondary',
+        'transferred': 'badge-soft-secondary'
     };
-    return classes[status] || 'bg-secondary';
+    return classes[status] || 'badge-soft-secondary';
 };
 
 const getStatusLabel = (status) => {
@@ -502,16 +525,6 @@ const convertToOpd = async (apt) => {
     }
 };
 
-const markNoShow = async (apt) => {
-    if (!confirm('Mark this appointment as No Show?')) return;
-    try {
-        await axios.post(`/api/appointments/${apt.appointment_id}/no-show`);
-        await fetchAppointments();
-    } catch (error) {
-        alert(error.response?.data?.message || 'Error marking as no show');
-    }
-};
-
 const transferAppointments = async () => {
     transferring.value = true;
     try {
@@ -552,7 +565,35 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.bg-purple {
-    background-color: #6f42c1 !important;
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+}
+
+.table-row-success {
+    background-color: var(--success-light) !important;
+}
+
+.table-row-danger {
+    background-color: var(--danger-light) !important;
+}
+
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+}
+
+@media (max-width: 1199.98px) {
+    .stats-row {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 767.98px) {
+    .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 </style>

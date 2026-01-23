@@ -11,17 +11,17 @@ class LabOrderDetail extends Model
     protected $fillable = [
         'order_id',
         'test_id',
-        'result',
-        'result_date',
-        'status',
-        'price',
-        'notes',
-        'performed_by',
+        'rate',
+        'result_value',
+        'result_status',
+        'remarks',
+        'verified_by',
+        'verified_at',
     ];
 
     protected $casts = [
-        'result_date' => 'datetime',
-        'price' => 'decimal:2',
+        'verified_at' => 'datetime',
+        'rate' => 'decimal:2',
     ];
 
     public function order()
@@ -34,8 +34,8 @@ class LabOrderDetail extends Model
         return $this->belongsTo(LabTest::class, 'test_id', 'test_id');
     }
 
-    public function performedBy()
+    public function verifiedBy()
     {
-        return $this->belongsTo(User::class, 'performed_by', 'user_id');
+        return $this->belongsTo(User::class, 'verified_by', 'user_id');
     }
 }

@@ -9,8 +9,8 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'bootstrap';
 
-// Import Custom Dashboard CSS
-import '../css/dashboard.css';
+// Import Dreams EMR Design System
+import '../css/dreams-emr.css';
 
 const app = createApp(App);
 const pinia = createPinia();

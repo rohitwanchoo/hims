@@ -260,6 +260,9 @@ class DatabaseSeeder extends Seeder
         // Call OPD Configuration Seeder
         $this->call(OpdConfigurationSeeder::class);
 
+        // Call Radiology Seeder
+        $this->call(RadiologySeeder::class);
+
         // Call Roles and Permissions Seeder
         $this->call(RolesAndPermissionsSeeder::class);
     }

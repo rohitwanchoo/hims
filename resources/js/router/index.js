@@ -23,6 +23,7 @@ import DepartmentList from '../views/departments/DepartmentList.vue';
 // Appointments
 import AppointmentList from '../views/appointments/AppointmentList.vue';
 import AppointmentForm from '../views/appointments/AppointmentForm.vue';
+import CalendarView from '../views/appointments/CalendarView.vue';
 
 // OPD
 import OpdList from '../views/opd/OpdList.vue';
@@ -110,6 +111,24 @@ import NotificationSettings from '../views/notifications/NotificationSettings.vu
 // ABHA / ABDM
 import AbhaManagement from '../views/abha/AbhaManagement.vue';
 
+// Masters - Reception
+import PrefixList from '../views/masters/reception/PrefixList.vue';
+import GenderList from '../views/masters/reception/GenderList.vue';
+import BloodGroupList from '../views/masters/reception/BloodGroupList.vue';
+import PatientTypeList from '../views/masters/reception/PatientTypeList.vue';
+import MaritalStatusList from '../views/masters/reception/MaritalStatusList.vue';
+import ReferenceDoctorList from '../views/masters/reception/ReferenceDoctorList.vue';
+import InsuranceCompanyList from '../views/masters/reception/InsuranceCompanyList.vue';
+import QualificationList from '../views/masters/reception/QualificationList.vue';
+import ConsultMasterList from '../views/masters/reception/ConsultMasterList.vue';
+
+// Masters - Address
+import CountryList from '../views/masters/address/CountryList.vue';
+import StateList from '../views/masters/address/StateList.vue';
+import DistrictList from '../views/masters/address/DistrictList.vue';
+import CityList from '../views/masters/address/CityList.vue';
+import AreaList from '../views/masters/address/AreaList.vue';
+
 const routes = [
     {
         path: '/login',
@@ -126,6 +145,78 @@ const routes = [
                 path: '',
                 name: 'dashboard',
                 component: Dashboard
+            },
+            // Masters - Reception
+            {
+                path: 'masters/reception/prefix',
+                name: 'masters.reception.prefix',
+                component: PrefixList
+            },
+            {
+                path: 'masters/reception/gender',
+                name: 'masters.reception.gender',
+                component: GenderList
+            },
+            {
+                path: 'masters/reception/blood-group',
+                name: 'masters.reception.blood-group',
+                component: BloodGroupList
+            },
+            {
+                path: 'masters/reception/patient-type',
+                name: 'masters.reception.patient-type',
+                component: PatientTypeList
+            },
+            {
+                path: 'masters/reception/marital-status',
+                name: 'masters.reception.marital-status',
+                component: MaritalStatusList
+            },
+            {
+                path: 'masters/reception/reference-doctor',
+                name: 'masters.reception.reference-doctor',
+                component: ReferenceDoctorList
+            },
+            {
+                path: 'masters/reception/insurance-company',
+                name: 'masters.reception.insurance-company',
+                component: InsuranceCompanyList
+            },
+            {
+                path: 'masters/reception/qualification',
+                name: 'masters.reception.qualification',
+                component: QualificationList
+            },
+            {
+                path: 'masters/reception/consult-master',
+                name: 'masters.reception.consult-master',
+                component: ConsultMasterList
+            },
+            // Masters - Address
+            {
+                path: 'masters/address/country',
+                name: 'masters.address.country',
+                component: CountryList
+            },
+            {
+                path: 'masters/address/state',
+                name: 'masters.address.state',
+                component: StateList
+            },
+            {
+                path: 'masters/address/district',
+                name: 'masters.address.district',
+                component: DistrictList
+            },
+            {
+                path: 'masters/address/city',
+                name: 'masters.address.city',
+                component: CityList
+            },
+            {
+                path: 'masters/address/area',
+                name: 'masters.address.area',
+                component: AreaList
             },
             // Patients
             {
@@ -185,6 +276,11 @@ const routes = [
                 path: 'appointments/:id',
                 name: 'appointments.view',
                 component: AppointmentForm
+            },
+            {
+                path: 'calendar',
+                name: 'calendar',
+                component: CalendarView
             },
             // OPD
             {

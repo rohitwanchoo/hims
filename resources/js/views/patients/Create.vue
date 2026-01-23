@@ -224,10 +224,11 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
 
 const router = useRouter()
+const route = useRoute()
 const loading = ref(false)
 const errors = ref({})
 
@@ -253,9 +254,16 @@ const submitForm = async () => {
     errors.value = {}
 
     const response = await axios.post('/api/patients', form)
-    
+
     if (response.data.success) {
-      router.push('/patients')
+      const patientId = response.data.data?.patient_id || response.data.patient_id
+
+      // Check if we should return to OPD form
+      if (route.query.returnToOPD === 'true' && patientId) {
+        router.push(`/opd/create?patient=${patientId}`)
+      } else {
+        router.push('/patients')
+      }
     }
   } catch (error) {
     if (error.response?.status === 422) {

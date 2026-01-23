@@ -37,14 +37,60 @@
                         </div>
                         <div class="card-body">
                             <div class="row g-3">
-                                <div class="col-md-8">
+                                <div class="col-md-12">
                                     <label class="form-label">Patient <span class="text-danger">*</span></label>
-                                    <select class="form-select" v-model="form.patient_id" required @change="onPatientChange">
-                                        <option value="">Select Patient ({{ patients.length }} available)</option>
-                                        <option v-for="p in patients" :key="p.patient_id" :value="p.patient_id">
-                                            {{ p.pcd }} - {{ p.patient_name }}
-                                        </option>
-                                    </select>
+                                    <div class="d-flex gap-2">
+                                        <div class="flex-grow-1 position-relative">
+                                            <input
+                                                type="text"
+                                                class="form-control pe-5"
+                                                v-model="patientSearch"
+                                                @input="filterPatients"
+                                                @focus="showPatientDropdown = true"
+                                                @blur="hidePatientDropdown"
+                                                placeholder="Search by name or PCD..."
+                                                autocomplete="off"
+                                            />
+                                            <button
+                                                v-if="form.patient_id && patientSearch"
+                                                type="button"
+                                                class="btn-clear-patient"
+                                                @click="clearPatient"
+                                                title="Clear selected patient">
+                                                <i class="bi bi-x-circle-fill"></i>
+                                            </button>
+                                            <!-- Patient Dropdown -->
+                                            <div v-if="showPatientDropdown && filteredPatients.length > 0"
+                                                 class="patient-dropdown">
+                                                <div class="patient-dropdown-item"
+                                                     v-for="p in filteredPatients.slice(0, 10)"
+                                                     :key="p.patient_id"
+                                                     @mousedown.prevent="selectPatient(p)"
+                                                     :class="{ 'active': form.patient_id === p.patient_id }">
+                                                    <div class="patient-info">
+                                                        <div class="patient-name">{{ p.patient_name }}</div>
+                                                        <div class="patient-details">
+                                                            <span class="badge bg-secondary me-1">{{ p.pcd }}</span>
+                                                            <small class="text-muted">
+                                                                {{ p.gender?.gender_name || 'N/A' }} | {{ p.age || 'N/A' }} yrs
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div v-if="patients.length > 10" class="patient-dropdown-footer">
+                                                    Showing {{ Math.min(10, filteredPatients.length) }} of {{ filteredPatients.length }} patients
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <router-link
+                                            :to="{ path: '/patients/create', query: { returnTo: $route.fullPath } }"
+                                            class="btn btn-primary d-flex align-items-center"
+                                            style="white-space: nowrap;"
+                                            title="Add New Patient">
+                                            <i class="bi bi-plus-lg me-1"></i> Add Patient
+                                        </router-link>
+                                    </div>
+                                    <input type="hidden" v-model="form.patient_id" required>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Patient Class</label>
@@ -200,7 +246,17 @@
 
                             <!-- Time Slot Selection -->
                             <div class="mt-4" v-if="form.doctor_id && form.appointment_date">
-                                <label class="form-label">Select Time Slot <span class="text-danger">*</span></label>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="form-label mb-0">Select Time Slot <span class="text-danger">*</span></label>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-primary"
+                                            @click="fetchTimeSlots"
+                                            :disabled="loadingSlots"
+                                            title="Refresh availability">
+                                        <i class="bi bi-arrow-clockwise" :class="{ 'spin': loadingSlots }"></i>
+                                        Refresh
+                                    </button>
+                                </div>
 
                                 <div v-if="loadingSlots" class="text-center py-3">
                                     <span class="spinner-border spinner-border-sm me-2"></span> Loading available slots...
@@ -217,22 +273,77 @@
                                          class="time-slot"
                                          :class="{
                                              'selected': selectedSlot === slot.slot_number,
-                                             'unavailable': !slot.available
+                                             'unavailable': !slot.available,
+                                             'limited': slot.available && (slot.max_patients - slot.booked) <= 1
                                          }"
-                                         @click="selectSlot(slot)">
-                                        <div class="slot-time">{{ formatTime(slot.start_time) }}</div>
-                                        <div class="slot-info">
-                                            <small v-if="slot.available">
-                                                {{ slot.max_patients - slot.booked }} available
-                                            </small>
-                                            <small v-else class="text-danger">Full</small>
+                                         @click="selectSlot(slot)"
+                                         :title="slot.available ? `${slot.max_patients - slot.booked} of ${slot.max_patients} slots available` : 'Fully booked'">
+                                        <div class="slot-header">
+                                            <div class="slot-time">
+                                                <i class="bi bi-clock me-1"></i>
+                                                {{ formatTime(slot.start_time) }}
+                                            </div>
+                                            <div class="slot-status-icon">
+                                                <i v-if="selectedSlot === slot.slot_number" class="bi bi-check-circle-fill text-primary"></i>
+                                                <i v-else-if="!slot.available" class="bi bi-lock-fill text-danger"></i>
+                                                <i v-else-if="(slot.max_patients - slot.booked) <= 1" class="bi bi-exclamation-circle-fill text-warning"></i>
+                                                <i v-else class="bi bi-circle text-success"></i>
+                                            </div>
+                                        </div>
+                                        <div class="slot-availability">
+                                            <div class="availability-bar">
+                                                <div class="availability-progress"
+                                                     :style="{ width: ((slot.booked / slot.max_patients) * 100) + '%' }"
+                                                     :class="{
+                                                         'bg-danger': !slot.available,
+                                                         'bg-warning': slot.available && (slot.max_patients - slot.booked) <= 1,
+                                                         'bg-success': slot.available && (slot.max_patients - slot.booked) > 1
+                                                     }">
+                                                </div>
+                                            </div>
+                                            <div class="slot-info mt-1">
+                                                <small v-if="slot.available" class="text-success">
+                                                    <i class="bi bi-person-check-fill me-1"></i>
+                                                    {{ slot.max_patients - slot.booked }}/{{ slot.max_patients }} available
+                                                </small>
+                                                <small v-else class="text-danger">
+                                                    <i class="bi bi-x-circle-fill me-1"></i>
+                                                    Fully Booked
+                                                </small>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="mt-2 text-muted small" v-if="timeSlots.length > 0">
-                                    <i class="bi bi-info-circle me-1"></i>
-                                    Total {{ availableSlotsCount }} slots available out of {{ timeSlots.length }}
+                                <div class="mt-3" v-if="timeSlots.length > 0">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="text-muted small">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            Total {{ availableSlotsCount }} of {{ timeSlots.length }} slots available
+                                        </div>
+                                        <div class="text-muted small" v-if="lastRefreshedText">
+                                            <i class="bi bi-clock-history me-1"></i>
+                                            Updated {{ lastRefreshedText }}
+                                        </div>
+                                    </div>
+                                    <div class="slot-legend">
+                                        <div class="legend-item">
+                                            <i class="bi bi-circle text-success"></i>
+                                            <span>Available</span>
+                                        </div>
+                                        <div class="legend-item">
+                                            <i class="bi bi-exclamation-circle-fill text-warning"></i>
+                                            <span>Limited</span>
+                                        </div>
+                                        <div class="legend-item">
+                                            <i class="bi bi-lock-fill text-danger"></i>
+                                            <span>Fully Booked</span>
+                                        </div>
+                                        <div class="legend-item">
+                                            <i class="bi bi-check-circle-fill text-primary"></i>
+                                            <span>Selected</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -341,7 +452,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 
@@ -365,6 +476,11 @@ const selectedSlot = ref(null);
 const saving = ref(false);
 const loadingData = ref(true);
 const loadError = ref('');
+const patientSearch = ref('');
+const filteredPatients = ref([]);
+const showPatientDropdown = ref(false);
+const lastRefreshed = ref(null);
+let autoRefreshInterval = null;
 
 // Form data
 const form = reactive({
@@ -414,6 +530,17 @@ const availableSlotsCount = computed(() => {
     return timeSlots.value.filter(s => s.available).length;
 });
 
+const lastRefreshedText = computed(() => {
+    if (!lastRefreshed.value) return '';
+    const now = new Date();
+    const diff = Math.floor((now - lastRefreshed.value) / 1000); // seconds
+    if (diff < 10) return 'just now';
+    if (diff < 60) return `${diff}s ago`;
+    const minutes = Math.floor(diff / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    return lastRefreshed.value.toLocaleTimeString();
+});
+
 // Methods
 const fetchData = async () => {
     loadingData.value = true;
@@ -457,6 +584,19 @@ const fetchData = async () => {
         console.log('Patients loaded:', patients.value.length);
         console.log('Doctors loaded:', doctors.value.length);
 
+        // Initialize filtered patients
+        filteredPatients.value = patients.value;
+
+        // Check if returning from patient creation with a new patient
+        if (route.query.patient_id) {
+            form.patient_id = parseInt(route.query.patient_id);
+            const newPatient = patients.value.find(p => p.patient_id === form.patient_id);
+            if (newPatient) {
+                patientSearch.value = `${newPatient.pcd} - ${newPatient.patient_name}`;
+                onPatientChange();
+            }
+        }
+
         // Load existing appointment if editing
         if (route.params.id) {
             const response = await axios.get(`/api/appointments/${route.params.id}`);
@@ -499,6 +639,39 @@ const fetchData = async () => {
     } finally {
         loadingData.value = false;
     }
+};
+
+const filterPatients = () => {
+    const search = patientSearch.value.toLowerCase().trim();
+    if (!search) {
+        filteredPatients.value = patients.value;
+    } else {
+        filteredPatients.value = patients.value.filter(p =>
+            p.patient_name?.toLowerCase().includes(search) ||
+            p.pcd?.toLowerCase().includes(search) ||
+            p.mobile_number?.includes(search)
+        );
+    }
+};
+
+const selectPatient = (patient) => {
+    form.patient_id = patient.patient_id;
+    patientSearch.value = `${patient.pcd} - ${patient.patient_name}`;
+    showPatientDropdown.value = false;
+    onPatientChange();
+};
+
+const clearPatient = () => {
+    form.patient_id = '';
+    patientSearch.value = '';
+    form.class_id = '';
+    showPatientDropdown.value = false;
+};
+
+const hidePatientDropdown = () => {
+    setTimeout(() => {
+        showPatientDropdown.value = false;
+    }, 200);
 };
 
 const onPatientChange = () => {
@@ -566,6 +739,8 @@ const fetchTimeSlots = async () => {
         if (response.data.message) {
             noSlotsMessage.value = response.data.message;
         }
+
+        lastRefreshed.value = new Date();
     } catch (error) {
         console.error('Error fetching time slots:', error);
         timeSlots.value = [];
@@ -636,53 +811,260 @@ watch(() => form.appointment_date, (newDate, oldDate) => {
     }
 });
 
-onMounted(fetchData);
+// Auto-refresh time slots every 30 seconds when doctor and date are selected
+const startAutoRefresh = () => {
+    stopAutoRefresh();
+    if (form.doctor_id && form.appointment_date) {
+        autoRefreshInterval = setInterval(() => {
+            if (form.doctor_id && form.appointment_date && !loadingSlots.value) {
+                fetchTimeSlots();
+            }
+        }, 30000); // 30 seconds
+    }
+};
+
+const stopAutoRefresh = () => {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
+};
+
+// Watch for doctor/date changes to manage auto-refresh
+watch([() => form.doctor_id, () => form.appointment_date], () => {
+    startAutoRefresh();
+});
+
+onMounted(async () => {
+    await fetchData();
+    startAutoRefresh();
+});
+
+onBeforeUnmount(() => {
+    stopAutoRefresh();
+});
 </script>
 
 <style scoped>
 .time-slots-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
 }
 
 .time-slot {
-    padding: 0.5rem;
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-    text-align: center;
+    padding: 0.75rem;
+    border: 2px solid #dee2e6;
+    border-radius: 0.5rem;
+    background: white;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
 }
 
 .time-slot:hover:not(.unavailable) {
     border-color: #3699ff;
-    background-color: rgba(54, 153, 255, 0.05);
+    background-color: rgba(54, 153, 255, 0.03);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(54, 153, 255, 0.15);
 }
 
 .time-slot.selected {
     border-color: #3699ff;
-    background-color: rgba(54, 153, 255, 0.1);
-    box-shadow: 0 0 0 2px rgba(54, 153, 255, 0.25);
+    background: linear-gradient(135deg, rgba(54, 153, 255, 0.1) 0%, rgba(54, 153, 255, 0.05) 100%);
+    box-shadow: 0 4px 16px rgba(54, 153, 255, 0.3);
+    transform: translateY(-2px);
 }
 
 .time-slot.unavailable {
-    background-color: #f8f9fa;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     cursor: not-allowed;
-    opacity: 0.6;
+    opacity: 0.7;
+    border-color: #ced4da;
+}
+
+.time-slot.unavailable:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.time-slot.limited:not(.selected) {
+    border-color: #ffc107;
+    background-color: rgba(255, 193, 7, 0.05);
+}
+
+.slot-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
 }
 
 .slot-time {
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+}
+
+.slot-status-icon {
+    font-size: 1.1rem;
+}
+
+.slot-availability {
+    margin-top: 0.5rem;
+}
+
+.availability-bar {
+    width: 100%;
+    height: 4px;
+    background-color: #e9ecef;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 0.25rem;
+}
+
+.availability-progress {
+    height: 100%;
+    transition: width 0.3s ease;
+    border-radius: 2px;
 }
 
 .slot-info {
     font-size: 0.75rem;
     color: #6c757d;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.time-slot.selected .slot-info {
+.time-slot.selected .slot-time {
     color: #3699ff;
+}
+
+.time-slot.unavailable .slot-time {
+    color: #6c757d;
+}
+
+/* Slot Legend */
+.slot-legend {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 0.375rem;
+    border: 1px solid #e9ecef;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.legend-item i {
+    font-size: 0.9rem;
+}
+
+/* Refresh button animation */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Clear Patient Button */
+.btn-clear-patient {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0;
+    font-size: 1.2rem;
+    line-height: 1;
+    z-index: 10;
+    transition: color 0.2s ease;
+}
+
+.btn-clear-patient:hover {
+    color: #dc3545;
+}
+
+.btn-clear-patient i {
+    display: block;
+}
+
+/* Patient Autocomplete Dropdown */
+.patient-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    margin-top: 0.25rem;
+}
+
+.patient-dropdown-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f1f3f5;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.patient-dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.patient-dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.patient-dropdown-item.active {
+    background-color: rgba(54, 153, 255, 0.1);
+    border-left: 3px solid #3699ff;
+}
+
+.patient-info .patient-name {
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 0.25rem;
+}
+
+.patient-info .patient-details {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.patient-dropdown-footer {
+    padding: 0.5rem 1rem;
+    background-color: #f8f9fa;
+    text-align: center;
+    font-size: 0.75rem;
+    color: #6c757d;
+    border-top: 1px solid #dee2e6;
 }
 </style>
