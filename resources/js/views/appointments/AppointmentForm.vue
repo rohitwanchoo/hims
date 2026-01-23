@@ -72,7 +72,7 @@
                                                         <div class="patient-details">
                                                             <span class="badge bg-secondary me-1">{{ p.pcd }}</span>
                                                             <small class="text-muted">
-                                                                {{ p.gender_relation?.gender_name || 'N/A' }} | {{ p.age || 'N/A' }} yrs
+                                                                {{ p.gender_relation?.gender_name || 'N/A' }} | {{ p.age || 'N/A' }} yrs | {{ p.mobile_number || p.mobile || p.permanent_mobile || 'N/A' }}
                                                             </small>
                                                         </div>
                                                     </div>
