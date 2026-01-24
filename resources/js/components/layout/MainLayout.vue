@@ -215,7 +215,8 @@ const menuSections = [
             { path: '/masters/reception/insurance-company', label: 'Insurance Company' },
             { path: '/masters/reception/qualification', label: 'Qualification' },
             { path: '/masters/reception/consult-master', label: 'Consult Master' },
-            { path: '/masters/prescription', label: 'Prescription Master' }
+            { path: '/masters/prescription', label: 'Prescription Master' },
+            { path: '/masters/bed-allocation', label: 'Bed Allocation' }
         ]
     },
     {
@@ -373,6 +374,7 @@ const pageTitle = computed(() => {
         '/masters/reception/qualification': 'Qualification Master',
         '/masters/reception/consult-master': 'Consult Master',
         '/masters/prescription': 'Prescription Master',
+        '/masters/bed-allocation': 'Bed Allocation Master',
         '/masters/address/country': 'Country Master',
         '/masters/address/state': 'State Master',
         '/masters/address/district': 'District Master',

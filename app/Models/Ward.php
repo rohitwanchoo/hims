@@ -33,6 +33,11 @@ class Ward extends Model
         return $this->belongsTo(Department::class, 'department_id', 'department_id');
     }
 
+    public function rooms()
+    {
+        return $this->hasMany(Room::class, 'ward_id', 'ward_id');
+    }
+
     public function beds()
     {
         return $this->hasMany(Bed::class, 'ward_id', 'ward_id');

@@ -15,9 +15,11 @@ class Bed extends Model
         'hospital_id',
         'bed_number',
         'room_number',
+        'room_id',
         'floor',
         'ward_id',
         'bed_type',
+        'bed_status',
         'charges_per_day',
         'status',
         'is_available',
@@ -28,6 +30,7 @@ class Bed extends Model
     ];
 
     protected $casts = [
+        'bed_number' => 'integer',
         'is_available' => 'boolean',
         'is_isolation' => 'boolean',
         'is_ventilator' => 'boolean',
@@ -57,6 +60,11 @@ class Bed extends Model
     public function ward()
     {
         return $this->belongsTo(Ward::class, 'ward_id', 'ward_id');
+    }
+
+    public function room()
+    {
+        return $this->belongsTo(Room::class, 'room_id', 'room_id');
     }
 
     public function currentAdmission()

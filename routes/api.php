@@ -299,8 +299,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('ipd-admissions/{admission}/initiate-discharge', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'initiateDischarge']);
     Route::post('ipd-admissions/{admission}/complete-discharge', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'completeDischarge']);
 
-    // Wards & Beds
+    // Wards, Rooms & Beds
     Route::apiResource('wards', \App\Http\Controllers\Api\WardController::class);
+    Route::apiResource('rooms', \App\Http\Controllers\Api\RoomController::class);
     Route::apiResource('beds', \App\Http\Controllers\Api\BedController::class);
     Route::get('beds/available', [\App\Http\Controllers\Api\BedController::class, 'available']);
 

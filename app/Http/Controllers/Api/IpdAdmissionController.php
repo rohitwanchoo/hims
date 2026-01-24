@@ -140,10 +140,15 @@ class IpdAdmissionController extends Controller
         $wards = Ward::where('hospital_id', $hospitalId)
             ->where('is_active', true)
             ->with(['beds' => function($q) {
-                $q->select('bed_id', 'ward_id', 'bed_number', 'room_number', 'bed_type',
+                $q->select('bed_id', 'ward_id', 'bed_number', 'room_number', 'room_id', 'bed_type',
                            'status', 'is_available', 'is_isolation', 'is_ventilator',
                            'charges_per_day', 'current_patient_id')
-                  ->with(['currentPatient:patient_id,first_name,last_name,gender']);
+                  ->whereNotNull('room_id')  // Only beds created through Bed Allocation Master
+                  ->with([
+                      'currentPatient:patient_id,first_name,last_name,gender',
+                      'room:room_id,room_name,ward_id'
+                  ])
+                  ->orderByRaw('CAST(bed_number AS UNSIGNED)');
             }])
             ->get()
             ->map(function($ward) {
@@ -172,7 +177,11 @@ class IpdAdmissionController extends Controller
 
         $query = Bed::where('hospital_id', $hospitalId)
             ->where('is_available', true)
-            ->with('ward:ward_id,ward_name,ward_type,charges_per_day');
+            ->whereNotNull('room_id') // Only beds from Bed Allocation Master
+            ->with([
+                'ward:ward_id,ward_name,ward_type,charges_per_day',
+                'room:room_id,room_name,room_type,ward_id'
+            ]);
 
         if ($wardId) {
             $query->where('ward_id', $wardId);
@@ -193,7 +202,7 @@ class IpdAdmissionController extends Controller
             $query->where('is_ventilator', true);
         }
 
-        $beds = $query->orderBy('bed_number')->get();
+        $beds = $query->orderByRaw('CAST(bed_number AS UNSIGNED)')->get();
 
         return response()->json($beds);
     }
@@ -482,15 +491,11 @@ class IpdAdmissionController extends Controller
             return response()->json(['message' => 'Active IPD admission not found'], 404);
         }
 
-        // Get doctor_id from auth user or request
-        $doctorId = $request->doctor_id;
-        if (!$doctorId) {
-            $doctor = Doctor::where('user_id', Auth::id())->first();
-            $doctorId = $doctor ? $doctor->doctor_id : null;
-        }
+        // Get doctor_id from request or use treating doctor of the admission
+        $doctorId = $request->doctor_id ?? $admission->treating_doctor_id;
 
         if (!$doctorId) {
-            return response()->json(['message' => 'Doctor ID is required'], 422);
+            return response()->json(['message' => 'Doctor ID is required. The admission must have a treating doctor assigned.'], 422);
         }
 
         $note = IpdProgressNote::create([

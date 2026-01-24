@@ -119,7 +119,7 @@ class Patient extends Model
         'is_active' => 'boolean',
     ];
 
-    protected $appends = ['mobile_number', 'age'];
+    protected $appends = ['mobile_number', 'age', 'full_name', 'age_display'];
 
     public function prefix()
     {
@@ -261,5 +261,24 @@ class Patient extends Model
     public function getAgeAttribute($value)
     {
         return $this->age_years ?? $value;
+    }
+
+    public function getFullNameAttribute()
+    {
+        if ($this->patient_name) {
+            return $this->patient_name;
+        }
+        return trim(($this->first_name ?? '') . ' ' . ($this->middle_name ?? '') . ' ' . ($this->last_name ?? ''));
+    }
+
+    public function getAgeDisplayAttribute()
+    {
+        if ($this->age_years) {
+            return $this->age_years . ' yrs';
+        }
+        if ($this->age) {
+            return $this->age . ' ' . ($this->age_unit ?? 'yrs');
+        }
+        return 'N/A';
     }
 }

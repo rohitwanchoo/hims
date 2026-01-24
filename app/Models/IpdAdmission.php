@@ -64,6 +64,8 @@ class IpdAdmission extends Model
         'attendant_name',
         'attendant_relation',
         'attendant_mobile',
+        'attendant_address',
+        'attendant_email',
         // Status and Discharge
         'status',
         'discharge_date',
@@ -125,7 +127,7 @@ class IpdAdmission extends Model
 
     public function getDoctorNameAttribute()
     {
-        return $this->treatingDoctor ? $this->treatingDoctor->doctor_name : null;
+        return $this->treatingDoctor ? $this->treatingDoctor->full_name : null;
     }
 
     public function getWardNameAttribute()

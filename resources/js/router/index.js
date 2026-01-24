@@ -133,6 +133,9 @@ import ConsultMasterList from '../views/masters/reception/ConsultMasterList.vue'
 // Masters - Prescription
 import PrescriptionMaster from '../views/masters/prescription/PrescriptionMaster.vue';
 
+// Masters - Bed Allocation
+import BedAllocationMaster from '../views/masters/BedAllocationMaster.vue';
+
 // Masters - Address
 import CountryList from '../views/masters/address/CountryList.vue';
 import StateList from '../views/masters/address/StateList.vue';
@@ -216,6 +219,11 @@ const routes = [
                 path: 'masters/prescription',
                 name: 'masters.prescription',
                 component: PrescriptionMaster
+            },
+            {
+                path: 'masters/bed-allocation',
+                name: 'masters.bed-allocation',
+                component: BedAllocationMaster
             },
             // Masters - Address
             {

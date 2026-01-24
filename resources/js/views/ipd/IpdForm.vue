@@ -35,9 +35,9 @@
             <div class="card-body py-3">
                 <div class="row align-items-center">
                     <div class="col-md-4">
-                        <h5 class="mb-1">{{ admission.patient?.full_name }}</h5>
+                        <h5 class="mb-1">{{ admission.patient?.patient_name || (admission.patient?.first_name + ' ' + admission.patient?.last_name) }}</h5>
                         <small class="text-muted">
-                            {{ admission.patient?.gender }} / {{ admission.patient?.age_display }} |
+                            {{ admission.patient?.gender }} / {{ admission.patient?.age || (admission.patient?.age_years + ' yrs') }} |
                             {{ admission.patient?.mobile }}
                         </small>
                     </div>
@@ -47,7 +47,7 @@
                     </div>
                     <div class="col-md-2 text-center border-end">
                         <small class="text-muted d-block">Doctor</small>
-                        <strong>{{ admission.treating_doctor?.doctor_name }}</strong>
+                        <strong>{{ admission.treating_doctor?.full_name }}</strong>
                     </div>
                     <div class="col-md-2 text-center border-end">
                         <small class="text-muted d-block">LOS</small>
@@ -141,9 +141,20 @@
                                     <small>Police Station: {{ admission.police_station }} | Brought By: {{ admission.brought_by }}</small>
                                 </div>
                             </div>
-                            <div v-if="admission.insurance_applicable" class="alert alert-info mb-0">
+                            <div v-if="admission.insurance_applicable && admission.insurance_company && admission.scheme_type !== 'none'" class="alert alert-info mb-0">
                                 <strong>Insurance:</strong> {{ admission.insurance_company }} ({{ admission.scheme_type }})<br>
-                                <small>TPA: {{ admission.tpa_name }} | Pre-Auth: Rs {{ admission.pre_auth_amount }}</small>
+                                <small>TPA: {{ admission.tpa_name || 'N/A' }} | Pre-Auth: Rs {{ admission.pre_auth_amount || 0 }}</small>
+                            </div>
+                            <div v-if="admission.attendant_name" class="alert alert-secondary mb-0 mt-2">
+                                <strong>Responsible Person:</strong> {{ admission.attendant_name }}<br>
+                                <small>
+                                    <strong>Relation:</strong> {{ admission.attendant_relation || 'N/A' }} |
+                                    <strong>Mobile:</strong> {{ admission.attendant_mobile || 'N/A' }}
+                                    <span v-if="admission.attendant_email"> | <strong>Email:</strong> {{ admission.attendant_email }}</span>
+                                </small>
+                                <div v-if="admission.attendant_address" class="mt-1">
+                                    <small><strong>Address:</strong> {{ admission.attendant_address }}</small>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -163,7 +174,7 @@
                             <div v-else class="list-group list-group-flush">
                                 <div v-for="note in progressNotes.slice(0, 5)" :key="note.note_id" class="list-group-item">
                                     <div class="d-flex justify-content-between mb-2">
-                                        <strong>{{ note.doctor?.doctor_name }}</strong>
+                                        <strong>{{ note.doctor?.full_name }}</strong>
                                         <small class="text-muted">{{ formatDate(note.note_date) }} {{ note.note_time }}</small>
                                     </div>
                                     <div v-if="note.subjective"><strong>S:</strong> {{ note.subjective }}</div>
@@ -259,7 +270,7 @@
                             <div v-for="note in progressNotes" :key="note.note_id" class="list-group-item">
                                 <div class="d-flex justify-content-between mb-2">
                                     <div>
-                                        <strong>{{ note.doctor?.doctor_name }}</strong>
+                                        <strong>{{ note.doctor?.full_name }}</strong>
                                         <span class="badge bg-secondary ms-2">{{ note.note_type }}</span>
                                     </div>
                                     <small class="text-muted">{{ formatDate(note.note_date) }} {{ note.note_time }}</small>
@@ -503,29 +514,86 @@
                             <div class="card-header">Patient Details</div>
                             <div class="card-body">
                                 <div class="mb-3">
-                                    <label class="form-label">Select Patient *</label>
-                                    <div class="input-group">
-                                        <input type="text" class="form-control" v-model="patientSearch"
-                                               placeholder="Search by name, mobile, ID..." @keyup.enter="searchPatients">
-                                        <button type="button" class="btn btn-primary" @click="searchPatients">
-                                            <i class="bi bi-search"></i> Search
-                                        </button>
-                                    </div>
-                                </div>
-                                <div v-if="patientResults.length > 0" class="list-group mb-3">
-                                    <a v-for="p in patientResults" :key="p.patient_id" href="#"
-                                       class="list-group-item list-group-item-action" @click.prevent="selectPatient(p)">
-                                        <div class="d-flex justify-content-between">
-                                            <strong>{{ p.full_name }}</strong>
-                                            <small class="text-muted">ID: {{ p.patient_id }}</small>
+                                    <label class="form-label">Patient <span class="text-danger">*</span></label>
+                                    <div class="d-flex gap-2">
+                                        <div class="flex-grow-1 position-relative">
+                                            <input
+                                                type="text"
+                                                class="form-control pe-5"
+                                                v-model="patientSearch"
+                                                @input="filterPatients"
+                                                @focus="showPatientDropdown = true"
+                                                @blur="hidePatientDropdown"
+                                                placeholder="Search by name, mobile, ID..."
+                                                autocomplete="off"
+                                            />
+                                            <button
+                                                v-if="form.patient_id && patientSearch"
+                                                type="button"
+                                                class="btn-clear-patient"
+                                                @click="clearPatient"
+                                                title="Clear selected patient">
+                                                <i class="bi bi-x-circle-fill"></i>
+                                            </button>
+                                            <!-- Patient Dropdown -->
+                                            <div v-if="showPatientDropdown && filteredTodaysPatients.length > 0"
+                                                 class="patient-dropdown">
+                                                <div class="dropdown-section-header">
+                                                    <i class="bi bi-calendar-check me-1"></i>
+                                                    Today's OPD Patients
+                                                </div>
+                                                <div class="patient-dropdown-item"
+                                                     v-for="p in filteredTodaysPatients"
+                                                     :key="p.patient_id"
+                                                     @mousedown.prevent="selectPatient(p)"
+                                                     :class="{ 'active': form.patient_id === p.patient_id }">
+                                                    <div class="patient-color-indicator" :style="{ backgroundColor: getPatientColor(p) }"></div>
+                                                    <div class="patient-info">
+                                                        <div class="patient-name">
+                                                            {{ p.first_name }} {{ p.last_name }}
+                                                            <span class="badge ms-1" :class="getGenderBadgeClass(p.gender)">
+                                                                {{ p.gender || 'N/A' }}
+                                                            </span>
+                                                        </div>
+                                                        <div class="patient-details">
+                                                            <small class="text-muted">
+                                                                <i class="bi bi-person-badge me-1"></i>ID: {{ p.patient_id }} |
+                                                                <i class="bi bi-calendar3 ms-1 me-1"></i>{{ p.age_display || 'N/A' }} |
+                                                                <i class="bi bi-telephone ms-1 me-1"></i>{{ p.mobile || 'N/A' }}
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div v-if="filteredTodaysPatients.length === 0 && !patientSearch" class="patient-dropdown-empty">
+                                                    <i class="bi bi-info-circle me-2"></i>
+                                                    No OPD patients today
+                                                </div>
+                                                <div v-if="filteredTodaysPatients.length === 0 && patientSearch" class="patient-dropdown-empty">
+                                                    <i class="bi bi-search me-2"></i>
+                                                    No patients found matching "{{ patientSearch }}"
+                                                </div>
+                                                <div v-if="filteredTodaysPatients.length > 0" class="patient-dropdown-footer">
+                                                    Showing {{ filteredTodaysPatients.length }} of {{ todaysOpdPatients.length }} patients
+                                                </div>
+                                            </div>
                                         </div>
-                                        <small class="text-muted">{{ p.gender }} / {{ p.age_display }} | {{ p.mobile }}</small>
-                                    </a>
+                                        <router-link
+                                            :to="{ path: '/patients/create', query: { returnTo: $route.fullPath } }"
+                                            class="btn btn-primary d-flex align-items-center"
+                                            style="white-space: nowrap;"
+                                            title="Add New Patient">
+                                            <i class="bi bi-plus-lg me-1"></i> Add Patient
+                                        </router-link>
+                                    </div>
+                                    <input type="hidden" v-model="form.patient_id" required>
                                 </div>
-                                <div v-if="selectedPatient" class="alert alert-success">
-                                    <strong>Selected:</strong> {{ selectedPatient.full_name }}
-                                    ({{ selectedPatient.gender }} / {{ selectedPatient.age_display }})
-                                    <button type="button" class="btn-close float-end" @click="selectedPatient = null"></button>
+                                <div v-if="selectedPatient" class="alert alert-info mb-3 py-2">
+                                    <small>
+                                        <strong>Selected:</strong> {{ selectedPatient.first_name }} {{ selectedPatient.last_name }} |
+                                        <strong>Mobile:</strong> {{ selectedPatient.mobile || 'N/A' }} |
+                                        <strong>Gender:</strong> {{ selectedPatient.gender || 'N/A' }} |
+                                        <strong>Age:</strong> {{ selectedPatient.age_display || 'N/A' }}
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -575,7 +643,7 @@
                                         <select class="form-select" v-model="form.treating_doctor_id" required>
                                             <option value="">Select Doctor</option>
                                             <option v-for="doc in filteredDoctors" :key="doc.doctor_id" :value="doc.doctor_id">
-                                                {{ doc.doctor_name }}
+                                                {{ doc.full_name }}
                                             </option>
                                         </select>
                                     </div>
@@ -642,7 +710,12 @@
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label">Insurance Company</label>
-                                        <input type="text" class="form-control" v-model="form.insurance_company">
+                                        <select class="form-select" v-model="form.insurance_company">
+                                            <option value="">Select Insurance Company</option>
+                                            <option v-for="company in insuranceCompanies" :key="company.insurance_id" :value="company.company_name">
+                                                {{ company.company_name }}
+                                            </option>
+                                        </select>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label">TPA Name</label>
@@ -665,6 +738,49 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Responsible Person / Attendant -->
+                        <div class="card mb-4">
+                            <div class="card-header">Responsible Person / Attendant Information</div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Attendant Name</label>
+                                        <input type="text" class="form-control" v-model="form.attendant_name" placeholder="Enter attendant name">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Relation with Patient</label>
+                                        <select class="form-select" v-model="form.attendant_relation">
+                                            <option value="">Select Relation</option>
+                                            <option value="Father">Father</option>
+                                            <option value="Mother">Mother</option>
+                                            <option value="Spouse">Spouse</option>
+                                            <option value="Son">Son</option>
+                                            <option value="Daughter">Daughter</option>
+                                            <option value="Brother">Brother</option>
+                                            <option value="Sister">Sister</option>
+                                            <option value="Guardian">Guardian</option>
+                                            <option value="Friend">Friend</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Attendant Mobile</label>
+                                        <input type="tel" class="form-control" v-model="form.attendant_mobile" placeholder="Enter mobile number">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <label class="form-label">Attendant Address</label>
+                                        <textarea class="form-control" v-model="form.attendant_address" rows="2" placeholder="Enter complete address"></textarea>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Attendant Email</label>
+                                        <input type="email" class="form-control" v-model="form.attendant_email" placeholder="Enter email address">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="col-md-4">
@@ -681,19 +797,29 @@
                                         </option>
                                     </select>
                                 </div>
-                                <div v-if="availableBeds.length > 0">
-                                    <label class="form-label">Available Beds</label>
-                                    <div class="bed-selection">
-                                        <div v-for="bed in availableBeds" :key="bed.bed_id"
-                                             :class="['bed-option', { selected: form.bed_id === bed.bed_id }]"
-                                             @click="form.bed_id = bed.bed_id">
-                                            <div class="bed-number">{{ bed.bed_number }}</div>
-                                            <small>{{ bed.bed_type }}</small>
-                                            <small class="text-muted">Rs {{ bed.charges_per_day }}/day</small>
+                                <div v-if="bedsByRoom.length > 0">
+                                    <label class="form-label">Available Beds by Room</label>
+                                    <div class="beds-by-room">
+                                        <div v-for="roomGroup in bedsByRoom" :key="roomGroup.room_id" class="room-group mb-3">
+                                            <div class="room-header">
+                                                <i class="bi bi-door-closed me-1"></i>
+                                                <strong>{{ roomGroup.room_name }}</strong>
+                                                <span class="badge bg-info ms-2">{{ roomGroup.room_type }}</span>
+                                                <small class="text-muted ms-2">({{ roomGroup.beds.length }} beds available)</small>
+                                            </div>
+                                            <div class="bed-selection mt-2">
+                                                <div v-for="bed in roomGroup.beds" :key="bed.bed_id"
+                                                     :class="['bed-option', { selected: form.bed_id === bed.bed_id }]"
+                                                     @click="form.bed_id = bed.bed_id">
+                                                    <div class="bed-number">{{ bed.bed_number }}</div>
+                                                    <small v-if="bed.charges_per_day" class="text-muted">₹{{ bed.charges_per_day }}/day</small>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                                 <div v-else-if="form.ward_id" class="alert alert-warning mb-0">
+                                    <i class="bi bi-info-circle me-2"></i>
                                     No beds available in this ward
                                 </div>
                             </div>
@@ -859,8 +985,219 @@
             </div>
         </div>
 
+        <!-- Add Nursing Chart Modal -->
+        <div class="modal fade" :class="{ show: showAddNursingChart }" :style="{ display: showAddNursingChart ? 'block' : 'none' }" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Nursing Chart Entry</h5>
+                        <button type="button" class="btn-close" @click="showAddNursingChart = false"></button>
+                    </div>
+                    <form @submit.prevent="saveNursingChart">
+                        <div class="modal-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Date *</label>
+                                    <input type="date" class="form-control" v-model="nursingChartForm.chart_date" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Shift *</label>
+                                    <select class="form-select" v-model="nursingChartForm.shift" required>
+                                        <option value="morning">Morning</option>
+                                        <option value="evening">Evening</option>
+                                        <option value="night">Night</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">BP Systolic</label>
+                                    <input type="number" class="form-control" v-model="nursingChartForm.bp_systolic" placeholder="120">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">BP Diastolic</label>
+                                    <input type="number" class="form-control" v-model="nursingChartForm.bp_diastolic" placeholder="80">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Pulse (bpm)</label>
+                                    <input type="number" class="form-control" v-model="nursingChartForm.pulse" placeholder="72">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Temp (°F)</label>
+                                    <input type="number" step="0.1" class="form-control" v-model="nursingChartForm.temperature" placeholder="98.6">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">SpO2 (%)</label>
+                                    <input type="number" class="form-control" v-model="nursingChartForm.spo2" placeholder="98">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Respiratory Rate</label>
+                                    <input type="number" class="form-control" v-model="nursingChartForm.respiratory_rate" placeholder="16">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Blood Sugar</label>
+                                    <input type="number" class="form-control" v-model="nursingChartForm.blood_sugar" placeholder="100">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Oral Intake (ml)</label>
+                                    <input type="number" class="form-control" v-model="nursingChartForm.oral_intake_ml" placeholder="0">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">IV Intake (ml)</label>
+                                    <input type="number" class="form-control" v-model="nursingChartForm.iv_intake_ml" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Urine Output (ml)</label>
+                                    <input type="number" class="form-control" v-model="nursingChartForm.urine_output_ml" placeholder="0">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Other Output (ml)</label>
+                                    <input type="number" class="form-control" v-model="nursingChartForm.other_output_ml" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Nursing Notes</label>
+                                <textarea class="form-control" v-model="nursingChartForm.nursing_notes" rows="3" placeholder="Enter observations and notes..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @click="showAddNursingChart = false">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Entry</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Medication Modal -->
+        <div class="modal fade" :class="{ show: showAddMedication }" :style="{ display: showAddMedication ? 'block' : 'none' }" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Medication Order</h5>
+                        <button type="button" class="btn-close" @click="showAddMedication = false"></button>
+                    </div>
+                    <form @submit.prevent="saveMedication">
+                        <div class="modal-body">
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label class="form-label">Drug Name *</label>
+                                    <select class="form-select" v-model="medicationForm.drug_name" required>
+                                        <option value="">Select Drug</option>
+                                        <option v-for="drug in drugs" :key="drug.drug_id" :value="drug.drug_name">
+                                            {{ drug.drug_name }} {{ drug.generic_name ? '(' + drug.generic_name + ')' : '' }}
+                                        </option>
+                                    </select>
+                                    <small class="text-muted">Can't find the drug? Add it from Masters > Pharmacy > Drugs</small>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Dosage *</label>
+                                    <input type="text" class="form-control" v-model="medicationForm.dosage" required placeholder="e.g., 500mg">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Route *</label>
+                                    <select class="form-select" v-model="medicationForm.route" required>
+                                        <option value="">Select Route</option>
+                                        <option value="oral">Oral</option>
+                                        <option value="iv">IV (Intravenous)</option>
+                                        <option value="im">IM (Intramuscular)</option>
+                                        <option value="sc">SC (Subcutaneous)</option>
+                                        <option value="topical">Topical</option>
+                                        <option value="inhalation">Inhalation</option>
+                                        <option value="pr">PR (Per Rectum)</option>
+                                        <option value="sl">SL (Sublingual)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Frequency *</label>
+                                    <input type="text" class="form-control" v-model="medicationForm.frequency" required placeholder="e.g., TDS, BD, OD">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Duration (days)</label>
+                                    <input type="number" class="form-control" v-model="medicationForm.duration_days" placeholder="7">
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label">Instructions</label>
+                                    <input type="text" class="form-control" v-model="medicationForm.instructions" placeholder="e.g., Take after food">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Remarks</label>
+                                <textarea class="form-control" v-model="medicationForm.remarks" rows="2" placeholder="Additional notes..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @click="showAddMedication = false">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Add Medication</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Investigation Modal -->
+        <div class="modal fade" :class="{ show: showAddInvestigation }" :style="{ display: showAddInvestigation ? 'block' : 'none' }" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Order Investigation</h5>
+                        <button type="button" class="btn-close" @click="showAddInvestigation = false"></button>
+                    </div>
+                    <form @submit.prevent="saveInvestigation">
+                        <div class="modal-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Investigation Type *</label>
+                                    <select class="form-select" v-model="investigationForm.investigation_type" required>
+                                        <option value="">Select Type</option>
+                                        <option value="pathology">Pathology (Lab)</option>
+                                        <option value="radiology">Radiology (Imaging)</option>
+                                        <option value="procedure">Procedure</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Priority *</label>
+                                    <select class="form-select" v-model="investigationForm.priority" required>
+                                        <option value="routine">Routine</option>
+                                        <option value="urgent">Urgent</option>
+                                        <option value="stat">STAT (Immediate)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Investigation Name *</label>
+                                <input type="text" class="form-control" v-model="investigationForm.investigation_name" required placeholder="e.g., Complete Blood Count">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Clinical Notes / Indication</label>
+                                <textarea class="form-control" v-model="investigationForm.clinical_notes" rows="2" placeholder="Enter clinical indication..."></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Special Instructions</label>
+                                <textarea class="form-control" v-model="investigationForm.instructions" rows="2" placeholder="Special instructions for lab/radiology..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @click="showAddInvestigation = false">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Order Investigation</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal Backdrop -->
-        <div v-if="showAddNote || showAdvancePayment || showDischargeModal" class="modal-backdrop fade show"></div>
+        <div v-if="showAddNote || showAdvancePayment || showDischargeModal || showAddNursingChart || showAddMedication || showAddInvestigation" class="modal-backdrop fade show"></div>
     </div>
 </template>
 
@@ -884,6 +1221,8 @@ export default {
         const doctors = ref([]);
         const wards = ref([]);
         const availableBeds = ref([]);
+        const insuranceCompanies = ref([]);
+        const drugs = ref([]);
 
         // View mode data
         const admission = ref({});
@@ -899,8 +1238,23 @@ export default {
 
         // Create mode data
         const patientSearch = ref('');
-        const patientResults = ref([]);
+        const todaysOpdPatients = ref([]);
         const selectedPatient = ref(null);
+        const showPatientDropdown = ref(false);
+
+        // Computed property to filter today's patients based on search
+        const filteredTodaysPatients = computed(() => {
+            const search = patientSearch.value.toLowerCase().trim();
+            if (!search) {
+                return todaysOpdPatients.value;
+            }
+            return todaysOpdPatients.value.filter(p =>
+                (p.first_name?.toLowerCase().includes(search)) ||
+                (p.last_name?.toLowerCase().includes(search)) ||
+                (p.patient_id?.toString().includes(search)) ||
+                (p.mobile?.includes(search))
+            );
+        });
 
         const form = ref({
             patient_id: null,
@@ -925,6 +1279,11 @@ export default {
             policy_number: '',
             pre_auth_amount: 0,
             credit_limit: 0,
+            attendant_name: '',
+            attendant_relation: '',
+            attendant_mobile: '',
+            attendant_address: '',
+            attendant_email: '',
         });
 
         // Modals
@@ -963,6 +1322,41 @@ export default {
             followup_date: '',
         });
 
+        const nursingChartForm = ref({
+            chart_date: new Date().toISOString().split('T')[0],
+            shift: 'morning',
+            bp_systolic: '',
+            bp_diastolic: '',
+            pulse: '',
+            temperature: '',
+            spo2: '',
+            respiratory_rate: '',
+            blood_sugar: '',
+            oral_intake_ml: '',
+            iv_intake_ml: '',
+            urine_output_ml: '',
+            other_output_ml: '',
+            nursing_notes: '',
+        });
+
+        const medicationForm = ref({
+            drug_name: '',
+            dosage: '',
+            route: '',
+            frequency: '',
+            duration_days: '',
+            instructions: '',
+            remarks: '',
+        });
+
+        const investigationForm = ref({
+            investigation_type: '',
+            investigation_name: '',
+            priority: 'routine',
+            clinical_notes: '',
+            instructions: '',
+        });
+
         const filteredDoctors = computed(() => {
             if (!form.value.department_id) return doctors.value;
             return doctors.value.filter(d => d.department_id == form.value.department_id);
@@ -977,16 +1371,71 @@ export default {
                    form.value.bed_id;
         });
 
+        const bedsByRoom = computed(() => {
+            if (!availableBeds.value || availableBeds.value.length === 0) return [];
+
+            // Group beds by room
+            const roomsMap = new Map();
+
+            availableBeds.value.forEach(bed => {
+                if (bed.room) {
+                    if (!roomsMap.has(bed.room.room_id)) {
+                        roomsMap.set(bed.room.room_id, {
+                            room_id: bed.room.room_id,
+                            room_name: bed.room.room_name,
+                            room_type: bed.room.room_type || 'General',
+                            beds: []
+                        });
+                    }
+                    roomsMap.get(bed.room.room_id).beds.push(bed);
+                }
+            });
+
+            return Array.from(roomsMap.values());
+        });
+
         const loadMasterData = async () => {
             try {
-                const [deptsRes, docsRes, wardsRes] = await Promise.all([
+                const [deptsRes, docsRes, wardsRes, insuranceRes, drugsRes] = await Promise.all([
                     axios.get('/api/departments'),
                     axios.get('/api/doctors'),
                     axios.get('/api/wards'),
+                    axios.get('/api/insurance-companies-active'),
+                    axios.get('/api/drugs'),
                 ]);
                 departments.value = deptsRes.data.data || deptsRes.data;
                 doctors.value = docsRes.data.data || docsRes.data;
                 wards.value = wardsRes.data.data || wardsRes.data;
+                insuranceCompanies.value = insuranceRes.data.data || insuranceRes.data;
+                drugs.value = drugsRes.data || [];
+
+                // Load today's OPD patients if in create mode
+                if (!isViewMode.value) {
+                    await loadTodaysOpdPatients();
+
+                    // Check if returning from patient creation with a new patient
+                    if (route.query.patient_id) {
+                        const patientId = parseInt(route.query.patient_id);
+                        // Try to find in today's OPD patients first
+                        let patient = todaysOpdPatients.value.find(p => p.patient_id === patientId);
+
+                        // If not found, load the specific patient
+                        if (!patient) {
+                            try {
+                                const response = await axios.get(`/api/patients/${patientId}`);
+                                patient = response.data.data || response.data;
+                                // Add to today's patients list
+                                todaysOpdPatients.value.unshift(patient);
+                            } catch (error) {
+                                console.error('Failed to load newly created patient:', error);
+                            }
+                        }
+
+                        if (patient) {
+                            selectPatient(patient);
+                        }
+                    }
+                }
             } catch (error) {
                 console.error('Failed to load master data:', error);
             }
@@ -1080,21 +1529,81 @@ export default {
             }
         };
 
-        const searchPatients = async () => {
-            if (!patientSearch.value) return;
+        const loadTodaysOpdPatients = async () => {
             try {
-                const response = await axios.get('/api/patients-search', { params: { search: patientSearch.value } });
-                patientResults.value = response.data.data || response.data;
+                const response = await axios.get('/api/opd-visits', {
+                    params: {
+                        date: new Date().toISOString().split('T')[0]
+                    }
+                });
+
+                // The API returns {visits: [...], summary: {...}}
+                const visits = response.data.visits || [];
+
+                // Extract unique patients from today's OPD visits
+                const patientIds = new Set();
+                const patients = [];
+
+                visits.forEach(visit => {
+                    if (visit.patient && !patientIds.has(visit.patient.patient_id)) {
+                        patientIds.add(visit.patient.patient_id);
+                        patients.push(visit.patient);
+                    }
+                });
+
+                todaysOpdPatients.value = patients;
+                console.log('Today\'s OPD patients loaded:', patients.length);
             } catch (error) {
-                console.error('Failed to search patients:', error);
+                console.error('Failed to load today\'s OPD patients:', error);
+                todaysOpdPatients.value = [];
             }
+        };
+
+        const getPatientColor = (patient) => {
+            // Color coding based on age groups
+            const age = parseInt(patient.age_years || patient.age || 0);
+
+            if (age < 12) {
+                return '#FF6B9D'; // Pink for pediatric (children)
+            } else if (age >= 12 && age < 18) {
+                return '#4ECDC4'; // Teal for adolescent
+            } else if (age >= 18 && age < 60) {
+                return '#45B7D1'; // Blue for adults
+            } else if (age >= 60) {
+                return '#FFA07A'; // Orange for seniors
+            }
+            return '#95E1D3'; // Default mint green
+        };
+
+        const getGenderBadgeClass = (gender) => {
+            if (!gender) return 'bg-secondary';
+            const genderLower = gender.toLowerCase();
+            if (genderLower === 'male' || genderLower === 'm') {
+                return 'bg-primary';
+            } else if (genderLower === 'female' || genderLower === 'f') {
+                return 'bg-danger';
+            }
+            return 'bg-info';
         };
 
         const selectPatient = (patient) => {
             selectedPatient.value = patient;
             form.value.patient_id = patient.patient_id;
-            patientResults.value = [];
+            patientSearch.value = `${patient.first_name} ${patient.last_name}`;
+            showPatientDropdown.value = false;
+        };
+
+        const clearPatient = () => {
+            selectedPatient.value = null;
+            form.value.patient_id = null;
             patientSearch.value = '';
+            showPatientDropdown.value = false;
+        };
+
+        const hidePatientDropdown = () => {
+            setTimeout(() => {
+                showPatientDropdown.value = false;
+            }, 200);
         };
 
         const loadAvailableBeds = async () => {
@@ -1173,6 +1682,68 @@ export default {
             }
         };
 
+        const saveNursingChart = async () => {
+            try {
+                await axios.post(`/api/ipd-admissions/${route.params.id}/nursing-charts`, nursingChartForm.value);
+                showAddNursingChart.value = false;
+                nursingChartForm.value = {
+                    chart_date: new Date().toISOString().split('T')[0],
+                    shift: 'morning',
+                    bp_systolic: '',
+                    bp_diastolic: '',
+                    pulse: '',
+                    temperature: '',
+                    spo2: '',
+                    respiratory_rate: '',
+                    blood_sugar: '',
+                    oral_intake_ml: '',
+                    iv_intake_ml: '',
+                    urine_output_ml: '',
+                    other_output_ml: '',
+                    nursing_notes: '',
+                };
+                loadNursingCharts();
+            } catch (error) {
+                alert('Failed to save nursing chart: ' + (error.response?.data?.message || error.message));
+            }
+        };
+
+        const saveMedication = async () => {
+            try {
+                await axios.post(`/api/ipd-admissions/${route.params.id}/medications`, medicationForm.value);
+                showAddMedication.value = false;
+                medicationForm.value = {
+                    drug_name: '',
+                    dosage: '',
+                    route: '',
+                    frequency: '',
+                    duration_days: '',
+                    instructions: '',
+                    remarks: '',
+                };
+                loadMedications();
+            } catch (error) {
+                alert('Failed to add medication: ' + (error.response?.data?.message || error.message));
+            }
+        };
+
+        const saveInvestigation = async () => {
+            try {
+                await axios.post(`/api/ipd-admissions/${route.params.id}/investigations`, investigationForm.value);
+                showAddInvestigation.value = false;
+                investigationForm.value = {
+                    investigation_type: '',
+                    investigation_name: '',
+                    priority: 'routine',
+                    clinical_notes: '',
+                    instructions: '',
+                };
+                loadInvestigations();
+            } catch (error) {
+                alert('Failed to order investigation: ' + (error.response?.data?.message || error.message));
+            }
+        };
+
         const formatDate = (date) => {
             if (!date) return '';
             return new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -1236,6 +1807,8 @@ export default {
             doctors,
             wards,
             availableBeds,
+            insuranceCompanies,
+            drugs,
             admission,
             runningBill,
             progressNotes,
@@ -1246,11 +1819,14 @@ export default {
             advancePayments,
             activeTab,
             patientSearch,
-            patientResults,
+            todaysOpdPatients,
+            filteredTodaysPatients,
             selectedPatient,
+            showPatientDropdown,
             form,
             filteredDoctors,
             canSubmit,
+            bedsByRoom,
             showAddNote,
             showAdvancePayment,
             showDischargeModal,
@@ -1263,8 +1839,14 @@ export default {
             noteForm,
             advanceForm,
             dischargeForm,
-            searchPatients,
+            nursingChartForm,
+            medicationForm,
+            investigationForm,
             selectPatient,
+            clearPatient,
+            hidePatientDropdown,
+            getPatientColor,
+            getGenderBadgeClass,
             loadAvailableBeds,
             loadDepartmentDoctors,
             submitAdmission,
@@ -1272,6 +1854,9 @@ export default {
             saveAdvancePayment,
             completeDischarge,
             stopMedication,
+            saveNursingChart,
+            saveMedication,
+            saveInvestigation,
             formatDate,
             formatStatus,
             getStatusBadge,
@@ -1284,6 +1869,26 @@ export default {
 </script>
 
 <style scoped>
+/* Beds by Room */
+.beds-by-room {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.room-group {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 12px;
+    background-color: #f8f9fa;
+}
+
+.room-header {
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #dee2e6;
+}
+
 .bed-selection {
     display: flex;
     flex-wrap: wrap;
@@ -1291,10 +1896,10 @@ export default {
 }
 
 .bed-option {
-    width: 80px;
-    padding: 10px;
+    width: 70px;
+    padding: 8px;
     border: 2px solid #28a745;
-    border-radius: 8px;
+    border-radius: 6px;
     background-color: #d4edda;
     text-align: center;
     cursor: pointer;
@@ -1303,20 +1908,147 @@ export default {
 
 .bed-option:hover {
     transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .bed-option.selected {
     border-color: #007bff;
     background-color: #cce5ff;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
 }
 
 .bed-number {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: bold;
+    color: #155724;
+}
+
+.bed-option.selected .bed-number {
+    color: #004085;
 }
 
 .btn-xs {
     padding: 0.15rem 0.4rem;
     font-size: 0.75rem;
+}
+
+/* Clear Patient Button */
+.btn-clear-patient {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0;
+    font-size: 1.2rem;
+    line-height: 1;
+    z-index: 10;
+    transition: color 0.2s ease;
+}
+
+.btn-clear-patient:hover {
+    color: #dc3545;
+}
+
+.btn-clear-patient i {
+    display: block;
+}
+
+/* Patient Autocomplete Dropdown */
+.patient-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+    margin-top: 0.25rem;
+}
+
+.dropdown-section-header {
+    padding: 0.5rem 1rem;
+    background-color: #f8f9fa;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #495057;
+    border-bottom: 1px solid #dee2e6;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.opd-patients-section {
+    border-bottom: 2px solid #dee2e6;
+}
+
+.patient-dropdown-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f1f3f5;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.patient-dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.patient-dropdown-item:hover {
+    background-color: #f8f9fa;
+    transform: translateX(3px);
+}
+
+.patient-dropdown-item.active {
+    background-color: rgba(54, 153, 255, 0.1);
+    border-left: 4px solid #3699ff;
+}
+
+.patient-color-indicator {
+    width: 6px;
+    height: 45px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.patient-info .patient-name {
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 0.25rem;
+}
+
+.patient-info .patient-details {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.patient-dropdown-footer {
+    padding: 0.5rem 1rem;
+    background-color: #f8f9fa;
+    text-align: center;
+    font-size: 0.75rem;
+    color: #6c757d;
+    border-top: 1px solid #dee2e6;
+}
+
+.patient-dropdown-empty {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+.patient-info {
+    flex: 1;
 }
 </style>

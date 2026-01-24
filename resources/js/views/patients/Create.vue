@@ -261,6 +261,12 @@ const submitForm = async () => {
       // Check if we should return to OPD form
       if (route.query.returnToOPD === 'true' && patientId) {
         router.push(`/opd/create?patient=${patientId}`)
+      }
+      // Check if we should return to a specific path (appointments, IPD, etc)
+      else if (route.query.returnTo && patientId) {
+        const returnPath = route.query.returnTo
+        const separator = returnPath.includes('?') ? '&' : '?'
+        router.push(`${returnPath}${separator}patient_id=${patientId}`)
       } else {
         router.push('/patients')
       }

@@ -37,7 +37,7 @@
                             <tr v-else-if="items.length === 0">
                                 <td colspan="7" class="text-center py-4 text-muted">No records found</td>
                             </tr>
-                            <tr v-for="(item, index) in items" :key="item.insurance_company_id">
+                            <tr v-for="(item, index) in items" :key="item.insurance_id">
                                 <td>{{ index + 1 }}</td>
                                 <td>{{ item.company_name }}</td>
                                 <td>{{ item.company_code || '-' }}</td>
@@ -204,7 +204,7 @@ const saveItem = async () => {
     saving.value = true;
     try {
         if (editingItem.value) {
-            await axios.put(`/api/insurance-companies/${editingItem.value.insurance_company_id}`, form);
+            await axios.put(`/api/insurance-companies/${editingItem.value.insurance_id}`, form);
         } else {
             await axios.post('/api/insurance-companies', form);
         }
@@ -219,7 +219,7 @@ const saveItem = async () => {
 const deleteItem = async (item) => {
     if (!confirm(`Are you sure you want to delete "${item.company_name}"?`)) return;
     try {
-        await axios.delete(`/api/insurance-companies/${item.insurance_company_id}`);
+        await axios.delete(`/api/insurance-companies/${item.insurance_id}`);
         fetchData();
     } catch (error) {
         alert(error.response?.data?.message || 'Error deleting record');
