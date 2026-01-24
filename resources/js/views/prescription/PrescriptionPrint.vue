@@ -71,6 +71,23 @@
                 <p style="white-space: pre-line;">{{ prescription.investigations }}</p>
             </div>
 
+            <!-- Consultation Data -->
+            <div v-if="showConsultation && consultationData" class="consultation-section mb-4">
+                <h5>Consultation Details:</h5>
+                <div class="consultation-data">
+                    <template v-for="field in consultationForm?.fields" :key="field.field_id">
+                        <div v-if="consultationData.form_data?.[field.field_key] && consultationData.form_data[field.field_key] !== ''" class="consultation-field mb-2">
+                            <strong>{{ field.field_label }}:</strong>
+                            <span class="ms-2">{{ formatFieldValue(consultationData.form_data[field.field_key], field.field_type) }}</span>
+                        </div>
+                    </template>
+                    <div v-if="consultationData.notes" class="consultation-field mb-2">
+                        <strong>Notes:</strong>
+                        <p class="ms-2 mb-0" style="white-space: pre-line;">{{ consultationData.notes }}</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Footer -->
             <div class="footer-section mt-5">
                 <div class="row">
@@ -108,12 +125,15 @@ import axios from 'axios';
 
 const route = useRoute();
 const prescriptionId = ref(route.params.id);
+const showConsultation = ref(route.query.consultation === '1');
 
 const loading = ref(true);
 const prescription = ref(null);
 const patient = ref(null);
 const doctor = ref(null);
 const hospital = ref({});
+const consultationData = ref(null);
+const consultationForm = ref(null);
 
 const fetchPrescription = async () => {
     try {
@@ -125,10 +145,27 @@ const fetchPrescription = async () => {
         // Fetch hospital info
         const user = await axios.get('/api/user');
         hospital.value = user.data.hospital || {};
+
+        // Fetch consultation data if enabled
+        if (showConsultation.value && patient.value?.patient_id) {
+            await fetchConsultationData(patient.value.patient_id);
+        }
     } catch (error) {
         console.error('Error fetching prescription:', error);
     } finally {
         loading.value = false;
+    }
+};
+
+const fetchConsultationData = async (patientId) => {
+    try {
+        const response = await axios.get(`/api/consultation-records/last/${patientId}`);
+        if (response.data.success && response.data.data) {
+            consultationData.value = response.data.data;
+            consultationForm.value = response.data.data.form;
+        }
+    } catch (error) {
+        console.error('Error fetching consultation data:', error);
     }
 };
 
@@ -139,6 +176,20 @@ const formatDate = (date) => {
         month: 'long',
         day: 'numeric'
     });
+};
+
+const formatFieldValue = (value, fieldType) => {
+    if (!value) return '';
+
+    if (fieldType === 'checkbox' && Array.isArray(value)) {
+        return value.join(', ');
+    }
+
+    if (fieldType === 'date' || fieldType === 'datetime') {
+        return formatDate(value);
+    }
+
+    return value;
 };
 
 const printPage = () => {
@@ -181,17 +232,28 @@ onMounted(() => {
 }
 
 .advice-section,
-.investigations-section {
+.investigations-section,
+.consultation-section {
     background: #f8f9fa;
     padding: 15px;
     border-radius: 5px;
 }
 
 .advice-section h5,
-.investigations-section h5 {
+.investigations-section h5,
+.consultation-section h5 {
     color: #2c3e50;
     font-weight: 600;
     margin-bottom: 10px;
+}
+
+.consultation-field {
+    padding: 5px 0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.consultation-field:last-child {
+    border-bottom: none;
 }
 
 @media print {

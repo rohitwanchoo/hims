@@ -21,6 +21,7 @@ class Prescription extends Model
         'advice',
         'investigations',
         'qty_display_on_print',
+        'print_consultation',
         'status',
         'created_by',
     ];
@@ -28,6 +29,7 @@ class Prescription extends Model
     protected $casts = [
         'prescription_date' => 'date',
         'qty_display_on_print' => 'boolean',
+        'print_consultation' => 'boolean',
     ];
 
     public function patient()

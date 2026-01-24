@@ -194,6 +194,12 @@
                         Qty Displayed On Print
                     </label>
                 </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" v-model="printConsultation" id="printConsultation">
+                    <label class="form-check-label small" for="printConsultation">
+                        Print Consultation
+                    </label>
+                </div>
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" v-model="saveAsStandardRx" id="standardRx">
                     <label class="form-check-label small" for="standardRx">
@@ -320,6 +326,7 @@ const standardRxList = ref([]);
 const adviceText = ref('');
 const investigations = ref('');
 const qtyDisplayOnPrint = ref(true);
+const printConsultation = ref(false);
 const saveAsStandardRx = ref(false);
 const diseaseName = ref('');
 const showDrugDropdown = ref(false);
@@ -599,7 +606,8 @@ const saveAndPrint = async () => {
             drugs: prescriptionDrugs.value,
             advice: adviceText.value,
             investigations: investigations.value,
-            qty_display_on_print: qtyDisplayOnPrint.value
+            qty_display_on_print: qtyDisplayOnPrint.value,
+            print_consultation: printConsultation.value
         };
 
         // If save as standard rx
@@ -616,7 +624,7 @@ const saveAndPrint = async () => {
             // Ask user if they want to print
             if (confirm('Prescription saved successfully! Do you want to print now?')) {
                 // Open print page in new window
-                const printUrl = `/prescription/${prescriptionId}/print`;
+                const printUrl = `/prescription/${prescriptionId}/print?consultation=${printConsultation.value ? 1 : 0}`;
                 window.open(printUrl, '_blank');
             }
 

@@ -22,6 +22,9 @@
         <button class="btn btn-success" @click="saveConsultation" :disabled="saving">
           <i class="bi bi-save me-1"></i> {{ saving ? 'Saving...' : 'Save' }}
         </button>
+        <button class="btn btn-info" @click="completeConsultation" :disabled="saving">
+          <i class="bi bi-check-circle me-1"></i> Complete Consultation
+        </button>
       </div>
     </div>
 
@@ -414,6 +417,17 @@ const getFieldColClass = (field) => {
     return 'col-12';
   }
   return 'col-md-6';
+};
+
+const completeConsultation = async () => {
+  // First save the consultation
+  await saveConsultation();
+
+  if (Object.keys(validationErrors.value).length === 0) {
+    // If save was successful, mark as completed and go back
+    alert('Consultation completed successfully!');
+    goBack();
+  }
 };
 
 const openPrescription = () => {
