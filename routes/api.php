@@ -41,6 +41,8 @@ use App\Http\Controllers\Api\ConsultationFormController;
 use App\Http\Controllers\Api\DoseTimeMasterController;
 use App\Http\Controllers\Api\DoseMasterController;
 use App\Http\Controllers\Api\DiseaseMasterController;
+use App\Http\Controllers\Api\DrugTypeController;
+use App\Http\Controllers\Api\DrugMasterController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -146,6 +148,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Disease Masters (Master > Prescription)
     Route::apiResource('disease-masters', DiseaseMasterController::class);
+
+    // Drug Types (Master > Prescription)
+    Route::apiResource('drug-types', DrugTypeController::class);
+
+    // Drug Masters (Master > Prescription)
+    Route::apiResource('drug-masters', DrugMasterController::class);
 
     // Countries (Master > Address)
     Route::apiResource('countries', CountryController::class);
