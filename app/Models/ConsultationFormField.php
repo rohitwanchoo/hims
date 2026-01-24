@@ -21,6 +21,8 @@ class ConsultationFormField extends Model
         'is_visible',
         'validation_rules',
         'section',
+        'column_width',
+        'placeholder',
         'help_text',
     ];
 

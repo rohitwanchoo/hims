@@ -534,11 +534,8 @@ const startConsultation = async (visit) => {
     );
 
     if (response.data.success) {
-      alert(response.data.message || 'Consultation started successfully');
-      fetchData(); // Refresh data
-
-      // Navigate to consultation form (update route as needed)
-      // router.push(`/opd/consultation/${visit.opd_id}`);
+      // Navigate to dynamic consultation form
+      router.push(`/consultation/${visit.opd_id}?patient_id=${visit.patient_id}&form_type=opd`);
     }
   } catch (error) {
     console.error('Error starting consultation:', error);
@@ -547,8 +544,8 @@ const startConsultation = async (visit) => {
 };
 
 const viewConsultation = (visit) => {
-  // Navigate to consultation form
-  router.push(`/opd/consultation/${visit.opd_id}`);
+  // Navigate to dynamic consultation form
+  router.push(`/consultation/${visit.opd_id}?patient_id=${visit.patient_id}&form_type=opd`);
 };
 
 const viewPatientHistory = async (patient) => {

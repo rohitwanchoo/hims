@@ -181,14 +181,38 @@
                               />
                             </div>
 
-                            <div class="mb-3">
-                              <label class="form-label">Section (Optional)</label>
-                              <input
-                                type="text"
-                                v-model="field.section"
-                                class="form-control"
-                                placeholder="e.g., Vitals, Examination"
-                              />
+                            <div class="row">
+                              <div class="col-md-6 mb-3">
+                                <label class="form-label">Section (Category) *</label>
+                                <select v-model="field.section" class="form-select">
+                                  <option value="">-- Select Section --</option>
+                                  <option v-for="section in uniqueSections" :key="section" :value="section">
+                                    {{ section }}
+                                  </option>
+                                  <option value="__new__">+ Add New Section</option>
+                                </select>
+                                <!-- Add new section input -->
+                                <input
+                                  v-if="field.section === '__new__'"
+                                  type="text"
+                                  v-model="newSectionName"
+                                  @blur="addNewSection(field)"
+                                  @keyup.enter="addNewSection(field)"
+                                  class="form-control mt-2"
+                                  placeholder="Enter new section name"
+                                  autofocus
+                                />
+                              </div>
+
+                              <div class="col-md-6 mb-3">
+                                <label class="form-label">Column Width *</label>
+                                <select v-model="field.column_width" class="form-select">
+                                  <option value="col-12">Full Width (1 per row)</option>
+                                  <option value="col-md-6">Half Width (2 per row)</option>
+                                  <option value="col-md-4">One-Third (3 per row)</option>
+                                  <option value="col-md-3">One-Quarter (4 per row)</option>
+                                </select>
+                              </div>
                             </div>
 
                             <div class="mb-3">
@@ -245,17 +269,31 @@
                             <div class="d-flex justify-content-between align-items-start">
                               <div class="flex-grow-1">
                                 <h6 class="mb-1">
+                                  <i :class="getFieldTypeIcon(field.field_type)" class="me-2" :style="{ color: getFieldTypeColor(field.field_type) }"></i>
                                   {{ field.field_label }}
-                                  <span v-if="field.is_required" class="text-danger">*</span>
+                                  <span v-if="field.is_required" class="text-danger ms-1">*</span>
                                   <span
                                     v-if="!field.is_visible"
                                     class="badge bg-secondary ms-2"
-                                  >Hidden</span>
+                                  >
+                                    <i class="bi bi-eye-slash me-1"></i>Hidden
+                                  </span>
                                 </h6>
-                                <div class="text-muted small mb-2">
-                                  <span class="badge bg-info me-2">{{ field.field_type }}</span>
-                                  <span v-if="field.section" class="badge bg-light text-dark">
+                                <div class="mb-2">
+                                  <span
+                                    class="badge me-2"
+                                    :style="{ backgroundColor: getFieldTypeColor(field.field_type), color: 'white' }"
+                                  >
+                                    <i :class="getFieldTypeIcon(field.field_type)" class="me-1"></i>
+                                    {{ field.field_type }}
+                                  </span>
+                                  <span v-if="field.section" class="badge bg-light text-dark me-2">
+                                    <i class="bi bi-folder2-open me-1"></i>
                                     {{ field.section }}
+                                  </span>
+                                  <span class="badge bg-secondary-subtle text-secondary">
+                                    <i class="bi bi-layout-three-columns me-1"></i>
+                                    {{ getColumnWidthLabel(field.column_width) }}
                                   </span>
                                 </div>
                                 <p v-if="field.help_text" class="text-muted small mb-0">
@@ -333,7 +371,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 import draggable from 'vuedraggable';
@@ -344,6 +382,7 @@ const route = useRoute();
 const formId = ref(route.params.formId || null);
 const saving = ref(false);
 const editingFieldId = ref(null);
+const newSectionName = ref('');
 
 const form = reactive({
   form_name: '',
@@ -358,6 +397,14 @@ const fields = ref([]);
 const departments = ref([]);
 const optionsText = ref({});
 
+// Get unique sections from existing fields
+const uniqueSections = computed(() => {
+  const sections = fields.value
+    .map(f => f.section)
+    .filter(s => s && s !== '__new__');
+  return [...new Set(sections)].sort();
+});
+
 const availableFieldTypes = [
   { type: 'text', label: 'Text Input', icon: 'bi bi-input-cursor-text' },
   { type: 'textarea', label: 'Text Area', icon: 'bi bi-textarea-t' },
@@ -371,6 +418,51 @@ const availableFieldTypes = [
   { type: 'email', label: 'Email', icon: 'bi bi-envelope' },
   { type: 'phone', label: 'Phone', icon: 'bi bi-telephone' },
 ];
+
+// Helper methods for enhanced display
+const getFieldTypeIcon = (fieldType) => {
+  const iconMap = {
+    text: 'bi bi-input-cursor-text',
+    textarea: 'bi bi-textarea-t',
+    number: 'bi bi-123',
+    dropdown: 'bi bi-menu-button-wide',
+    radio: 'bi bi-ui-radios',
+    checkbox: 'bi bi-ui-checks',
+    date: 'bi bi-calendar-date',
+    time: 'bi bi-clock',
+    datetime: 'bi bi-calendar-event',
+    email: 'bi bi-envelope',
+    phone: 'bi bi-telephone',
+  };
+  return iconMap[fieldType] || 'bi bi-question-circle';
+};
+
+const getFieldTypeColor = (fieldType) => {
+  const colorMap = {
+    text: '#0d6efd',
+    textarea: '#6610f2',
+    number: '#d63384',
+    dropdown: '#fd7e14',
+    radio: '#20c997',
+    checkbox: '#198754',
+    date: '#0dcaf0',
+    time: '#ffc107',
+    datetime: '#dc3545',
+    email: '#6f42c1',
+    phone: '#0a58ca',
+  };
+  return colorMap[fieldType] || '#6c757d';
+};
+
+const getColumnWidthLabel = (columnWidth) => {
+  const labelMap = {
+    'col-12': 'Full Width',
+    'col-md-6': 'Half Width',
+    'col-md-4': '1/3 Width',
+    'col-md-3': '1/4 Width',
+  };
+  return labelMap[columnWidth] || 'Half Width';
+};
 
 const fetchForm = async () => {
   if (!formId.value) return;
@@ -473,6 +565,7 @@ const addNewField = (fieldType) => {
     is_required: false,
     is_visible: true,
     section: '',
+    column_width: fieldType === 'textarea' ? 'col-12' : 'col-md-6',
     help_text: '',
     _isNew: true,
   };
@@ -487,6 +580,15 @@ const addNewField = (fieldType) => {
 
 const editField = (field) => {
   editingFieldId.value = field.field_id;
+};
+
+const addNewSection = (field) => {
+  if (newSectionName.value.trim()) {
+    field.section = newSectionName.value.trim();
+    newSectionName.value = '';
+  } else {
+    field.section = '';
+  }
 };
 
 const saveFieldEdit = async (field) => {
@@ -612,26 +714,134 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* Card styling */
+.card {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.card-header {
+  border-radius: 12px 12px 0 0 !important;
+  padding: 1rem 1.25rem;
+}
+
+.card-header.bg-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none;
+}
+
+.card-header.bg-success {
+  background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%) !important;
+  border: none;
+}
+
+/* Field items */
 .field-item {
-  transition: all 0.3s ease;
-  border-left: 4px solid #0d6efd;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-left: 4px solid #667eea;
+  border-radius: 8px;
+  background: white;
+}
+
+.field-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+  border-left-color: #764ba2;
 }
 
 .field-item.field-hidden {
-  opacity: 0.6;
+  opacity: 0.5;
   border-left-color: #6c757d;
+  background: #f8f9fa;
 }
 
+/* Drag handle */
 .drag-handle {
   cursor: grab;
   user-select: none;
+  transition: color 0.2s ease;
+}
+
+.drag-handle:hover {
+  color: #667eea !important;
 }
 
 .drag-handle:active {
   cursor: grabbing;
 }
 
+/* Fields list */
 .fields-list {
   min-height: 100px;
+}
+
+/* Add field buttons */
+.btn-outline-primary.w-100 {
+  transition: all 0.3s ease;
+  border-radius: 8px;
+}
+
+.btn-outline-primary.w-100:hover:not(:disabled) {
+  transform: translateX(5px);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: white;
+}
+
+.btn-outline-primary.w-100:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Badges */
+.badge {
+  padding: 0.35em 0.65em;
+  font-weight: 500;
+  border-radius: 6px;
+}
+
+.bg-secondary-subtle {
+  background-color: #e9ecef !important;
+  color: #495057 !important;
+}
+
+/* Action buttons */
+.btn-sm {
+  transition: all 0.2s ease;
+  border-radius: 6px;
+}
+
+.btn-sm:hover {
+  transform: scale(1.05);
+}
+
+/* Alert styling */
+.alert-warning {
+  border-left: 4px solid #ffc107;
+  border-radius: 8px;
+}
+
+/* Form controls */
+.form-control, .form-select {
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  transition: all 0.2s ease;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+}
+
+/* Form check */
+.form-check-input:checked {
+  background-color: #667eea;
+  border-color: #667eea;
+}
+
+/* Empty state */
+.text-center.py-5 i {
+  color: #667eea;
 }
 </style>

@@ -342,11 +342,14 @@ const getDefaultValueForType = (fieldType) => {
 };
 
 const getFieldColClass = (field) => {
-  // Full width for textarea and certain field types
+  // Use column_width from field if available, otherwise default based on type
+  if (field.column_width) {
+    return field.column_width;
+  }
+  // Fallback for old fields without column_width
   if (['textarea'].includes(field.field_type)) {
     return 'col-12';
   }
-  // Half width for most fields
   return 'col-md-6';
 };
 
