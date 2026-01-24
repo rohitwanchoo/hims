@@ -39,11 +39,8 @@ class PrescriptionController extends Controller
 
         $hospitalId = Auth::user()->hospital_id;
 
-        // Try to get doctor_id from authenticated user
+        // Set doctor_id to null for now - can be set later if needed
         $doctorId = null;
-        if (Auth::user()->doctor) {
-            $doctorId = Auth::user()->doctor->doctor_id;
-        }
 
         DB::beginTransaction();
         try {
