@@ -495,11 +495,7 @@ const openPrescription = () => {
 };
 
 const goBack = () => {
-  if (opdId.value) {
-    router.push(`/opd/${opdId.value}`);
-  } else {
-    router.push('/opd');
-  }
+  router.push('/doctor-workbench');
 };
 
 onMounted(async () => {
