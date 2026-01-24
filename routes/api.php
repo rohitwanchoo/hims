@@ -159,8 +159,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Prescriptions
     Route::post('prescriptions', [\App\Http\Controllers\Api\PrescriptionController::class, 'store']);
-    Route::get('prescriptions/{prescription}', [\App\Http\Controllers\Api\PrescriptionController::class, 'show']);
     Route::get('prescriptions/last/{patientId}', [\App\Http\Controllers\Api\PrescriptionController::class, 'getLastPrescription']);
+    Route::get('prescriptions/{prescription}', [\App\Http\Controllers\Api\PrescriptionController::class, 'show']);
 
     // Standard Rx
     Route::get('standard-rx', [\App\Http\Controllers\Api\StandardRxController::class, 'index']);
