@@ -9,7 +9,7 @@
         <div class="row mb-3">
             <div class="col-md-4">
                 <label class="form-label">Language</label>
-                <select v-model="selectedLanguage" class="form-select">
+                <select v-model="selectedLanguage" @change="fetchData" class="form-select">
                     <option value="english">English</option>
                     <option value="marathi">Marathi</option>
                     <option value="hindi">Hindi</option>
@@ -27,8 +27,10 @@
                         v-model="searchText"
                         placeholder="Type dose time instruction"
                         @keyup.enter="addDoseTime"
+                        @input="debouncedSearch"
                     />
-                    <button class="btn btn-primary" @click="addDoseTime">
+                    <button class="btn btn-primary" @click="addDoseTime" :disabled="saving">
+                        <span v-if="saving" class="spinner-border spinner-border-sm me-1"></span>
                         Add New
                     </button>
                 </div>
@@ -37,87 +39,235 @@
 
         <!-- Dose Time List -->
         <div class="border rounded p-3" style="height: 450px; overflow-y: auto;">
-            <div
-                v-for="doseTime in filteredDoseTimes"
-                :key="doseTime.id"
-                class="dose-time-item py-1 px-2 mb-1 cursor-pointer"
-                :class="{ 'bg-primary text-white': selectedDoseTime?.id === doseTime.id }"
-                @click="selectDoseTime(doseTime)"
-                @dblclick="editDoseTime(doseTime)"
-            >
-                {{ doseTime.text }}
+            <div v-if="loading" class="text-center py-4">
+                <div class="spinner-border spinner-border-sm me-2"></div>Loading...
             </div>
-            <div v-if="filteredDoseTimes.length === 0" class="text-center text-muted py-4">
+            <div v-else-if="doseTimes.length === 0" class="text-center text-muted py-4">
                 No dose time instructions found
+            </div>
+            <div v-else>
+                <div
+                    v-for="doseTime in doseTimes"
+                    :key="doseTime.dose_time_id"
+                    class="dose-time-item py-2 px-3 mb-1 cursor-pointer d-flex justify-content-between align-items-center"
+                    :class="{ 'bg-primary text-white': selectedDoseTime?.dose_time_id === doseTime.dose_time_id }"
+                    @click="selectDoseTime(doseTime)"
+                    @dblclick="editDoseTime(doseTime)"
+                    @keyup.insert="editDoseTime(doseTime)"
+                    @keyup.delete="confirmDelete(doseTime)"
+                    tabindex="0"
+                >
+                    <span>{{ doseTime.dose_time_text }}</span>
+                    <div class="btn-group btn-group-sm">
+                        <button
+                            class="btn btn-sm"
+                            :class="selectedDoseTime?.dose_time_id === doseTime.dose_time_id ? 'btn-light' : 'btn-outline-primary'"
+                            @click.stop="editDoseTime(doseTime)"
+                            title="Edit"
+                        >
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button
+                            class="btn btn-sm"
+                            :class="selectedDoseTime?.dose_time_id === doseTime.dose_time_id ? 'btn-light text-danger' : 'btn-outline-danger'"
+                            @click.stop="confirmDelete(doseTime)"
+                            title="Delete"
+                        >
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Modal -->
+        <div class="modal fade" id="editModal" tabindex="-1" ref="editModalRef">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Dose Time</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form @submit.prevent="updateDoseTime">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Dose Time Instruction *</label>
+                                <textarea
+                                    class="form-control"
+                                    v-model="editForm.dose_time_text"
+                                    rows="4"
+                                    required
+                                    maxlength="1000"
+                                ></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Language *</label>
+                                <select v-model="editForm.language" class="form-select" required>
+                                    <option value="english">English</option>
+                                    <option value="marathi">Marathi</option>
+                                    <option value="hindi">Hindi</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" :disabled="saving">
+                                <span v-if="saving" class="spinner-border spinner-border-sm me-1"></span>
+                                Update
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, onMounted } from 'vue';
+import axios from 'axios';
+import { Modal } from 'bootstrap';
 
-const selectedLanguage = ref('marathi');
+const selectedLanguage = ref('english');
 const searchText = ref('');
 const selectedDoseTime = ref(null);
+const doseTimes = ref([]);
+const loading = ref(false);
+const saving = ref(false);
+const editModalRef = ref(null);
+let editModal = null;
 
-const doseTimes = ref([
-    { id: 1, text: 'डोक्यात १० थेंब लावणे   रोज टुपोरो', language: 'marathi' },
-    { id: 2, text: '0 - 0 - 1  रात्रि दिवसांनी', language: 'marathi' },
-    { id: 3, text: '0 - 0 - 1 रोज रात्री', language: 'marathi' },
-    { id: 4, text: '0 - 0 - 1 रोज रात्रि नाक्वावर दिवसा', language: 'marathi' },
-    { id: 5, text: '0—1—0 रोज टुपारी', language: 'marathi' },
-    { id: 6, text: '0—1—0 रोज टुपारी ऐकुनर शनिवार', language: 'marathi' },
-    { id: 7, text: '1 -  0 - 1 ऐकुनर शनिवार', language: 'marathi' },
-    { id: 8, text: '1 -  1 - 1 ऐकुनर शनिवार', language: 'marathi' },
-    { id: 9, text: '1 - 0 - 0 शनिवार व रविवार सकारी १ टुपारीवार', language: 'marathi' },
-    { id: 10, text: '1 - 0 - 1 वेषण्यापोषी', language: 'marathi' },
-    { id: 11, text: '1 - 0 - 1 वेषण्यानंतर', language: 'marathi' },
-    { id: 12, text: '1 ML TWICE DAILY  APPLY AND MASSAGE GENTLY TO...', language: 'english' },
-    { id: 13, text: '1-0-0 सकाळी', language: 'marathi' },
-    { id: 14, text: '1-0-1 twice daily', language: 'english' },
-    { id: 15, text: '1—0——1 रोज सकाळी ऐणमाळी नावने', language: 'marathi' },
-    { id: 16, text: '1——0——1 रोज सकाळी ऐणमाळी नावने', language: 'marathi' },
-    { id: 17, text: '1——1——1 प्रियात्मन वोट फेशन', language: 'marathi' },
-    { id: 18, text: '0 - 1 - 0', language: 'english' },
-    { id: 19, text: '0 - 1- 0', language: 'english' },
-    { id: 20, text: '0- 1- 0', language: 'english' }
-]);
-
-const filteredDoseTimes = computed(() => {
-    let filtered = doseTimes.value.filter(d => d.language === selectedLanguage.value);
-
-    if (searchText.value.trim()) {
-        const search = searchText.value.toLowerCase();
-        filtered = filtered.filter(d =>
-            d.text.toLowerCase().includes(search)
-        );
-    }
-
-    return filtered;
+const editForm = ref({
+    dose_time_id: null,
+    dose_time_text: '',
+    language: 'english'
 });
+
+let searchTimeout = null;
+
+const debouncedSearch = () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        fetchData();
+    }, 300);
+};
+
+const fetchData = async () => {
+    loading.value = true;
+    try {
+        const params = {
+            language: selectedLanguage.value
+        };
+        if (searchText.value.trim()) {
+            params.search = searchText.value.trim();
+        }
+        const response = await axios.get('/api/dose-time-masters', { params });
+        doseTimes.value = response.data;
+    } catch (error) {
+        console.error('Error fetching dose times:', error);
+        alert('Error loading dose time masters');
+    }
+    loading.value = false;
+};
 
 const selectDoseTime = (doseTime) => {
     selectedDoseTime.value = doseTime;
 };
 
 const editDoseTime = (doseTime) => {
-    searchText.value = doseTime.text;
+    editForm.value = {
+        dose_time_id: doseTime.dose_time_id,
+        dose_time_text: doseTime.dose_time_text,
+        language: doseTime.language
+    };
     selectedDoseTime.value = doseTime;
+    editModal.show();
 };
 
-const addDoseTime = () => {
-    if (searchText.value.trim()) {
-        const newDoseTime = {
-            id: Math.max(...doseTimes.value.map(d => d.id), 0) + 1,
-            text: searchText.value.trim(),
+const addDoseTime = async () => {
+    if (!searchText.value.trim()) {
+        alert('Please enter dose time instruction');
+        return;
+    }
+
+    saving.value = true;
+    try {
+        const response = await axios.post('/api/dose-time-masters', {
+            dose_time_text: searchText.value.trim(),
             language: selectedLanguage.value
-        };
-        doseTimes.value.push(newDoseTime);
-        searchText.value = '';
-        selectedDoseTime.value = newDoseTime;
+        });
+
+        if (response.data.success) {
+            searchText.value = '';
+            await fetchData();
+            selectedDoseTime.value = response.data.data;
+            alert('Dose time added successfully');
+        }
+    } catch (error) {
+        console.error('Error adding dose time:', error);
+        if (error.response?.data?.message) {
+            alert(error.response.data.message);
+        } else {
+            alert('Error adding dose time');
+        }
+    }
+    saving.value = false;
+};
+
+const updateDoseTime = async () => {
+    if (!editForm.value.dose_time_text.trim()) {
+        alert('Please enter dose time instruction');
+        return;
+    }
+
+    saving.value = true;
+    try {
+        const response = await axios.put(`/api/dose-time-masters/${editForm.value.dose_time_id}`, {
+            dose_time_text: editForm.value.dose_time_text.trim(),
+            language: editForm.value.language
+        });
+
+        if (response.data.success) {
+            editModal.hide();
+            await fetchData();
+            alert('Dose time updated successfully');
+        }
+    } catch (error) {
+        console.error('Error updating dose time:', error);
+        if (error.response?.data?.message) {
+            alert(error.response.data.message);
+        } else {
+            alert('Error updating dose time');
+        }
+    }
+    saving.value = false;
+};
+
+const confirmDelete = async (doseTime) => {
+    if (!confirm(`Are you sure you want to delete this dose time instruction?\n\n"${doseTime.dose_time_text}"`)) {
+        return;
+    }
+
+    try {
+        const response = await axios.delete(`/api/dose-time-masters/${doseTime.dose_time_id}`);
+
+        if (response.data.success) {
+            if (selectedDoseTime.value?.dose_time_id === doseTime.dose_time_id) {
+                selectedDoseTime.value = null;
+            }
+            await fetchData();
+            alert('Dose time deleted successfully');
+        }
+    } catch (error) {
+        console.error('Error deleting dose time:', error);
+        alert('Error deleting dose time');
     }
 };
+
+onMounted(() => {
+    editModal = new Modal(editModalRef.value);
+    fetchData();
+});
 </script>
 
 <style scoped>
@@ -131,7 +281,17 @@ const addDoseTime = () => {
     background-color: rgba(0, 0, 0, 0.05);
 }
 
+.dose-time-item:focus {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+
 .cursor-pointer {
     cursor: pointer;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
 }
 </style>

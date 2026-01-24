@@ -1,0 +1,34 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('dose_time_masters', function (Blueprint $table) {
+            $table->id('dose_time_id');
+            $table->unsignedBigInteger('hospital_id');
+            $table->text('dose_time_text');
+            $table->enum('language', ['english', 'marathi', 'hindi'])->default('english');
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+
+            $table->foreign('hospital_id')->references('hospital_id')->on('hospitals')->onDelete('cascade');
+            $table->index(['hospital_id', 'language']);
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('dose_time_masters');
+    }
+};

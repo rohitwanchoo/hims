@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\QualificationController;
 use App\Http\Controllers\Api\ConsultMasterController;
 use App\Http\Controllers\Api\DoctorWorkbenchController;
 use App\Http\Controllers\Api\ConsultationFormController;
+use App\Http\Controllers\Api\DoseTimeMasterController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -134,6 +135,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('consult-masters/doctor-schedules/{doctorId}', [ConsultMasterController::class, 'doctorSchedules']);
     Route::post('consult-masters/available-slots', [ConsultMasterController::class, 'availableSlots']);
     Route::post('consult-masters/preview-slots', [ConsultMasterController::class, 'previewSlots']);
+
+    // Dose Time Masters (Master > Prescription)
+    Route::apiResource('dose-time-masters', DoseTimeMasterController::class);
 
     // Countries (Master > Address)
     Route::apiResource('countries', CountryController::class);
