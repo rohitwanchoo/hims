@@ -1,11 +1,5 @@
 <template>
     <div>
-        <p class="text-muted small mb-3">
-            To Add, Type the Name into 'Search/Add Text Box' & Click Button, Next to 'Add New Box'<br>
-            To Edit, Click on Name & Press INSERT Key.<br>
-            To Delete, Click on Name & Press DELETE Key.
-        </p>
-
         <div class="row mb-3">
             <div class="col-md-4">
                 <label class="form-label">Language</label>
@@ -45,38 +39,50 @@
             <div v-else-if="doses.length === 0" class="text-center text-muted py-4">
                 No dosage instructions found
             </div>
-            <div v-else>
-                <div
-                    v-for="dose in doses"
-                    :key="dose.dose_id"
-                    class="dose-item py-2 px-3 mb-1 cursor-pointer d-flex justify-content-between align-items-center"
-                    :class="{ 'bg-primary text-white': selectedDose?.dose_id === dose.dose_id }"
-                    @click="selectDose(dose)"
-                    @dblclick="editDose(dose)"
-                    @keyup.insert="editDose(dose)"
-                    @keyup.delete="confirmDelete(dose)"
-                    tabindex="0"
-                >
-                    <span>{{ dose.dose_text }}</span>
-                    <div class="btn-group btn-group-sm">
-                        <button
-                            class="btn btn-sm"
-                            :class="selectedDose?.dose_id === dose.dose_id ? 'btn-light' : 'btn-outline-primary'"
-                            @click.stop="editDose(dose)"
-                            title="Edit"
+            <div v-else class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th style="width: 70%">Dosage Instruction</th>
+                            <th style="width: 15%">Language</th>
+                            <th style="width: 15%">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="dose in doses"
+                            :key="dose.dose_id"
+                            class="cursor-pointer"
+                            :class="{ 'table-active': selectedDose?.dose_id === dose.dose_id }"
+                            @click="selectDose(dose)"
                         >
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button
-                            class="btn btn-sm"
-                            :class="selectedDose?.dose_id === dose.dose_id ? 'btn-light text-danger' : 'btn-outline-danger'"
-                            @click.stop="confirmDelete(dose)"
-                            title="Delete"
-                        >
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </div>
+                            <td>{{ dose.dose_text }}</td>
+                            <td>
+                                <span class="badge bg-info text-capitalize">
+                                    {{ dose.language }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button
+                                        class="btn btn-sm btn-outline-primary"
+                                        @click.stop="editDose(dose)"
+                                        title="Edit"
+                                    >
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button
+                                        class="btn btn-sm btn-outline-danger"
+                                        @click.stop="confirmDelete(dose)"
+                                        title="Delete"
+                                    >
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -271,23 +277,20 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.dose-item {
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
-
-.dose-item:hover:not(.bg-primary) {
-    background-color: rgba(0, 0, 0, 0.05);
-}
-
-.dose-item:focus {
-    outline: 2px solid #0d6efd;
-    outline-offset: 2px;
-}
-
 .cursor-pointer {
     cursor: pointer;
+}
+
+.table-responsive {
+    max-height: 420px;
+    overflow-y: auto;
+}
+
+.table thead {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa;
+    z-index: 1;
 }
 
 .btn-group-sm .btn {
