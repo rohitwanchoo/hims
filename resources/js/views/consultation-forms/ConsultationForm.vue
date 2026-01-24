@@ -420,13 +420,68 @@ const getFieldColClass = (field) => {
 };
 
 const completeConsultation = async () => {
-  // First save the consultation
-  await saveConsultation();
+  // Validate form first
+  validationErrors.value = validateForm();
 
-  if (Object.keys(validationErrors.value).length === 0) {
-    // If save was successful, mark as completed and go back
-    alert('Consultation completed successfully!');
-    goBack();
+  if (Object.keys(validationErrors.value).length > 0) {
+    alert('Please fix validation errors before completing consultation');
+    return;
+  }
+
+  saving.value = true;
+
+  try {
+    const payload = {
+      opd_id: opdId.value,
+      patient_id: patientId.value,
+      doctor_id: doctor.value?.doctor_id,
+      form_id: form.value.form_id,
+      consultation_date: new Date().toISOString(),
+      form_data: formData,
+      notes: notes.value,
+    };
+
+    let response;
+
+    if (recordId.value) {
+      // Update existing record
+      response = await axios.put(`/api/consultation-records/${recordId.value}`, {
+        form_data: formData,
+        notes: notes.value,
+      });
+    } else {
+      // Create new record
+      response = await axios.post('/api/consultation-records', payload);
+
+      // Set the recordId
+      if (response.data.success && response.data.data) {
+        recordId.value = response.data.data.record_id;
+      }
+    }
+
+    if (response.data.success) {
+      // Update OPD status to completed
+      if (opdId.value) {
+        try {
+          await axios.post(`/api/opd-visits/${opdId.value}/complete-consultation`);
+        } catch (error) {
+          console.error('Error updating OPD status:', error);
+        }
+      }
+
+      alert('Consultation completed successfully!');
+      goBack();
+    }
+  } catch (error) {
+    console.error('Error completing consultation:', error);
+
+    if (error.response?.data?.errors?.form_data) {
+      validationErrors.value = error.response.data.errors.form_data;
+    }
+
+    alert('Failed to complete consultation: ' + (error.response?.data?.message || error.message));
+  } finally {
+    saving.value = false;
   }
 };
 
