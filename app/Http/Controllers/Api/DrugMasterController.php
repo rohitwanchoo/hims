@@ -46,6 +46,7 @@ class DrugMasterController extends Controller
         $request->validate([
             'drug_name' => 'required|string|max:255',
             'drug_type_id' => 'nullable|exists:drug_types,drug_type_id',
+            'language' => 'required|in:english,marathi,hindi',
             'dose_time' => 'nullable|string|max:100',
             'days' => 'nullable|integer|min:0',
             'quantity' => 'nullable|integer|min:0',
@@ -57,6 +58,7 @@ class DrugMasterController extends Controller
             'hospital_id' => $hospitalId,
             'drug_type_id' => $request->drug_type_id,
             'drug_name' => $request->drug_name,
+            'language' => $request->language,
             'dose_time' => $request->dose_time,
             'days' => $request->days,
             'quantity' => $request->quantity,
@@ -98,6 +100,7 @@ class DrugMasterController extends Controller
         $request->validate([
             'drug_name' => 'required|string|max:255',
             'drug_type_id' => 'nullable|exists:drug_types,drug_type_id',
+            'language' => 'required|in:english,marathi,hindi',
             'dose_time' => 'nullable|string|max:100',
             'days' => 'nullable|integer|min:0',
             'quantity' => 'nullable|integer|min:0',
@@ -106,6 +109,7 @@ class DrugMasterController extends Controller
         $drugMaster->update([
             'drug_type_id' => $request->drug_type_id,
             'drug_name' => $request->drug_name,
+            'language' => $request->language,
             'dose_time' => $request->dose_time,
             'days' => $request->days,
             'quantity' => $request->quantity,

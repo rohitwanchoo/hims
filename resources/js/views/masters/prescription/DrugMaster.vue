@@ -59,44 +59,62 @@
 
         <!-- Drug List -->
         <div class="border rounded p-3" style="height: 400px; overflow-y: auto;">
-            <div class="mb-3">
-                <label class="form-label fw-bold">Description</label>
-            </div>
             <div v-if="loading" class="text-center py-4">
                 <div class="spinner-border spinner-border-sm me-2"></div>Loading...
             </div>
             <div v-else-if="drugs.length === 0" class="text-center text-muted py-4">
                 No drugs found
             </div>
-            <div v-else>
-                <div
-                    v-for="drug in drugs"
-                    :key="drug.drug_master_id"
-                    class="drug-item py-2 px-3 mb-1 cursor-pointer d-flex justify-content-between align-items-center"
-                    :class="{ 'bg-primary text-white': selectedDrug?.drug_master_id === drug.drug_master_id }"
-                    @click="selectDrug(drug)"
-                    tabindex="0"
-                >
-                    <span>{{ drug.drug_name }}</span>
-                    <div class="btn-group btn-group-sm">
-                        <button
-                            class="btn btn-sm"
-                            :class="selectedDrug?.drug_master_id === drug.drug_master_id ? 'btn-light' : 'btn-outline-primary'"
-                            @click.stop="editDrug(drug)"
-                            title="Edit"
+            <div v-else class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>Drug Name</th>
+                            <th>Language</th>
+                            <th>Dose Time</th>
+                            <th>Days</th>
+                            <th>Qty</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="drug in drugs"
+                            :key="drug.drug_master_id"
+                            class="cursor-pointer"
+                            :class="{ 'table-active': selectedDrug?.drug_master_id === drug.drug_master_id }"
+                            @click="selectDrug(drug)"
                         >
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button
-                            class="btn btn-sm"
-                            :class="selectedDrug?.drug_master_id === drug.drug_master_id ? 'btn-light text-danger' : 'btn-outline-danger'"
-                            @click.stop="confirmDelete(drug)"
-                            title="Delete"
-                        >
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </div>
+                            <td>{{ drug.drug_name }}</td>
+                            <td>
+                                <span class="badge bg-info text-capitalize">
+                                    {{ drug.language }}
+                                </span>
+                            </td>
+                            <td>{{ drug.dose_time || '-' }}</td>
+                            <td>{{ drug.days || '-' }}</td>
+                            <td>{{ drug.quantity || '-' }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button
+                                        class="btn btn-sm btn-outline-primary"
+                                        @click.stop="editDrug(drug)"
+                                        title="Edit"
+                                    >
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button
+                                        class="btn btn-sm btn-outline-danger"
+                                        @click.stop="confirmDelete(drug)"
+                                        title="Delete"
+                                    >
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -303,7 +321,9 @@ const editDrug = async (drug) => {
         quantity: drug.quantity || ''
     };
     selectedDrug.value = drug;
-    editLanguage.value = 'english';
+    // Set language from drug data
+    editLanguage.value = drug.language || 'english';
+    // Fetch dose times for the drug's language
     await fetchDoseTimesForEdit();
     editDrugModal.show();
 };
@@ -319,6 +339,7 @@ const saveDrug = async () => {
         const response = await axios.post('/api/drug-masters', {
             drug_type_id: selectedDrugType.value || null,
             drug_name: form.value.drug_name.trim(),
+            language: selectedLanguage.value,
             dose_time: form.value.dose_time || null,
             days: form.value.days || null,
             quantity: form.value.quantity || null
@@ -353,6 +374,7 @@ const updateDrug = async () => {
         const response = await axios.put(`/api/drug-masters/${editForm.value.drug_master_id}`, {
             drug_type_id: editForm.value.drug_type_id || null,
             drug_name: editForm.value.drug_name.trim(),
+            language: editLanguage.value,
             dose_time: editForm.value.dose_time || null,
             days: editForm.value.days || null,
             quantity: editForm.value.quantity || null
@@ -436,23 +458,20 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.drug-item {
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
-
-.drug-item:hover:not(.bg-primary) {
-    background-color: rgba(0, 0, 0, 0.05);
-}
-
-.drug-item:focus {
-    outline: 2px solid #0d6efd;
-    outline-offset: 2px;
-}
-
 .cursor-pointer {
     cursor: pointer;
+}
+
+.table-responsive {
+    max-height: 380px;
+    overflow-y: auto;
+}
+
+.table thead {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa;
+    z-index: 1;
 }
 
 .btn-group-sm .btn {

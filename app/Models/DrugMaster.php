@@ -13,6 +13,7 @@ class DrugMaster extends Model
         'hospital_id',
         'drug_type_id',
         'drug_name',
+        'language',
         'dose_time',
         'days',
         'quantity',
