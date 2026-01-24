@@ -1,9 +1,9 @@
 <template>
     <div class="prescription-form">
-        <!-- Info Alert -->
-        <div v-if="prescriptionDrugs.length > 0" class="alert alert-info alert-dismissible fade show mb-3" role="alert">
+        <!-- Info Alert - Only show if prescription was auto-loaded from today -->
+        <div v-if="showPrescriptionLoadedAlert && prescriptionDrugs.length > 0" class="alert alert-info alert-dismissible fade show mb-3" role="alert">
             <i class="bi bi-info-circle me-2"></i>
-            <strong>Previous prescription loaded:</strong> {{ prescriptionDrugs.length }} drug(s) from last visit. You can edit or add more.
+            <strong>Today's prescription loaded:</strong> {{ prescriptionDrugs.length }} drug(s) from earlier today. You can edit or add more.
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
 
@@ -334,6 +334,7 @@ const selectedIndex = ref(0);
 const importing = ref(false);
 const importFile = ref(null);
 const fileInput = ref(null);
+const showPrescriptionLoadedAlert = ref(false);
 
 // Modals
 const adviceModalRef = ref(null);
@@ -417,17 +418,32 @@ const loadLastPrescription = async () => {
     try {
         const response = await axios.get(`/api/prescriptions/last/${props.patientId}`);
         if (response.data && response.data.drugs) {
-            // Populate drugs
-            prescriptionDrugs.value = response.data.drugs;
-            // Populate advice and investigations
-            adviceText.value = response.data.advice || '';
-            investigations.value = response.data.investigations || '';
+            // Check if prescription is from today
+            const prescriptionDate = new Date(response.data.created_at || response.data.prescription_date);
+            const today = new Date();
 
-            console.log('Loaded previous prescription with', prescriptionDrugs.value.length, 'drugs');
+            // Compare only the date part (ignore time)
+            const isSameDay = prescriptionDate.getFullYear() === today.getFullYear() &&
+                            prescriptionDate.getMonth() === today.getMonth() &&
+                            prescriptionDate.getDate() === today.getDate();
+
+            if (isSameDay) {
+                // Only load if prescription is from today
+                prescriptionDrugs.value = response.data.drugs;
+                adviceText.value = response.data.advice || '';
+                investigations.value = response.data.investigations || '';
+                showPrescriptionLoadedAlert.value = true; // Show alert for today's prescription
+
+                console.log('Loaded today\'s prescription with', prescriptionDrugs.value.length, 'drugs');
+            } else {
+                console.log('Previous prescription is from a different day - starting fresh');
+                showPrescriptionLoadedAlert.value = false; // Don't show alert
+            }
         }
     } catch (error) {
         // No previous prescription found - that's okay
         console.log('No previous prescription found for patient');
+        showPrescriptionLoadedAlert.value = false;
     }
 };
 
@@ -583,6 +599,7 @@ const removeStandardRx = () => {
     if (confirm('Are you sure you want to remove all drugs?')) {
         prescriptionDrugs.value = [];
         adviceText.value = '';
+        showPrescriptionLoadedAlert.value = false;
     }
 };
 
@@ -590,6 +607,7 @@ const removeLastRx = () => {
     if (confirm('Are you sure you want to clear the prescription?')) {
         prescriptionDrugs.value = [];
         adviceText.value = '';
+        showPrescriptionLoadedAlert.value = false;
         investigations.value = '';
     }
 };
