@@ -159,7 +159,9 @@
       "Bash(composer dump-autoload:*)",
       "Bash(test:*)",
       "Bash(pkill:*)",
-      "Bash(php:*)"
+      "Bash(php:*)",
+      "Bash(sudo tail:*)",
+      "Bash(systemctl list-units:*)"
     ]
   }
 }

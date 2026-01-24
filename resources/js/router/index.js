@@ -140,12 +140,21 @@ import DistrictList from '../views/masters/address/DistrictList.vue';
 import CityList from '../views/masters/address/CityList.vue';
 import AreaList from '../views/masters/address/AreaList.vue';
 
+// Prescription
+import PrescriptionPrint from '../views/prescription/PrescriptionPrint.vue';
+
 const routes = [
     {
         path: '/login',
         name: 'login',
         component: Login,
         meta: { guest: true }
+    },
+    {
+        path: '/prescription/:id/print',
+        name: 'prescription.print',
+        component: PrescriptionPrint,
+        meta: { requiresAuth: true }
     },
     {
         path: '/',

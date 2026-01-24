@@ -53,8 +53,8 @@
 
                     <!-- Save & Print -->
                     <button class="btn btn-sm btn-success" @click="saveAndPrint">
-                        <i class="bi bi-printer"></i>
-                        Save & Print (F11)
+                        <i class="bi bi-save me-1"></i>
+                        Save & Print
                     </button>
 
                     <!-- Import Drugs Data -->
@@ -115,10 +115,6 @@
                         {{ dt.dose_time_text }}
                     </option>
                 </select>
-            </div>
-            <div class="col-md-1">
-                <label class="form-label small">Stock</label>
-                <input type="text" class="form-control form-control-sm" v-model="drugForm.stock" readonly />
             </div>
             <div class="col-md-1">
                 <label class="form-label small">Days</label>
@@ -233,14 +229,20 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Advice</label>
-                            <textarea class="form-control" v-model="adviceForm.advice_text" rows="4"></textarea>
+                            <div class="input-group">
+                                <textarea class="form-control" v-model="adviceForm.advice_text" rows="3" placeholder="Type new advice..."></textarea>
+                                <button class="btn btn-outline-success" type="button" @click="saveAdviceToMaster" :disabled="!adviceForm.advice_text.trim()">
+                                    <i class="bi bi-save"></i> Save
+                                </button>
+                            </div>
+                            <small class="text-muted">Type new advice and click Save to add to master list</small>
                         </div>
                         <div v-if="adviceList.length > 0" class="mb-3">
-                            <label class="form-label">Select from saved advice</label>
-                            <div class="list-group" style="max-height: 200px; overflow-y: auto;">
+                            <label class="form-label">Saved Advice (Click to use)</label>
+                            <div class="list-group" style="max-height: 250px; overflow-y: auto;">
                                 <button
                                     v-for="advice in adviceList"
-                                    :key="advice.id"
+                                    :key="advice.advice_id"
                                     type="button"
                                     class="list-group-item list-group-item-action text-start"
                                     @click="selectAdvice(advice)"
@@ -249,10 +251,15 @@
                                 </button>
                             </div>
                         </div>
+                        <div v-else class="text-center text-muted py-3">
+                            <i class="bi bi-info-circle"></i> No saved advice found. Type above and click Save to create one.
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary" @click="saveAdvice">Add to Prescription</button>
+                        <button type="button" class="btn btn-primary" @click="addAdviceToPrescription" :disabled="!adviceForm.advice_text.trim()">
+                            <i class="bi bi-plus-lg me-1"></i> Add to Prescription
+                        </button>
                     </div>
                 </div>
             </div>
@@ -335,7 +342,6 @@ const drugForm = reactive({
     drug_type: '',
     language: 'english',
     dose_advice: '',
-    stock: '',
     days: '',
     qty: ''
 });
@@ -378,10 +384,13 @@ const fetchDoseTimes = async () => {
 
 const fetchAdviceList = async () => {
     try {
-        // TODO: Create advice master endpoint
-        adviceList.value = [];
+        const response = await axios.get('/api/advice-masters', {
+            params: { language: adviceForm.language }
+        });
+        adviceList.value = response.data;
     } catch (error) {
         console.error('Error fetching advice list:', error);
+        adviceList.value = [];
     }
 };
 
@@ -436,7 +445,6 @@ const selectDrug = async (drug) => {
     drugForm.dose_advice = drug.dose_time || '';
     drugForm.days = drug.days || '';
     drugForm.qty = drug.quantity || '';
-    drugForm.stock = ''; // TODO: Fetch from inventory
 
     showDrugDropdown.value = false;
 
@@ -468,7 +476,6 @@ const addDrug = () => {
         drug_type: '',
         language: 'english',
         dose_advice: '',
-        stock: '',
         days: '',
         qty: ''
     });
@@ -481,6 +488,7 @@ const removeDrug = (index) => {
 };
 
 const openAdviceModal = () => {
+    fetchAdviceList();
     adviceModal.show();
 };
 
@@ -488,10 +496,47 @@ const selectAdvice = (advice) => {
     adviceForm.advice_text = advice.advice_text;
 };
 
-const saveAdvice = () => {
+const saveAdviceToMaster = async () => {
+    if (!adviceForm.advice_text.trim()) {
+        alert('Please enter advice text');
+        return;
+    }
+
+    try {
+        const response = await axios.post('/api/advice-masters', {
+            advice_text: adviceForm.advice_text.trim(),
+            language: adviceForm.language
+        });
+
+        if (response.data.success) {
+            alert('Advice saved to master list successfully');
+            // Refresh advice list
+            await fetchAdviceList();
+            // Don't clear the text, user might want to add it to prescription
+        }
+    } catch (error) {
+        console.error('Error saving advice:', error);
+        if (error.response?.data?.message) {
+            alert(error.response.data.message);
+        } else {
+            alert('Error saving advice to master');
+        }
+    }
+};
+
+const addAdviceToPrescription = () => {
     if (adviceForm.advice_text.trim()) {
-        adviceText.value = adviceForm.advice_text;
+        // Add to prescription advice (append if there's existing advice)
+        if (adviceText.value && adviceText.value.trim()) {
+            adviceText.value += '\n' + adviceForm.advice_text.trim();
+        } else {
+            adviceText.value = adviceForm.advice_text.trim();
+        }
+
+        // Clear form and close modal
+        adviceForm.advice_text = '';
         adviceModal.hide();
+        alert('Advice added to prescription');
     }
 };
 
@@ -566,11 +611,17 @@ const saveAndPrint = async () => {
         const response = await axios.post('/api/prescriptions', payload);
 
         if (response.data.success) {
-            alert('Prescription saved successfully');
+            const prescriptionId = response.data.data.prescription_id;
+
+            // Ask user if they want to print
+            if (confirm('Prescription saved successfully! Do you want to print now?')) {
+                // Open print page in new window
+                const printUrl = `/prescription/${prescriptionId}/print`;
+                window.open(printUrl, '_blank');
+            }
+
             // Reload the saved prescription
             await loadLastPrescription();
-            // TODO: Open print dialog
-            // window.print();
         }
     } catch (error) {
         console.error('Error saving prescription:', error);
@@ -658,13 +709,7 @@ const handleClickOutside = (event) => {
     }
 };
 
-// Keyboard shortcut handler
-const handleKeyDown = (e) => {
-    if (e.key === 'F11') {
-        e.preventDefault();
-        saveAndPrint();
-    }
-};
+// Keyboard shortcut handler (removed F11)
 
 onMounted(() => {
     adviceModal = new Modal(adviceModalRef.value);
@@ -678,12 +723,10 @@ onMounted(() => {
     loadLastPrescription();
 
     document.addEventListener('click', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
 });
 
 onBeforeUnmount(() => {
     document.removeEventListener('click', handleClickOutside);
-    document.removeEventListener('keydown', handleKeyDown);
 });
 </script>
 

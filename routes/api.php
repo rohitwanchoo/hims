@@ -157,6 +157,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('drug-masters-template', [DrugMasterController::class, 'downloadTemplate']);
     Route::post('drug-masters-import', [DrugMasterController::class, 'import']);
 
+    // Advice Masters (Master > Prescription)
+    Route::apiResource('advice-masters', \App\Http\Controllers\Api\AdviceMasterController::class);
+
     // Prescriptions
     Route::post('prescriptions', [\App\Http\Controllers\Api\PrescriptionController::class, 'store']);
     Route::get('prescriptions/last/{patientId}', [\App\Http\Controllers\Api\PrescriptionController::class, 'getLastPrescription']);
