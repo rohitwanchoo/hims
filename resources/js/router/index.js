@@ -130,6 +130,9 @@ import InsuranceCompanyList from '../views/masters/reception/InsuranceCompanyLis
 import QualificationList from '../views/masters/reception/QualificationList.vue';
 import ConsultMasterList from '../views/masters/reception/ConsultMasterList.vue';
 
+// Masters - Prescription
+import PrescriptionMaster from '../views/masters/prescription/PrescriptionMaster.vue';
+
 // Masters - Address
 import CountryList from '../views/masters/address/CountryList.vue';
 import StateList from '../views/masters/address/StateList.vue';
@@ -199,6 +202,11 @@ const routes = [
                 path: 'masters/reception/consult-master',
                 name: 'masters.reception.consult-master',
                 component: ConsultMasterList
+            },
+            {
+                path: 'masters/prescription',
+                name: 'masters.prescription',
+                component: PrescriptionMaster
             },
             // Masters - Address
             {
