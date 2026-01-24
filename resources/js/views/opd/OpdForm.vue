@@ -33,37 +33,47 @@
                                 <div class="row g-3">
                                     <div class="col-md-8">
                                         <label class="form-label">Search Patient <span class="text-danger">*</span></label>
-                                        <div class="input-group">
-                                            <input type="text" class="form-control" v-model="patientSearch"
-                                                   placeholder="Enter UHID, name, or mobile number..."
-                                                   @keyup.enter="searchPatients">
-                                            <button type="button" class="btn btn-outline-primary" @click="searchPatients">
-                                                <i class="bi bi-search"></i> Search
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Search Results -->
-                                <div v-if="searchResults.length > 0" class="mt-3">
-                                    <label class="form-label small">Search Results</label>
-                                    <div class="list-group">
-                                        <button type="button" v-for="p in searchResults" :key="p.patient_id"
-                                                class="list-group-item list-group-item-action"
-                                                :class="{'active': form.patient_id === p.patient_id}"
-                                                @click="selectPatient(p)">
-                                            <div class="d-flex justify-content-between">
-                                                <div>
-                                                    <strong>{{ p.patient_name }}</strong>
-                                                    <span class="badge bg-secondary ms-2">{{ p.pcd }}</span>
-                                                </div>
-                                                <small>{{ p.mobile }}</small>
+                                        <div class="position-relative">
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" v-model="patientSearch"
+                                                       placeholder="Enter UHID, name, or mobile number..."
+                                                       @input="onPatientSearchInput"
+                                                       @keydown.down.prevent="navigateResults(1)"
+                                                       @keydown.up.prevent="navigateResults(-1)"
+                                                       @keydown.enter.prevent="selectResultByIndex"
+                                                       @keydown.esc="hideResults"
+                                                       @focus="showResultsIfAvailable">
+                                                <button type="button" class="btn btn-outline-primary" @click="searchPatients">
+                                                    <i class="bi bi-search"></i> Search
+                                                </button>
                                             </div>
-                                            <small class="text-muted">
-                                                {{ p.gender }} | {{ p.age }} {{ p.age_unit }} |
-                                                {{ p.address || 'No address' }}
-                                            </small>
-                                        </button>
+
+                                            <!-- Autocomplete Dropdown -->
+                                            <div v-if="showAutocomplete && searchResults.length > 0"
+                                                 class="autocomplete-dropdown position-absolute w-100 shadow-lg">
+                                                <div class="list-group">
+                                                    <button type="button"
+                                                            v-for="(p, index) in searchResults"
+                                                            :key="p.patient_id"
+                                                            class="list-group-item list-group-item-action"
+                                                            :class="{ 'active': selectedResultIndex === index }"
+                                                            @click="selectPatient(p)"
+                                                            @mouseenter="selectedResultIndex = index">
+                                                        <div class="d-flex justify-content-between">
+                                                            <div>
+                                                                <strong>{{ p.patient_name }}</strong>
+                                                                <span class="badge bg-secondary ms-2">{{ p.pcd }}</span>
+                                                            </div>
+                                                            <small>{{ p.mobile }}</small>
+                                                        </div>
+                                                        <small class="text-muted">
+                                                            {{ p.gender }} | {{ p.age }} {{ p.age_unit }} |
+                                                            {{ p.address || 'No address' }}
+                                                        </small>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -357,6 +367,9 @@ const patientSearch = ref('');
 const selectedPatient = ref(null);
 const isFreeFollowup = ref(false);
 const lastVisitDate = ref('');
+const showAutocomplete = ref(false);
+const selectedResultIndex = ref(0);
+let searchTimeout = null;
 
 // New patient form
 const newPatient = reactive({
@@ -473,15 +486,68 @@ const fetchData = async () => {
 };
 
 const searchPatients = async () => {
-    if (!patientSearch.value.trim()) return;
+    if (!patientSearch.value.trim()) {
+        searchResults.value = [];
+        showAutocomplete.value = false;
+        return;
+    }
 
     try {
         const response = await axios.get('/api/patients-search', {
             params: { search: patientSearch.value }
         });
         searchResults.value = response.data.data || response.data;
+        showAutocomplete.value = searchResults.value.length > 0;
+        selectedResultIndex.value = 0;
     } catch (error) {
         console.error('Error searching patients:', error);
+        searchResults.value = [];
+        showAutocomplete.value = false;
+    }
+};
+
+const onPatientSearchInput = () => {
+    // Clear existing timeout
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+    }
+
+    // Set new timeout for debounced search
+    searchTimeout = setTimeout(() => {
+        if (patientSearch.value.trim().length >= 2) {
+            searchPatients();
+        } else {
+            searchResults.value = [];
+            showAutocomplete.value = false;
+        }
+    }, 300); // Wait 300ms after user stops typing
+};
+
+const navigateResults = (direction) => {
+    if (searchResults.value.length === 0) return;
+
+    selectedResultIndex.value += direction;
+
+    if (selectedResultIndex.value < 0) {
+        selectedResultIndex.value = searchResults.value.length - 1;
+    } else if (selectedResultIndex.value >= searchResults.value.length) {
+        selectedResultIndex.value = 0;
+    }
+};
+
+const selectResultByIndex = () => {
+    if (searchResults.value.length > 0 && selectedResultIndex.value >= 0) {
+        selectPatient(searchResults.value[selectedResultIndex.value]);
+    }
+};
+
+const hideResults = () => {
+    showAutocomplete.value = false;
+};
+
+const showResultsIfAvailable = () => {
+    if (searchResults.value.length > 0 && patientSearch.value.trim()) {
+        showAutocomplete.value = true;
     }
 };
 
@@ -491,6 +557,8 @@ const selectPatient = async (patient) => {
     form.class_id = patient.class_id || '';
     form.reference_doctor_id = patient.reference_doctor_id || '';
     searchResults.value = [];
+    showAutocomplete.value = false;
+    patientSearch.value = ''; // Clear search input
 
     // Fetch patient history
     try {
@@ -646,3 +714,50 @@ onMounted(async () => {
     await loadPatientFromQuery();
 });
 </script>
+
+<style scoped>
+.autocomplete-dropdown {
+    top: 100%;
+    left: 0;
+    z-index: 1050;
+    max-height: 400px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    margin-top: 0.25rem;
+}
+
+.autocomplete-dropdown .list-group-item {
+    border-left: none;
+    border-right: none;
+    cursor: pointer;
+}
+
+.autocomplete-dropdown .list-group-item:first-child {
+    border-top: none;
+    border-top-left-radius: 0.25rem;
+    border-top-right-radius: 0.25rem;
+}
+
+.autocomplete-dropdown .list-group-item:last-child {
+    border-bottom: none;
+    border-bottom-left-radius: 0.25rem;
+    border-bottom-right-radius: 0.25rem;
+}
+
+.autocomplete-dropdown .list-group-item:hover,
+.autocomplete-dropdown .list-group-item.active {
+    background-color: #0d6efd;
+    color: white;
+}
+
+.autocomplete-dropdown .list-group-item.active .badge {
+    background-color: white !important;
+    color: #0d6efd !important;
+}
+
+.autocomplete-dropdown .list-group-item.active .text-muted {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+</style>
