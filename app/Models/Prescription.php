@@ -9,19 +9,25 @@ class Prescription extends Model
     protected $primaryKey = 'prescription_id';
 
     protected $fillable = [
+        'hospital_id',
         'patient_id',
         'doctor_id',
         'visit_id',
         'admission_id',
+        'appointment_id',
         'prescription_date',
         'diagnosis',
         'notes',
+        'advice',
+        'investigations',
+        'qty_display_on_print',
         'status',
         'created_by',
     ];
 
     protected $casts = [
         'prescription_date' => 'date',
+        'qty_display_on_print' => 'boolean',
     ];
 
     public function patient()
@@ -47,6 +53,16 @@ class Prescription extends Model
     public function items()
     {
         return $this->hasMany(PrescriptionItem::class, 'prescription_id', 'prescription_id');
+    }
+
+    public function drugs()
+    {
+        return $this->hasMany(PrescriptionDrug::class, 'prescription_id', 'prescription_id')->orderBy('display_order');
+    }
+
+    public function hospital()
+    {
+        return $this->belongsTo(Hospital::class, 'hospital_id', 'hospital_id');
     }
 
     public function createdBy()

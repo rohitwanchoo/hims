@@ -16,6 +16,9 @@
         <button class="btn btn-light" @click="goBack">
           <i class="bi bi-arrow-left me-1"></i> Back
         </button>
+        <button class="btn btn-primary" @click="openPrescription">
+          <i class="bi bi-prescription2 me-1"></i> Prescription
+        </button>
         <button class="btn btn-success" @click="saveConsultation" :disabled="saving">
           <i class="bi bi-save me-1"></i> {{ saving ? 'Saving...' : 'Save' }}
         </button>
@@ -100,6 +103,24 @@
         </div>
       </div>
     </div>
+
+    <!-- Prescription Modal -->
+    <div class="modal fade" id="prescriptionModal" tabindex="-1" ref="prescriptionModalRef" data-bs-backdrop="static" data-bs-keyboard="false">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="bi bi-prescription2 me-2"></i>
+              Prescription - {{ patient?.patient_name }}
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <PrescriptionForm :patient-id="parseInt(patientId)" v-if="showPrescription" />
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -107,7 +128,9 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
+import { Modal } from 'bootstrap';
 import DynamicField from './components/DynamicField.vue';
+import PrescriptionForm from '../../components/prescription/PrescriptionForm.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -127,6 +150,11 @@ const formData = reactive({});
 const notes = ref('');
 const validationErrors = ref({});
 const expandedSections = ref({});
+
+// Prescription modal
+const prescriptionModalRef = ref(null);
+const showPrescription = ref(false);
+let prescriptionModal = null;
 
 // Group fields by section
 const sections = computed(() => {
@@ -353,6 +381,15 @@ const getFieldColClass = (field) => {
   return 'col-md-6';
 };
 
+const openPrescription = () => {
+  if (!patientId.value) {
+    alert('Patient ID is required to open prescription');
+    return;
+  }
+  showPrescription.value = true;
+  prescriptionModal.show();
+};
+
 const goBack = () => {
   if (opdId.value) {
     router.push(`/opd/${opdId.value}`);
@@ -368,6 +405,9 @@ onMounted(() => {
     fetchForm();
     fetchPatient();
   }
+
+  // Initialize prescription modal
+  prescriptionModal = new Modal(prescriptionModalRef.value);
 });
 </script>
 

@@ -142,4 +142,95 @@ class DrugMasterController extends Controller
             'message' => 'Drug deleted successfully'
         ]);
     }
+
+    /**
+     * Download Excel template for bulk drug import.
+     */
+    public function downloadTemplate()
+    {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="drug_import_template.csv"',
+        ];
+
+        $columns = ['drug_name', 'drug_type', 'language', 'dose_time', 'days', 'quantity'];
+
+        $callback = function() use ($columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+
+            // Add sample data
+            fputcsv($file, ['Paracetamol 500mg', 'Tablet', 'english', '1-1-1', '5', '15']);
+            fputcsv($file, ['Amoxicillin 250mg', 'Capsule', 'english', '1-0-1', '7', '14']);
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Import drugs from Excel/CSV file.
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt,xlsx,xls|max:2048',
+        ]);
+
+        $hospitalId = Auth::user()->hospital_id;
+        $file = $request->file('file');
+        $importedCount = 0;
+        $errors = [];
+
+        try {
+            // Read CSV file
+            if (($handle = fopen($file->getRealPath(), 'r')) !== false) {
+                $header = fgetcsv($handle); // Skip header row
+
+                while (($row = fgetcsv($handle)) !== false) {
+                    try {
+                        // Find or create drug type
+                        $drugTypeId = null;
+                        if (!empty($row[1])) {
+                            $drugType = \App\Models\DrugType::firstOrCreate([
+                                'hospital_id' => $hospitalId,
+                                'type_name' => trim($row[1])
+                            ]);
+                            $drugTypeId = $drugType->drug_type_id;
+                        }
+
+                        DrugMaster::create([
+                            'hospital_id' => $hospitalId,
+                            'drug_name' => trim($row[0]),
+                            'drug_type_id' => $drugTypeId,
+                            'language' => !empty($row[2]) ? trim($row[2]) : 'english',
+                            'dose_time' => !empty($row[3]) ? trim($row[3]) : null,
+                            'days' => !empty($row[4]) ? (int)$row[4] : null,
+                            'quantity' => !empty($row[5]) ? (int)$row[5] : null,
+                            'is_active' => true,
+                        ]);
+
+                        $importedCount++;
+                    } catch (\Exception $e) {
+                        $errors[] = "Row error: " . $e->getMessage();
+                    }
+                }
+
+                fclose($handle);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully imported {$importedCount} drugs",
+                'count' => $importedCount,
+                'errors' => $errors
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error importing file: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
