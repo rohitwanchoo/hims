@@ -249,10 +249,11 @@
                                             @click="startConsultation(visit)" title="Start Consultation">
                                         <i class="bi bi-play-fill"></i>
                                     </button>
-                                    <button v-if="visit.status === 'in_consultation' && opdConfig.show_continue_consultation_button" class="btn btn-success"
+                                    <!-- Continue Consultation button temporarily hidden -->
+                                    <!-- <button v-if="visit.status === 'in_consultation' && opdConfig.show_continue_consultation_button" class="btn btn-success"
                                             @click="openConsultation(visit)" title="Continue Consultation">
                                         <i class="bi bi-pencil"></i>
-                                    </button>
+                                    </button> -->
                                     <button v-if="canCancel(visit)" class="btn btn-outline-danger"
                                             @click="cancelVisit(visit)" title="Cancel">
                                         <i class="bi bi-x"></i>
