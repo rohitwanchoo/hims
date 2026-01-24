@@ -9,7 +9,7 @@
         <div class="row mb-3">
             <div class="col-md-4">
                 <label class="form-label">Language</label>
-                <select v-model="selectedLanguage" class="form-select">
+                <select v-model="selectedLanguage" @change="fetchData" class="form-select">
                     <option value="english">English</option>
                     <option value="marathi">Marathi</option>
                     <option value="hindi">Hindi</option>
@@ -27,8 +27,10 @@
                         v-model="searchText"
                         placeholder="Type disease name"
                         @keyup.enter="addDisease"
+                        @input="debouncedSearch"
                     />
-                    <button class="btn btn-primary" @click="addDisease">
+                    <button class="btn btn-primary" @click="addDisease" :disabled="saving">
+                        <span v-if="saving" class="spinner-border spinner-border-sm me-1"></span>
                         Add New
                     </button>
                 </div>
@@ -37,97 +39,235 @@
 
         <!-- Disease List -->
         <div class="border rounded p-3" style="height: 450px; overflow-y: auto;">
-            <div
-                v-for="disease in filteredDiseases"
-                :key="disease.id"
-                class="disease-item py-1 px-2 mb-1 cursor-pointer"
-                :class="{ 'bg-primary text-white': selectedDisease?.id === disease.id }"
-                @click="selectDisease(disease)"
-                @dblclick="editDisease(disease)"
-            >
-                {{ disease.name }}
+            <div v-if="loading" class="text-center py-4">
+                <div class="spinner-border spinner-border-sm me-2"></div>Loading...
             </div>
-            <div v-if="filteredDiseases.length === 0" class="text-center text-muted py-4">
+            <div v-else-if="diseases.length === 0" class="text-center text-muted py-4">
                 No diseases found
+            </div>
+            <div v-else>
+                <div
+                    v-for="disease in diseases"
+                    :key="disease.disease_id"
+                    class="disease-item py-2 px-3 mb-1 cursor-pointer d-flex justify-content-between align-items-center"
+                    :class="{ 'bg-primary text-white': selectedDisease?.disease_id === disease.disease_id }"
+                    @click="selectDisease(disease)"
+                    @dblclick="editDisease(disease)"
+                    @keyup.insert="editDisease(disease)"
+                    @keyup.delete="confirmDelete(disease)"
+                    tabindex="0"
+                >
+                    <span>{{ disease.disease_name }}</span>
+                    <div class="btn-group btn-group-sm">
+                        <button
+                            class="btn btn-sm"
+                            :class="selectedDisease?.disease_id === disease.disease_id ? 'btn-light' : 'btn-outline-primary'"
+                            @click.stop="editDisease(disease)"
+                            title="Edit"
+                        >
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button
+                            class="btn btn-sm"
+                            :class="selectedDisease?.disease_id === disease.disease_id ? 'btn-light text-danger' : 'btn-outline-danger'"
+                            @click.stop="confirmDelete(disease)"
+                            title="Delete"
+                        >
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Modal -->
+        <div class="modal fade" id="editModal" tabindex="-1" ref="editModalRef">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Disease</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form @submit.prevent="updateDisease">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Disease Name *</label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    v-model="editForm.disease_name"
+                                    required
+                                    maxlength="255"
+                                />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Language *</label>
+                                <select v-model="editForm.language" class="form-select" required>
+                                    <option value="english">English</option>
+                                    <option value="marathi">Marathi</option>
+                                    <option value="hindi">Hindi</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" :disabled="saving">
+                                <span v-if="saving" class="spinner-border spinner-border-sm me-1"></span>
+                                Update
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, onMounted } from 'vue';
+import axios from 'axios';
+import { Modal } from 'bootstrap';
 
 const selectedLanguage = ref('english');
 const searchText = ref('');
 const selectedDisease = ref(null);
+const diseases = ref([]);
+const loading = ref(false);
+const saving = ref(false);
+const editModalRef = ref(null);
+let editModal = null;
 
-const diseases = ref([
-    { id: 1, name: 'Acne', language: 'english' },
-    { id: 2, name: 'Allergic Rhinitis', language: 'english' },
-    { id: 3, name: 'Asthma', language: 'english' },
-    { id: 4, name: 'Back Pain', language: 'english' },
-    { id: 5, name: 'Bronchitis', language: 'english' },
-    { id: 6, name: 'Common Cold', language: 'english' },
-    { id: 7, name: 'Conjunctivitis', language: 'english' },
-    { id: 8, name: 'Constipation', language: 'english' },
-    { id: 9, name: 'Cough', language: 'english' },
-    { id: 10, name: 'Dengue Fever', language: 'english' },
-    { id: 11, name: 'Diabetes Mellitus', language: 'english' },
-    { id: 12, name: 'Diarrhea', language: 'english' },
-    { id: 13, name: 'Eczema', language: 'english' },
-    { id: 14, name: 'Fever', language: 'english' },
-    { id: 15, name: 'Gastritis', language: 'english' },
-    { id: 16, name: 'Headache', language: 'english' },
-    { id: 17, name: 'Hypertension', language: 'english' },
-    { id: 18, name: 'Influenza', language: 'english' },
-    { id: 19, name: 'Malaria', language: 'english' },
-    { id: 20, name: 'Migraine', language: 'english' },
-    { id: 21, name: 'Pneumonia', language: 'english' },
-    { id: 22, name: 'Skin Infection', language: 'english' },
-    { id: 23, name: 'Tonsillitis', language: 'english' },
-    { id: 24, name: 'Typhoid', language: 'english' },
-    { id: 25, name: 'Urinary Tract Infection', language: 'english' },
-    { id: 26, name: 'त्वचा संक्रमण', language: 'marathi' },
-    { id: 27, name: 'ताप', language: 'marathi' },
-    { id: 28, name: 'डोकेदुखी', language: 'marathi' },
-    { id: 29, name: 'खोकला', language: 'marathi' },
-    { id: 30, name: 'मधुमेह', language: 'marathi' }
-]);
-
-const filteredDiseases = computed(() => {
-    let filtered = diseases.value.filter(d => d.language === selectedLanguage.value);
-
-    if (searchText.value.trim()) {
-        const search = searchText.value.toLowerCase();
-        filtered = filtered.filter(d =>
-            d.name.toLowerCase().includes(search)
-        );
-    }
-
-    return filtered;
+const editForm = ref({
+    disease_id: null,
+    disease_name: '',
+    language: 'english'
 });
+
+let searchTimeout = null;
+
+const debouncedSearch = () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        fetchData();
+    }, 300);
+};
+
+const fetchData = async () => {
+    loading.value = true;
+    try {
+        const params = {
+            language: selectedLanguage.value
+        };
+        if (searchText.value.trim()) {
+            params.search = searchText.value.trim();
+        }
+        const response = await axios.get('/api/disease-masters', { params });
+        diseases.value = response.data;
+    } catch (error) {
+        console.error('Error fetching diseases:', error);
+        alert('Error loading disease masters');
+    }
+    loading.value = false;
+};
 
 const selectDisease = (disease) => {
     selectedDisease.value = disease;
 };
 
 const editDisease = (disease) => {
-    searchText.value = disease.name;
+    editForm.value = {
+        disease_id: disease.disease_id,
+        disease_name: disease.disease_name,
+        language: disease.language
+    };
     selectedDisease.value = disease;
+    editModal.show();
 };
 
-const addDisease = () => {
-    if (searchText.value.trim()) {
-        const newDisease = {
-            id: Math.max(...diseases.value.map(d => d.id), 0) + 1,
-            name: searchText.value.trim(),
+const addDisease = async () => {
+    if (!searchText.value.trim()) {
+        alert('Please enter disease name');
+        return;
+    }
+
+    saving.value = true;
+    try {
+        const response = await axios.post('/api/disease-masters', {
+            disease_name: searchText.value.trim(),
             language: selectedLanguage.value
-        };
-        diseases.value.push(newDisease);
-        searchText.value = '';
-        selectedDisease.value = newDisease;
+        });
+
+        if (response.data.success) {
+            searchText.value = '';
+            await fetchData();
+            selectedDisease.value = response.data.data;
+            alert('Disease added successfully');
+        }
+    } catch (error) {
+        console.error('Error adding disease:', error);
+        if (error.response?.data?.message) {
+            alert(error.response.data.message);
+        } else {
+            alert('Error adding disease');
+        }
+    }
+    saving.value = false;
+};
+
+const updateDisease = async () => {
+    if (!editForm.value.disease_name.trim()) {
+        alert('Please enter disease name');
+        return;
+    }
+
+    saving.value = true;
+    try {
+        const response = await axios.put(`/api/disease-masters/${editForm.value.disease_id}`, {
+            disease_name: editForm.value.disease_name.trim(),
+            language: editForm.value.language
+        });
+
+        if (response.data.success) {
+            editModal.hide();
+            await fetchData();
+            alert('Disease updated successfully');
+        }
+    } catch (error) {
+        console.error('Error updating disease:', error);
+        if (error.response?.data?.message) {
+            alert(error.response.data.message);
+        } else {
+            alert('Error updating disease');
+        }
+    }
+    saving.value = false;
+};
+
+const confirmDelete = async (disease) => {
+    if (!confirm(`Are you sure you want to delete this disease?\n\n"${disease.disease_name}"`)) {
+        return;
+    }
+
+    try {
+        const response = await axios.delete(`/api/disease-masters/${disease.disease_id}`);
+
+        if (response.data.success) {
+            if (selectedDisease.value?.disease_id === disease.disease_id) {
+                selectedDisease.value = null;
+            }
+            await fetchData();
+            alert('Disease deleted successfully');
+        }
+    } catch (error) {
+        console.error('Error deleting disease:', error);
+        alert('Error deleting disease');
     }
 };
+
+onMounted(() => {
+    editModal = new Modal(editModalRef.value);
+    fetchData();
+});
 </script>
 
 <style scoped>
@@ -141,7 +281,17 @@ const addDisease = () => {
     background-color: rgba(0, 0, 0, 0.05);
 }
 
+.disease-item:focus {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+
 .cursor-pointer {
     cursor: pointer;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
 }
 </style>

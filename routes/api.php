@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\DoctorWorkbenchController;
 use App\Http\Controllers\Api\ConsultationFormController;
 use App\Http\Controllers\Api\DoseTimeMasterController;
 use App\Http\Controllers\Api\DoseMasterController;
+use App\Http\Controllers\Api\DiseaseMasterController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -142,6 +143,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Dose Time Masters (Master > Prescription)
     Route::apiResource('dose-time-masters', DoseTimeMasterController::class);
+
+    // Disease Masters (Master > Prescription)
+    Route::apiResource('disease-masters', DiseaseMasterController::class);
 
     // Countries (Master > Address)
     Route::apiResource('countries', CountryController::class);
