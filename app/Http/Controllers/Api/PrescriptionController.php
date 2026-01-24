@@ -18,16 +18,24 @@ class PrescriptionController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'patient_id' => 'nullable|exists:patients,patient_id',
-            'drugs' => 'required|array|min:1',
-            'drugs.*.drug_name' => 'required|string',
-            'advice' => 'nullable|string',
-            'investigations' => 'nullable|string',
-            'qty_display_on_print' => 'boolean',
-            'save_as_standard_rx' => 'boolean',
-            'disease_name' => 'required_if:save_as_standard_rx,true|string|max:255',
-        ]);
+        try {
+            $request->validate([
+                'patient_id' => 'nullable|exists:patients,patient_id',
+                'drugs' => 'required|array|min:1',
+                'drugs.*.drug_name' => 'required|string',
+                'advice' => 'nullable|string',
+                'investigations' => 'nullable|string',
+                'qty_display_on_print' => 'boolean',
+                'save_as_standard_rx' => 'boolean',
+                'disease_name' => 'required_if:save_as_standard_rx,true|string|max:255',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        }
 
         $hospitalId = Auth::user()->hospital_id;
 
@@ -94,9 +102,16 @@ class PrescriptionController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Prescription save error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error saving prescription: ' . $e->getMessage()
+                'message' => 'Error saving prescription: ' . $e->getMessage(),
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
             ], 500);
         }
     }

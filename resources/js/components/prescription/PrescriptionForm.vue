@@ -544,7 +544,25 @@ const saveAndPrint = async () => {
         }
     } catch (error) {
         console.error('Error saving prescription:', error);
-        alert('Error saving prescription');
+        console.error('Error response:', error.response);
+
+        let errorMessage = 'Error saving prescription';
+
+        if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.response?.data?.error) {
+            errorMessage = error.response.data.error;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+
+        // Show validation errors if any
+        if (error.response?.data?.errors) {
+            const errors = Object.values(error.response.data.errors).flat();
+            errorMessage += '\n\nValidation Errors:\n' + errors.join('\n');
+        }
+
+        alert(errorMessage);
     }
 };
 
