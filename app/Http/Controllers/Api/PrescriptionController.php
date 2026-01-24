@@ -39,12 +39,19 @@ class PrescriptionController extends Controller
 
         $hospitalId = Auth::user()->hospital_id;
 
+        // Try to get doctor_id from authenticated user
+        $doctorId = null;
+        if (Auth::user()->doctor) {
+            $doctorId = Auth::user()->doctor->doctor_id;
+        }
+
         DB::beginTransaction();
         try {
             // Create prescription
             $prescription = Prescription::create([
                 'hospital_id' => $hospitalId,
                 'patient_id' => $request->patient_id,
+                'doctor_id' => $doctorId,
                 'appointment_id' => $request->appointment_id,
                 'advice' => $request->advice,
                 'investigations' => $request->investigations,
