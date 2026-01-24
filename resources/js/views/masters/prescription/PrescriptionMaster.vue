@@ -87,24 +87,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Right Sidebar (Optional - for additional info) -->
-        <div class="position-fixed top-0 end-0 p-3" style="margin-top: 80px; z-index: 1000;">
-            <div class="card shadow-sm" style="width: 250px;">
-                <div class="card-body">
-                    <h6 class="card-title">General Master</h6>
-                    <p class="small text-muted mb-2">Department Master</p>
-                    <p class="small text-muted mb-2">Consultant Master</p>
-                    <p class="small text-muted mb-2">Referral Doctor</p>
-                    <p class="small text-muted mb-2"><strong>Prescription Master</strong></p>
-                    <p class="small text-muted mb-2">Hospital Services</p>
-                    <p class="small text-muted mb-2">Telephone Diary</p>
-                    <p class="small text-muted mb-2">Other Master</p>
-                    <p class="small text-muted mb-2">Room Bed Allocation</p>
-                    <p class="small text-muted mb-0">Company Master</p>
-                </div>
-            </div>
-        </div>
     </div>
 </template>
 

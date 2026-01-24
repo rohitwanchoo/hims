@@ -24,6 +24,14 @@
                 <input type="text" class="form-control" v-model="form.drug_name" />
             </div>
             <div class="col-md-2">
+                <label class="form-label">Language</label>
+                <select v-model="selectedLanguage" @change="fetchDoseTimes" class="form-select">
+                    <option value="english">English</option>
+                    <option value="marathi">Marathi</option>
+                    <option value="hindi">Hindi</option>
+                </select>
+            </div>
+            <div class="col-md-2">
                 <label class="form-label">Dose Time</label>
                 <select class="form-select" v-model="form.dose_time">
                     <option value="">Select</option>
@@ -32,11 +40,11 @@
                     </option>
                 </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-1">
                 <label class="form-label">Days</label>
                 <input type="number" class="form-control" v-model="form.days" min="0" />
             </div>
-            <div class="col-md-2">
+            <div class="col-md-1">
                 <label class="form-label">Qty</label>
                 <input type="number" class="form-control" v-model="form.quantity" min="0" />
             </div>
@@ -155,10 +163,18 @@
                                 />
                             </div>
                             <div class="mb-3">
+                                <label class="form-label">Language</label>
+                                <select v-model="editLanguage" @change="fetchDoseTimesForEdit" class="form-select">
+                                    <option value="english">English</option>
+                                    <option value="marathi">Marathi</option>
+                                    <option value="hindi">Hindi</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
                                 <label class="form-label">Dose Time</label>
                                 <select class="form-select" v-model="editForm.dose_time">
                                     <option value="">Select</option>
-                                    <option v-for="doseTime in doseTimes" :key="doseTime.dose_time_id" :value="doseTime.dose_time_text">
+                                    <option v-for="doseTime in editDoseTimes" :key="doseTime.dose_time_id" :value="doseTime.dose_time_text">
                                         {{ doseTime.dose_time_text }}
                                     </option>
                                 </select>
@@ -192,10 +208,13 @@ import axios from 'axios';
 import { Modal } from 'bootstrap';
 
 const selectedDrugType = ref('');
+const selectedLanguage = ref('english');
+const editLanguage = ref('english');
 const selectedDrug = ref(null);
 const drugs = ref([]);
 const drugTypes = ref([]);
 const doseTimes = ref([]);
+const editDoseTimes = ref([]);
 const loading = ref(false);
 const saving = ref(false);
 const addDrugTypeModalRef = ref(null);
@@ -235,9 +254,20 @@ const fetchDrugTypes = async () => {
 const fetchDoseTimes = async () => {
     try {
         const response = await axios.get('/api/dose-time-masters', {
-            params: { language: 'english' }
+            params: { language: selectedLanguage.value }
         });
         doseTimes.value = response.data;
+    } catch (error) {
+        console.error('Error fetching dose times:', error);
+    }
+};
+
+const fetchDoseTimesForEdit = async () => {
+    try {
+        const response = await axios.get('/api/dose-time-masters', {
+            params: { language: editLanguage.value }
+        });
+        editDoseTimes.value = response.data;
     } catch (error) {
         console.error('Error fetching dose times:', error);
     }
@@ -263,7 +293,7 @@ const selectDrug = (drug) => {
     selectedDrug.value = drug;
 };
 
-const editDrug = (drug) => {
+const editDrug = async (drug) => {
     editForm.value = {
         drug_master_id: drug.drug_master_id,
         drug_type_id: drug.drug_type_id,
@@ -273,6 +303,8 @@ const editDrug = (drug) => {
         quantity: drug.quantity || ''
     };
     selectedDrug.value = drug;
+    editLanguage.value = 'english';
+    await fetchDoseTimesForEdit();
     editDrugModal.show();
 };
 
