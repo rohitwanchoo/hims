@@ -400,7 +400,7 @@ class ConsultationFormController extends Controller
             'opd_id' => 'nullable|exists:opd_visits,opd_id',
             'ipd_id' => 'nullable|exists:ipd_admissions,ipd_id',
             'patient_id' => 'required|exists:patients,patient_id',
-            'doctor_id' => 'required|exists:doctors,doctor_id',
+            'doctor_id' => 'nullable|exists:doctors,doctor_id',
             'form_id' => 'required|exists:consultation_forms,form_id',
             'consultation_date' => 'required|date',
             'form_data' => 'required|array',
