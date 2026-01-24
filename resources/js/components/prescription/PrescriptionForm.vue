@@ -1,5 +1,12 @@
 <template>
     <div class="prescription-form">
+        <!-- Info Alert -->
+        <div v-if="prescriptionDrugs.length > 0" class="alert alert-info alert-dismissible fade show mb-3" role="alert">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Previous prescription loaded:</strong> {{ prescriptionDrugs.length }} drug(s) from last visit. You can edit or add more.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
         <!-- Action Buttons Row -->
         <div class="row mb-3">
             <div class="col-12">
@@ -380,10 +387,31 @@ const fetchAdviceList = async () => {
 
 const fetchStandardRxList = async () => {
     try {
-        // TODO: Create standard rx endpoint
-        standardRxList.value = [];
+        const response = await axios.get('/api/standard-rx');
+        standardRxList.value = response.data;
     } catch (error) {
         console.error('Error fetching standard rx list:', error);
+        standardRxList.value = [];
+    }
+};
+
+const loadLastPrescription = async () => {
+    if (!props.patientId) return;
+
+    try {
+        const response = await axios.get(`/api/prescriptions/last/${props.patientId}`);
+        if (response.data && response.data.drugs) {
+            // Populate drugs
+            prescriptionDrugs.value = response.data.drugs;
+            // Populate advice and investigations
+            adviceText.value = response.data.advice || '';
+            investigations.value = response.data.investigations || '';
+
+            console.log('Loaded previous prescription with', prescriptionDrugs.value.length, 'drugs');
+        }
+    } catch (error) {
+        // No previous prescription found - that's okay
+        console.log('No previous prescription found for patient');
     }
 };
 
@@ -539,8 +567,10 @@ const saveAndPrint = async () => {
 
         if (response.data.success) {
             alert('Prescription saved successfully');
+            // Reload the saved prescription
+            await loadLastPrescription();
             // TODO: Open print dialog
-            window.print();
+            // window.print();
         }
     } catch (error) {
         console.error('Error saving prescription:', error);
@@ -643,6 +673,9 @@ onMounted(() => {
     fetchDrugMasters();
     fetchDoseTimes();
     fetchStandardRxList();
+
+    // Load last prescription for this patient
+    loadLastPrescription();
 
     document.addEventListener('click', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
