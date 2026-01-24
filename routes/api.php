@@ -259,9 +259,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Consultation Records
     Route::post('consultation-records', [ConsultationFormController::class, 'storeRecord']);
+    Route::get('consultation-records/last/{patientId}', [ConsultationFormController::class, 'getLastConsultation']);
+    Route::get('consultation-records/patient/{patientId}', [ConsultationFormController::class, 'getPatientRecords']);
     Route::get('consultation-records/{recordId}', [ConsultationFormController::class, 'getRecord']);
     Route::put('consultation-records/{recordId}', [ConsultationFormController::class, 'updateRecord']);
-    Route::get('consultation-records/patient/{patientId}', [ConsultationFormController::class, 'getPatientRecords']);
 
     // Skill Sets (Doctor Specialties)
     Route::apiResource('skill-sets', \App\Http\Controllers\Api\SkillSetController::class);

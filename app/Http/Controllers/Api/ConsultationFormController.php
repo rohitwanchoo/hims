@@ -378,6 +378,29 @@ class ConsultationFormController extends Controller
     }
 
     /**
+     * Get last consultation record for a patient (optionally filtered by OPD)
+     */
+    public function getLastConsultation(Request $request, $patientId)
+    {
+        $query = ConsultationRecord::with(['form.fields', 'patient', 'doctor'])
+            ->where('patient_id', $patientId);
+
+        // Filter by OPD if provided
+        if ($request->has('opd_id')) {
+            $query->where('opd_id', $request->opd_id);
+        }
+
+        $record = $query->orderBy('consultation_date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'data' => $record
+        ]);
+    }
+
+    /**
      * Get a specific consultation record
      */
     public function getRecord($recordId)

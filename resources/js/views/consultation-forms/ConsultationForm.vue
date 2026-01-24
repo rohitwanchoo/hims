@@ -260,6 +260,35 @@ const fetchRecord = async () => {
   }
 };
 
+const fetchLastConsultation = async () => {
+  if (!patientId.value) return;
+
+  try {
+    const params = {};
+    if (opdId.value) {
+      params.opd_id = opdId.value;
+    }
+
+    const response = await axios.get(`/api/consultation-records/last/${patientId.value}`, { params });
+
+    if (response.data.success && response.data.data) {
+      const record = response.data.data;
+
+      // Set the recordId so future saves will update instead of create
+      recordId.value = record.record_id;
+
+      // Populate form data
+      notes.value = record.notes || '';
+      Object.assign(formData, record.form_data || {});
+
+      console.log('Loaded previous consultation data');
+    }
+  } catch (error) {
+    console.error('Error fetching last consultation:', error);
+    // Don't alert - this is optional, form can still be filled fresh
+  }
+};
+
 const saveConsultation = async () => {
   // Validate form
   validationErrors.value = validateForm();
@@ -293,11 +322,17 @@ const saveConsultation = async () => {
     } else {
       // Create new record
       response = await axios.post('/api/consultation-records', payload);
+
+      // Set the recordId so subsequent saves will update
+      if (response.data.success && response.data.data) {
+        recordId.value = response.data.data.record_id;
+      }
     }
 
     if (response.data.success) {
       alert('Consultation saved successfully!');
-      goBack();
+      // Don't redirect - stay on the form so user can continue editing
+      // goBack();
     }
   } catch (error) {
     console.error('Error saving consultation:', error);
@@ -398,12 +433,14 @@ const goBack = () => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   if (recordId.value) {
     fetchRecord();
   } else {
-    fetchForm();
-    fetchPatient();
+    await fetchForm();
+    await fetchPatient();
+    // Try to load last consultation for this patient
+    await fetchLastConsultation();
   }
 
   // Initialize prescription modal
