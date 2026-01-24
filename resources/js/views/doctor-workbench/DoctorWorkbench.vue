@@ -308,6 +308,13 @@
                       </td>
                       <td>
                         <button
+                          @click="editPatientConsultation(patient)"
+                          class="btn btn-sm btn-primary me-1"
+                          title="Edit Consultation"
+                        >
+                          <i class="bi bi-pencil-square"></i> Edit
+                        </button>
+                        <button
                           @click="viewPatientHistory(patient)"
                           class="btn btn-sm btn-outline-primary"
                         >
@@ -546,6 +553,18 @@ const startConsultation = async (visit) => {
 const viewConsultation = (visit) => {
   // Navigate to dynamic consultation form
   router.push(`/consultation/${visit.opd_id}?patient_id=${visit.patient_id}&form_type=opd`);
+};
+
+const editPatientConsultation = (patient) => {
+  // Check if patient has a latest OPD visit
+  if (patient.latest_opd_visit) {
+    // Navigate to the latest consultation
+    router.push(`/consultation/${patient.latest_opd_visit.opd_id}?patient_id=${patient.patient_id}&form_type=opd`);
+  } else {
+    // No OPD visit exists, navigate with just patient_id
+    // This will load the consultation form without an opd_id
+    alert('This patient has no OPD visits. Please create an OPD visit first from the OPD module.');
+  }
 };
 
 const viewPatientHistory = async (patient) => {
