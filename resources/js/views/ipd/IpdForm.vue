@@ -1992,7 +1992,7 @@ export default {
             try {
                 await axios.delete(`/api/ipd-admissions/${route.params.id}/services/${serviceId}`);
                 await loadServices();
-                await loadAdmissionDetails();
+                await loadAdmission();
             } catch (error) {
                 alert('Failed to delete service: ' + (error.response?.data?.message || error.message));
             }
@@ -2039,7 +2039,7 @@ export default {
 
                 closeServiceModal();
                 await loadServices();
-                await loadAdmissionDetails();
+                await loadAdmission();
             } catch (error) {
                 alert('Failed to save service: ' + (error.response?.data?.message || error.message));
             }
