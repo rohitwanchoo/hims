@@ -15,6 +15,7 @@ class IpdService extends Model
         'hospital_id',
         'ipd_id',
         'service_date',
+        'doctor_id',
         'service_type',
         'service_id',
         'service_name',
@@ -44,6 +45,11 @@ class IpdService extends Model
     public function ipdAdmission()
     {
         return $this->belongsTo(IpdAdmission::class, 'ipd_id', 'ipd_id');
+    }
+
+    public function doctor()
+    {
+        return $this->belongsTo(Doctor::class, 'doctor_id', 'doctor_id');
     }
 
     public function bill()

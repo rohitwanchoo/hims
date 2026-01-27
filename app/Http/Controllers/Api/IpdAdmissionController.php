@@ -625,6 +625,7 @@ class IpdAdmissionController extends Controller
             'service_type' => 'required|in:bed,doctor_visit,nursing,procedure,lab,radiology,pharmacy,ot,icu,consumable,other',
             'quantity' => 'required|integer|min:1',
             'rate' => 'required|numeric|min:0',
+            'doctor_id' => 'nullable|exists:doctors,doctor_id',
         ]);
 
         $hospitalId = Auth::user()->hospital_id;
@@ -642,6 +643,7 @@ class IpdAdmissionController extends Controller
             'hospital_id' => $hospitalId,
             'ipd_id' => $id,
             'service_date' => $request->service_date ?? now()->toDateString(),
+            'doctor_id' => $request->doctor_id,
             'service_type' => $request->service_type,
             'service_id' => $request->service_id,
             'service_name' => $request->service_name,
@@ -697,6 +699,7 @@ class IpdAdmissionController extends Controller
             'service_type' => 'required|in:bed,doctor_visit,nursing,procedure,lab,radiology,pharmacy,ot,icu,consumable,other',
             'quantity' => 'required|integer|min:1',
             'rate' => 'required|numeric|min:0',
+            'doctor_id' => 'nullable|exists:doctors,doctor_id',
         ]);
 
         $hospitalId = Auth::user()->hospital_id;
@@ -708,6 +711,7 @@ class IpdAdmissionController extends Controller
 
         $service->update([
             'service_date' => $request->service_date ?? $service->service_date,
+            'doctor_id' => $request->doctor_id,
             'service_type' => $request->service_type,
             'service_id' => $request->service_id,
             'service_name' => $request->service_name,

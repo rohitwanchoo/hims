@@ -1193,6 +1193,15 @@
                                 <input type="date" class="form-control" v-model="serviceForm.service_date">
                             </div>
                             <div class="mb-3">
+                                <label class="form-label">Doctor</label>
+                                <select class="form-select" v-model="serviceForm.doctor_id">
+                                    <option value="">-- Select Doctor (Optional) --</option>
+                                    <option v-for="doctor in doctors" :key="doctor.doctor_id" :value="doctor.doctor_id">
+                                        {{ doctor.full_name }} - {{ doctor.specialization }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
                                 <label class="form-label">Select from Hospital Services</label>
                                 <select class="form-select" v-model="serviceForm.hospital_service_id" @change="onHospitalServiceChange">
                                     <option value="">-- Select Service (or enter manually below) --</option>
@@ -1261,6 +1270,7 @@
                                     <thead class="table-light">
                                         <tr>
                                             <th>Date</th>
+                                            <th>Doctor</th>
                                             <th>Service Name</th>
                                             <th>Qty</th>
                                             <th>Rate</th>
@@ -1272,6 +1282,7 @@
                                     <tbody>
                                         <tr v-for="(svc, index) in bulkServicesList" :key="index">
                                             <td>{{ formatDate(svc.service_date) }}</td>
+                                            <td>{{ svc.doctor_name || '-' }}</td>
                                             <td>{{ svc.service_name }}</td>
                                             <td>{{ svc.quantity }}</td>
                                             <td>Rs {{ svc.rate }}</td>
@@ -1286,7 +1297,7 @@
                                     </tbody>
                                     <tfoot class="table-light">
                                         <tr>
-                                            <th colspan="5" class="text-end">Grand Total:</th>
+                                            <th colspan="6" class="text-end">Grand Total:</th>
                                             <th colspan="2">Rs {{ bulkServicesTotal }}</th>
                                         </tr>
                                     </tfoot>
@@ -1518,6 +1529,7 @@ export default {
 
         const serviceForm = ref({
             service_date: new Date().toISOString().split('T')[0],
+            doctor_id: '',
             service_type: '',
             hospital_service_id: '',
             service_name: '',
@@ -2009,6 +2021,7 @@ export default {
             editingServiceId.value = service.ipd_service_id;
             serviceForm.value = {
                 service_date: service.service_date,
+                doctor_id: service.doctor_id || '',
                 service_type: service.service_type,
                 hospital_service_id: service.service_id || '',
                 service_name: service.service_name,
@@ -2043,6 +2056,7 @@ export default {
             bulkServicesList.value = [];
             serviceForm.value = {
                 service_date: new Date().toISOString().split('T')[0],
+                doctor_id: '',
                 service_type: '',
                 hospital_service_id: '',
                 service_name: '',
@@ -2067,9 +2081,18 @@ export default {
             // If service_type is not set (manual entry), default to 'other'
             const serviceType = serviceForm.value.service_type || 'other';
 
+            // Get doctor name for display
+            let doctorName = '';
+            if (serviceForm.value.doctor_id) {
+                const selectedDoctor = doctors.value.find(d => d.doctor_id == serviceForm.value.doctor_id);
+                doctorName = selectedDoctor ? selectedDoctor.full_name : '';
+            }
+
             // Add to bulk list
             bulkServicesList.value.push({
                 service_date: serviceForm.value.service_date,
+                doctor_id: serviceForm.value.doctor_id || null,
+                doctor_name: doctorName,
                 service_type: serviceType,
                 service_id: serviceForm.value.hospital_service_id || null,
                 service_name: serviceForm.value.service_name,
@@ -2083,7 +2106,7 @@ export default {
 
             console.log('Service added to bulk list', bulkServicesList.value);
 
-            // Reset form for next entry (keep date and auto-detected service_type if from dropdown)
+            // Reset form for next entry (keep date and doctor_id)
             serviceForm.value.hospital_service_id = '';
             serviceForm.value.service_name = '';
             serviceForm.value.quantity = 1;
@@ -2093,7 +2116,7 @@ export default {
             serviceForm.value.is_package = false;
             serviceForm.value.remarks = '';
             serviceForm.value.service_type = '';
-            // Keep service_date as is
+            // Keep service_date and doctor_id as is for faster bulk entry
         };
 
         const removeFromBulkList = (index) => {
@@ -2125,6 +2148,7 @@ export default {
             try {
                 const payload = {
                     service_date: serviceForm.value.service_date,
+                    doctor_id: serviceForm.value.doctor_id || null,
                     service_type: serviceForm.value.service_type,
                     service_id: serviceForm.value.hospital_service_id || null,
                     service_name: serviceForm.value.service_name,
