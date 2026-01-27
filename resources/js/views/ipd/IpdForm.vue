@@ -1188,18 +1188,20 @@
                     <div class="modal-body">
                         <!-- Service Form -->
                         <div>
-                            <div class="mb-3">
-                                <label class="form-label">Service Date *</label>
-                                <input type="date" class="form-control" v-model="serviceForm.service_date">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Doctor</label>
-                                <select class="form-select" v-model="serviceForm.doctor_id">
-                                    <option value="">-- Select Doctor (Optional) --</option>
-                                    <option v-for="doctor in doctors" :key="doctor.doctor_id" :value="doctor.doctor_id">
-                                        {{ doctor.full_name }} - {{ doctor.specialization }}
-                                    </option>
-                                </select>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Service Date *</label>
+                                    <input type="date" class="form-control" v-model="serviceForm.service_date">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Doctor</label>
+                                    <select class="form-select" v-model="serviceForm.doctor_id">
+                                        <option value="">-- Select Doctor (Optional) --</option>
+                                        <option v-for="doctor in doctors" :key="doctor.doctor_id" :value="doctor.doctor_id">
+                                            {{ doctor.full_name }} - {{ doctor.specialization }}
+                                        </option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Select from Hospital Services</label>
@@ -2019,8 +2021,16 @@ export default {
 
         const editServiceItem = (service) => {
             editingServiceId.value = service.ipd_service_id;
+
+            // Format service_date to YYYY-MM-DD for date input
+            let formattedDate = service.service_date;
+            if (service.service_date) {
+                const dateObj = new Date(service.service_date);
+                formattedDate = dateObj.toISOString().split('T')[0];
+            }
+
             serviceForm.value = {
-                service_date: service.service_date,
+                service_date: formattedDate,
                 doctor_id: service.doctor_id || '',
                 service_type: service.service_type,
                 hospital_service_id: service.service_id || '',
