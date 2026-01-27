@@ -1179,14 +1179,15 @@
 
         <!-- Add Service Modal -->
         <div class="modal fade" :class="{ show: showAddService }" :style="{ display: showAddService ? 'block' : 'none' }" tabindex="-1">
-            <div class="modal-dialog modal-lg">
+            <div class="modal-dialog modal-xl">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">{{ editingServiceId ? 'Edit Service / Charge' : 'Add Service / Charge' }}</h5>
+                        <h5 class="modal-title">{{ editingServiceId ? 'Edit Service / Charge' : 'Add Services / Charges' }}</h5>
                         <button type="button" class="btn-close" @click="closeServiceModal"></button>
                     </div>
-                    <form @submit.prevent="saveService">
-                        <div class="modal-body">
+                    <div class="modal-body">
+                        <!-- Service Form -->
+                        <form @submit.prevent="editingServiceId ? saveService : addServiceToList">
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Service Date *</label>
@@ -1229,43 +1230,97 @@
                                 <input type="text" class="form-control" v-model="serviceForm.service_name" required placeholder="Enter service name">
                             </div>
                             <div class="row mb-3">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="form-label">Quantity *</label>
                                     <input type="number" class="form-control" v-model="serviceForm.quantity" min="1" required @input="calculateServiceAmount">
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="form-label">Rate (Rs) *</label>
                                     <input type="number" class="form-control" v-model="serviceForm.rate" step="0.01" min="0" required @input="calculateServiceAmount">
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="form-label">Discount (Rs)</label>
                                     <input type="number" class="form-control" v-model="serviceForm.discount" step="0.01" min="0" @input="calculateServiceAmount">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Total Amount</label>
+                                    <input type="text" class="form-control" :value="'Rs ' + serviceForm.total_amount" readonly>
                                 </div>
                             </div>
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <label class="form-label">Total Amount</label>
-                                    <input type="text" class="form-control" :value="'Rs ' + serviceForm.total_amount" readonly>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-check mt-4">
+                                    <div class="form-check">
                                         <input type="checkbox" class="form-check-input" id="isPackage" v-model="serviceForm.is_package">
                                         <label class="form-check-label" for="isPackage">
                                             This is a package service
                                         </label>
                                     </div>
                                 </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Remarks</label>
+                                    <input type="text" class="form-control" v-model="serviceForm.remarks" placeholder="Any additional notes...">
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Remarks</label>
-                                <textarea class="form-control" v-model="serviceForm.remarks" rows="2" placeholder="Any additional notes..."></textarea>
+                            <div class="text-end">
+                                <button v-if="editingServiceId" type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-lg"></i> Update Service
+                                </button>
+                                <button v-else type="submit" class="btn btn-success">
+                                    <i class="bi bi-plus-lg"></i> Add to List
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Services List (Only show in bulk add mode) -->
+                        <div v-if="!editingServiceId && bulkServicesList.length > 0" class="mt-4">
+                            <hr>
+                            <h6>Services to be Added ({{ bulkServicesList.length }})</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Type</th>
+                                            <th>Service Name</th>
+                                            <th>Qty</th>
+                                            <th>Rate</th>
+                                            <th>Discount</th>
+                                            <th>Total</th>
+                                            <th width="80">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(svc, index) in bulkServicesList" :key="index">
+                                            <td>{{ formatDate(svc.service_date) }}</td>
+                                            <td><span class="badge bg-secondary">{{ svc.service_type }}</span></td>
+                                            <td>{{ svc.service_name }}</td>
+                                            <td>{{ svc.quantity }}</td>
+                                            <td>Rs {{ svc.rate }}</td>
+                                            <td>Rs {{ svc.discount }}</td>
+                                            <td><strong>Rs {{ svc.total_amount }}</strong></td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" @click="removeFromBulkList(index)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot class="table-light">
+                                        <tr>
+                                            <th colspan="6" class="text-end">Grand Total:</th>
+                                            <th colspan="2">Rs {{ bulkServicesTotal }}</th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" @click="showAddService = false">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Add Service</button>
-                        </div>
-                    </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @click="closeServiceModal">Cancel</button>
+                        <button v-if="!editingServiceId && bulkServicesList.length > 0" type="button" class="btn btn-primary" @click="saveBulkServices">
+                            <i class="bi bi-save"></i> Save All Services ({{ bulkServicesList.length }})
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1498,6 +1553,11 @@ export default {
         const hospitalServices = ref([]);
         const editingServiceId = ref(null);
         const editingAdvanceId = ref(null);
+        const bulkServicesList = ref([]);
+
+        const bulkServicesTotal = computed(() => {
+            return bulkServicesList.value.reduce((sum, svc) => sum + parseFloat(svc.total_amount || 0), 0).toFixed(2);
+        });
 
         const filteredDoctors = computed(() => {
             if (!form.value.department_id) return doctors.value;
@@ -2001,6 +2061,7 @@ export default {
         const closeServiceModal = () => {
             showAddService.value = false;
             editingServiceId.value = null;
+            bulkServicesList.value = [];
             serviceForm.value = {
                 service_date: new Date().toISOString().split('T')[0],
                 service_type: '',
@@ -2013,6 +2074,67 @@ export default {
                 is_package: false,
                 remarks: '',
             };
+        };
+
+        const addServiceToList = () => {
+            // Validate form
+            if (!serviceForm.value.service_date || !serviceForm.value.service_type || !serviceForm.value.service_name) {
+                alert('Please fill all required fields');
+                return;
+            }
+
+            // Add to bulk list
+            bulkServicesList.value.push({
+                service_date: serviceForm.value.service_date,
+                service_type: serviceForm.value.service_type,
+                service_id: serviceForm.value.hospital_service_id || null,
+                service_name: serviceForm.value.service_name,
+                quantity: serviceForm.value.quantity,
+                rate: serviceForm.value.rate,
+                discount: serviceForm.value.discount,
+                total_amount: serviceForm.value.total_amount,
+                is_package: serviceForm.value.is_package,
+                remarks: serviceForm.value.remarks,
+            });
+
+            // Reset form for next entry
+            serviceForm.value = {
+                service_date: serviceForm.value.service_date, // Keep same date
+                service_type: '',
+                hospital_service_id: '',
+                service_name: '',
+                quantity: 1,
+                rate: 0,
+                discount: 0,
+                total_amount: 0,
+                is_package: false,
+                remarks: '',
+            };
+        };
+
+        const removeFromBulkList = (index) => {
+            bulkServicesList.value.splice(index, 1);
+        };
+
+        const saveBulkServices = async () => {
+            if (bulkServicesList.value.length === 0) {
+                alert('No services to save');
+                return;
+            }
+
+            try {
+                // Save all services
+                for (const service of bulkServicesList.value) {
+                    await axios.post(`/api/ipd-admissions/${route.params.id}/services`, service);
+                }
+
+                closeServiceModal();
+                await loadServices();
+                await loadAdmission();
+                alert(`Successfully added ${bulkServicesList.value.length} service(s)`);
+            } catch (error) {
+                alert('Failed to save services: ' + (error.response?.data?.message || error.message));
+            }
         };
 
         const saveService = async () => {
@@ -2207,9 +2329,14 @@ export default {
             hospitalServices,
             editingServiceId,
             editingAdvanceId,
+            bulkServicesList,
+            bulkServicesTotal,
             onHospitalServiceChange,
             calculateServiceAmount,
             saveService,
+            addServiceToList,
+            removeFromBulkList,
+            saveBulkServices,
             editServiceItem,
             deleteServiceItem,
             closeServiceModal,
