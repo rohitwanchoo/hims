@@ -1188,28 +1188,9 @@
                     <div class="modal-body">
                         <!-- Service Form -->
                         <div>
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Service Date *</label>
-                                    <input type="date" class="form-control" v-model="serviceForm.service_date">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Service Type *</label>
-                                    <select class="form-select" v-model="serviceForm.service_type">
-                                        <option value="">Select Type</option>
-                                        <option value="bed">Bed Charges</option>
-                                        <option value="doctor_visit">Doctor Visit</option>
-                                        <option value="nursing">Nursing Care</option>
-                                        <option value="procedure">Procedure</option>
-                                        <option value="lab">Laboratory</option>
-                                        <option value="radiology">Radiology</option>
-                                        <option value="pharmacy">Pharmacy</option>
-                                        <option value="ot">Operation Theater</option>
-                                        <option value="icu">ICU Charges</option>
-                                        <option value="consumable">Consumables</option>
-                                        <option value="other">Other</option>
-                                    </select>
-                                </div>
+                            <div class="mb-3">
+                                <label class="form-label">Service Date *</label>
+                                <input type="date" class="form-control" v-model="serviceForm.service_date">
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Select from Hospital Services</label>
@@ -1280,7 +1261,6 @@
                                     <thead class="table-light">
                                         <tr>
                                             <th>Date</th>
-                                            <th>Type</th>
                                             <th>Service Name</th>
                                             <th>Qty</th>
                                             <th>Rate</th>
@@ -1292,7 +1272,6 @@
                                     <tbody>
                                         <tr v-for="(svc, index) in bulkServicesList" :key="index">
                                             <td>{{ formatDate(svc.service_date) }}</td>
-                                            <td><span class="badge bg-secondary">{{ svc.service_type }}</span></td>
                                             <td>{{ svc.service_name }}</td>
                                             <td>{{ svc.quantity }}</td>
                                             <td>Rs {{ svc.rate }}</td>
@@ -1307,7 +1286,7 @@
                                     </tbody>
                                     <tfoot class="table-light">
                                         <tr>
-                                            <th colspan="6" class="text-end">Grand Total:</th>
+                                            <th colspan="5" class="text-end">Grand Total:</th>
                                             <th colspan="2">Rs {{ bulkServicesTotal }}</th>
                                         </tr>
                                     </tfoot>
@@ -2080,18 +2059,18 @@ export default {
             console.log('addServiceToList called', serviceForm.value);
 
             // Validate form
-            if (!serviceForm.value.service_date || !serviceForm.value.service_type || !serviceForm.value.service_name) {
-                alert('Please fill all required fields');
+            if (!serviceForm.value.service_date || !serviceForm.value.service_name) {
+                alert('Please fill all required fields (Service Date and Service Name)');
                 return;
             }
 
-            // Save current date for reuse
-            const currentDate = serviceForm.value.service_date;
+            // If service_type is not set (manual entry), default to 'other'
+            const serviceType = serviceForm.value.service_type || 'other';
 
             // Add to bulk list
             bulkServicesList.value.push({
                 service_date: serviceForm.value.service_date,
-                service_type: serviceForm.value.service_type,
+                service_type: serviceType,
                 service_id: serviceForm.value.hospital_service_id || null,
                 service_name: serviceForm.value.service_name,
                 quantity: parseFloat(serviceForm.value.quantity) || 1,
@@ -2104,8 +2083,7 @@ export default {
 
             console.log('Service added to bulk list', bulkServicesList.value);
 
-            // Reset form for next entry (keep date)
-            serviceForm.value.service_type = '';
+            // Reset form for next entry (keep date and auto-detected service_type if from dropdown)
             serviceForm.value.hospital_service_id = '';
             serviceForm.value.service_name = '';
             serviceForm.value.quantity = 1;
@@ -2114,6 +2092,7 @@ export default {
             serviceForm.value.total_amount = 0;
             serviceForm.value.is_package = false;
             serviceForm.value.remarks = '';
+            serviceForm.value.service_type = '';
             // Keep service_date as is
         };
 
