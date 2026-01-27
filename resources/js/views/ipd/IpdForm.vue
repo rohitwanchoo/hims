@@ -1187,15 +1187,15 @@
                     </div>
                     <div class="modal-body">
                         <!-- Service Form -->
-                        <form @submit.prevent="editingServiceId ? saveService : addServiceToList">
+                        <div>
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Service Date *</label>
-                                    <input type="date" class="form-control" v-model="serviceForm.service_date" required>
+                                    <input type="date" class="form-control" v-model="serviceForm.service_date">
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Service Type *</label>
-                                    <select class="form-select" v-model="serviceForm.service_type" required>
+                                    <select class="form-select" v-model="serviceForm.service_type">
                                         <option value="">Select Type</option>
                                         <option value="bed">Bed Charges</option>
                                         <option value="doctor_visit">Doctor Visit</option>
@@ -1227,16 +1227,16 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Service Name *</label>
-                                <input type="text" class="form-control" v-model="serviceForm.service_name" required placeholder="Enter service name">
+                                <input type="text" class="form-control" v-model="serviceForm.service_name" placeholder="Enter service name">
                             </div>
                             <div class="row mb-3">
                                 <div class="col-md-3">
                                     <label class="form-label">Quantity *</label>
-                                    <input type="number" class="form-control" v-model="serviceForm.quantity" min="1" required @input="calculateServiceAmount">
+                                    <input type="number" class="form-control" v-model="serviceForm.quantity" min="1" @input="calculateServiceAmount">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Rate (Rs) *</label>
-                                    <input type="number" class="form-control" v-model="serviceForm.rate" step="0.01" min="0" required @input="calculateServiceAmount">
+                                    <input type="number" class="form-control" v-model="serviceForm.rate" step="0.01" min="0" @input="calculateServiceAmount">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Discount (Rs)</label>
@@ -1262,14 +1262,14 @@
                                 </div>
                             </div>
                             <div class="text-end">
-                                <button v-if="editingServiceId" type="submit" class="btn btn-primary">
+                                <button v-if="editingServiceId" type="button" class="btn btn-primary" @click="saveService">
                                     <i class="bi bi-check-lg"></i> Update Service
                                 </button>
-                                <button v-else type="submit" class="btn btn-success">
+                                <button v-else type="button" class="btn btn-success" @click="addServiceToList">
                                     <i class="bi bi-plus-lg"></i> Add to List
                                 </button>
                             </div>
-                        </form>
+                        </div>
 
                         <!-- Services List (Only show in bulk add mode) -->
                         <div v-if="!editingServiceId && bulkServicesList.length > 0" class="mt-4">
