@@ -2077,11 +2077,16 @@ export default {
         };
 
         const addServiceToList = () => {
+            console.log('addServiceToList called', serviceForm.value);
+
             // Validate form
             if (!serviceForm.value.service_date || !serviceForm.value.service_type || !serviceForm.value.service_name) {
                 alert('Please fill all required fields');
                 return;
             }
+
+            // Save current date for reuse
+            const currentDate = serviceForm.value.service_date;
 
             // Add to bulk list
             bulkServicesList.value.push({
@@ -2089,27 +2094,27 @@ export default {
                 service_type: serviceForm.value.service_type,
                 service_id: serviceForm.value.hospital_service_id || null,
                 service_name: serviceForm.value.service_name,
-                quantity: serviceForm.value.quantity,
-                rate: serviceForm.value.rate,
-                discount: serviceForm.value.discount,
-                total_amount: serviceForm.value.total_amount,
-                is_package: serviceForm.value.is_package,
-                remarks: serviceForm.value.remarks,
+                quantity: parseFloat(serviceForm.value.quantity) || 1,
+                rate: parseFloat(serviceForm.value.rate) || 0,
+                discount: parseFloat(serviceForm.value.discount) || 0,
+                total_amount: parseFloat(serviceForm.value.total_amount) || 0,
+                is_package: serviceForm.value.is_package || false,
+                remarks: serviceForm.value.remarks || '',
             });
 
-            // Reset form for next entry
-            serviceForm.value = {
-                service_date: serviceForm.value.service_date, // Keep same date
-                service_type: '',
-                hospital_service_id: '',
-                service_name: '',
-                quantity: 1,
-                rate: 0,
-                discount: 0,
-                total_amount: 0,
-                is_package: false,
-                remarks: '',
-            };
+            console.log('Service added to bulk list', bulkServicesList.value);
+
+            // Reset form for next entry (keep date)
+            serviceForm.value.service_type = '';
+            serviceForm.value.hospital_service_id = '';
+            serviceForm.value.service_name = '';
+            serviceForm.value.quantity = 1;
+            serviceForm.value.rate = 0;
+            serviceForm.value.discount = 0;
+            serviceForm.value.total_amount = 0;
+            serviceForm.value.is_package = false;
+            serviceForm.value.remarks = '';
+            // Keep service_date as is
         };
 
         const removeFromBulkList = (index) => {
