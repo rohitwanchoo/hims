@@ -643,6 +643,7 @@ class IpdAdmissionController extends Controller
             'hospital_id' => $hospitalId,
             'ipd_id' => $id,
             'service_date' => $request->service_date ?? now()->toDateString(),
+            'service_time' => $request->service_time ?? now()->toTimeString(),
             'doctor_id' => $request->doctor_id,
             'service_type' => $request->service_type,
             'service_id' => $request->service_id,
@@ -672,7 +673,8 @@ class IpdAdmissionController extends Controller
         $hospitalId = Auth::user()->hospital_id;
 
         $query = IpdService::where('hospital_id', $hospitalId)
-            ->where('ipd_id', $id);
+            ->where('ipd_id', $id)
+            ->with('doctor:doctor_id,full_name,specialization');
 
         if ($request->has('service_type') && $request->service_type) {
             $query->where('service_type', $request->service_type);
@@ -711,6 +713,7 @@ class IpdAdmissionController extends Controller
 
         $service->update([
             'service_date' => $request->service_date ?? $service->service_date,
+            'service_time' => $request->service_time ?? $service->service_time,
             'doctor_id' => $request->doctor_id,
             'service_type' => $request->service_type,
             'service_id' => $request->service_id,

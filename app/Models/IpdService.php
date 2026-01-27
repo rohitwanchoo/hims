@@ -15,6 +15,7 @@ class IpdService extends Model
         'hospital_id',
         'ipd_id',
         'service_date',
+        'service_time',
         'doctor_id',
         'service_type',
         'service_id',

@@ -449,6 +449,7 @@
                                             <tr>
                                                 <th>Date</th>
                                                 <th>Type</th>
+                                                <th>Doctor</th>
                                                 <th>Service</th>
                                                 <th>Qty</th>
                                                 <th>Rate</th>
@@ -458,13 +459,14 @@
                                         </thead>
                                         <tbody>
                                             <tr v-if="services.length === 0">
-                                                <td colspan="7" class="text-center text-muted py-3">No services added</td>
+                                                <td colspan="8" class="text-center text-muted py-3">No services added</td>
                                             </tr>
                                             <tr v-for="svc in services" :key="svc.ipd_service_id">
                                                 <td>{{ formatDate(svc.service_date) }}</td>
                                                 <td>
                                                     <span class="badge bg-secondary">{{ svc.service_type }}</span>
                                                 </td>
+                                                <td>{{ svc.doctor ? svc.doctor.full_name : '-' }}</td>
                                                 <td>
                                                     {{ svc.service_name }}
                                                     <span v-if="svc.is_package" class="badge bg-info ms-1">Package</span>
@@ -1189,9 +1191,13 @@
                         <!-- Service Form -->
                         <div>
                             <div class="row mb-3">
-                                <div class="col-md-6">
+                                <div class="col-md-3">
                                     <label class="form-label">Service Date *</label>
                                     <input type="date" class="form-control" v-model="serviceForm.service_date">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Service Time *</label>
+                                    <input type="time" class="form-control" v-model="serviceForm.service_time">
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Doctor</label>
@@ -1531,6 +1537,7 @@ export default {
 
         const serviceForm = ref({
             service_date: new Date().toISOString().split('T')[0],
+            service_time: new Date().toTimeString().split(' ')[0].substring(0, 5), // HH:MM format
             doctor_id: '',
             service_type: '',
             hospital_service_id: '',
@@ -2029,8 +2036,15 @@ export default {
                 formattedDate = dateObj.toISOString().split('T')[0];
             }
 
+            // Format service_time to HH:MM for time input
+            let formattedTime = service.service_time || new Date().toTimeString().split(' ')[0].substring(0, 5);
+            if (service.service_time && service.service_time.length > 5) {
+                formattedTime = service.service_time.substring(0, 5); // Get HH:MM from HH:MM:SS
+            }
+
             serviceForm.value = {
                 service_date: formattedDate,
+                service_time: formattedTime,
                 doctor_id: service.doctor_id || '',
                 service_type: service.service_type,
                 hospital_service_id: service.service_id || '',
@@ -2066,6 +2080,7 @@ export default {
             bulkServicesList.value = [];
             serviceForm.value = {
                 service_date: new Date().toISOString().split('T')[0],
+                service_time: new Date().toTimeString().split(' ')[0].substring(0, 5),
                 doctor_id: '',
                 service_type: '',
                 hospital_service_id: '',
@@ -2101,6 +2116,7 @@ export default {
             // Add to bulk list
             bulkServicesList.value.push({
                 service_date: serviceForm.value.service_date,
+                service_time: serviceForm.value.service_time || null,
                 doctor_id: serviceForm.value.doctor_id || null,
                 doctor_name: doctorName,
                 service_type: serviceType,
@@ -2158,6 +2174,7 @@ export default {
             try {
                 const payload = {
                     service_date: serviceForm.value.service_date,
+                    service_time: serviceForm.value.service_time || null,
                     doctor_id: serviceForm.value.doctor_id || null,
                     service_type: serviceForm.value.service_type,
                     service_id: serviceForm.value.hospital_service_id || null,
