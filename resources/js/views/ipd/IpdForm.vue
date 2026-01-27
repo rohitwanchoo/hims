@@ -462,7 +462,10 @@
                                                 <td colspan="8" class="text-center text-muted py-3">No services added</td>
                                             </tr>
                                             <tr v-for="svc in services" :key="svc.ipd_service_id">
-                                                <td>{{ formatDate(svc.service_date) }}</td>
+                                                <td>
+                                                    {{ formatDate(svc.service_date) }}
+                                                    <small v-if="svc.service_time" class="text-muted d-block">{{ svc.service_time }}</small>
+                                                </td>
                                                 <td>
                                                     <span class="badge bg-secondary">{{ svc.service_type }}</span>
                                                 </td>
@@ -1289,7 +1292,10 @@
                                     </thead>
                                     <tbody>
                                         <tr v-for="(svc, index) in bulkServicesList" :key="index">
-                                            <td>{{ formatDate(svc.service_date) }}</td>
+                                            <td>
+                                                {{ formatDate(svc.service_date) }}
+                                                <small v-if="svc.service_time" class="text-muted d-block">{{ svc.service_time }}</small>
+                                            </td>
                                             <td>{{ svc.doctor_name || '-' }}</td>
                                             <td>{{ svc.service_name }}</td>
                                             <td>{{ svc.quantity }}</td>
