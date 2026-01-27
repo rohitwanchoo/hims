@@ -26,9 +26,11 @@ class InsuranceCompanyController extends Controller
 
     public function active()
     {
-        return InsuranceCompany::where('is_active', true)
+        $companies = InsuranceCompany::where('is_active', true)
             ->orderBy('company_name')
             ->get(['insurance_id', 'company_name', 'company_code']);
+
+        return response()->json($companies);
     }
 
     public function store(Request $request)

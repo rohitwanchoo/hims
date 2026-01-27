@@ -288,6 +288,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('ipd-admissions/{admission}/nursing-charts', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'getNursingCharts']);
     Route::post('ipd-admissions/{admission}/services', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'addService']);
     Route::get('ipd-admissions/{admission}/services', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'getServices']);
+    Route::put('ipd-admissions/{admission}/services/{service}', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'updateService']);
+    Route::delete('ipd-admissions/{admission}/services/{service}', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'deleteService']);
     Route::post('ipd-admissions/{admission}/medications', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'addMedication']);
     Route::get('ipd-admissions/{admission}/medications', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'getMedications']);
     Route::put('ipd-admissions/{admission}/medications/{medication}', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'updateMedication']);
@@ -295,6 +297,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('ipd-admissions/{admission}/investigations', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'getInvestigations']);
     Route::post('ipd-admissions/{admission}/advance-payments', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'collectAdvance']);
     Route::get('ipd-admissions/{admission}/advance-payments', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'getAdvancePayments']);
+    Route::put('ipd-admissions/{admission}/advance-payments/{advance}', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'updateAdvance']);
+    Route::delete('ipd-admissions/{admission}/advance-payments/{advance}', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'deleteAdvance']);
     Route::get('ipd-admissions/{admission}/running-bill', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'getRunningBill']);
     Route::post('ipd-admissions/{admission}/initiate-discharge', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'initiateDischarge']);
     Route::post('ipd-admissions/{admission}/complete-discharge', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'completeDischarge']);
@@ -304,6 +308,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('rooms', \App\Http\Controllers\Api\RoomController::class);
     Route::apiResource('beds', \App\Http\Controllers\Api\BedController::class);
     Route::get('beds/available', [\App\Http\Controllers\Api\BedController::class, 'available']);
+
+    // Cost Heads & Hospital Services
+    Route::apiResource('cost-heads', \App\Http\Controllers\Api\CostHeadController::class);
+    Route::apiResource('hospital-services', \App\Http\Controllers\Api\HospitalServiceController::class);
+    Route::put('hospital-services/{id}/prices/{priceId}', [\App\Http\Controllers\Api\HospitalServiceController::class, 'updatePrice']);
+    Route::get('hospital-services-rooms-beds', [\App\Http\Controllers\Api\HospitalServiceController::class, 'getRoomsAndBeds']);
+
+    // GST Plans
+    Route::get('gst-plans/active', [\App\Http\Controllers\Api\GstPlanController::class, 'active']);
+    Route::apiResource('gst-plans', \App\Http\Controllers\Api\GstPlanController::class);
 
     // Laboratory
     Route::apiResource('lab-categories', \App\Http\Controllers\Api\LabCategoryController::class);

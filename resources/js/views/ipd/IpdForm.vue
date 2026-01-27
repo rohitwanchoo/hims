@@ -453,19 +453,38 @@
                                                 <th>Qty</th>
                                                 <th>Rate</th>
                                                 <th>Amount</th>
+                                                <th style="width: 100px;">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <tr v-if="services.length === 0">
-                                                <td colspan="6" class="text-center text-muted py-3">No services added</td>
+                                                <td colspan="7" class="text-center text-muted py-3">No services added</td>
                                             </tr>
                                             <tr v-for="svc in services" :key="svc.ipd_service_id">
                                                 <td>{{ formatDate(svc.service_date) }}</td>
-                                                <td>{{ svc.service_type }}</td>
-                                                <td>{{ svc.service_name }}</td>
+                                                <td>
+                                                    <span class="badge bg-secondary">{{ svc.service_type }}</span>
+                                                </td>
+                                                <td>
+                                                    {{ svc.service_name }}
+                                                    <span v-if="svc.is_package" class="badge bg-info ms-1">Package</span>
+                                                </td>
                                                 <td>{{ svc.quantity }}</td>
                                                 <td>Rs {{ svc.rate }}</td>
-                                                <td>Rs {{ svc.net_amount }}</td>
+                                                <td>
+                                                    <strong>Rs {{ svc.net_amount }}</strong>
+                                                    <small v-if="svc.discount > 0" class="text-muted d-block">
+                                                        (Disc: Rs {{ svc.discount }})
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <button v-if="admission.status === 'admitted'" class="btn btn-sm btn-outline-primary me-1" @click="editServiceItem(svc)" title="Edit">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <button v-if="admission.status === 'admitted'" class="btn btn-sm btn-outline-danger" @click="deleteServiceItem(svc.ipd_service_id)" title="Delete">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -487,13 +506,26 @@
                                         No advance payments
                                     </div>
                                     <div v-for="pay in advancePayments" :key="pay.advance_id" class="list-group-item">
-                                        <div class="d-flex justify-content-between">
-                                            <small>{{ pay.receipt_number }}</small>
-                                            <small class="text-muted">{{ formatDate(pay.payment_date) }}</small>
-                                        </div>
-                                        <div class="d-flex justify-content-between">
-                                            <span>{{ pay.payment_mode }}</span>
-                                            <strong>Rs {{ pay.amount }}</strong>
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between">
+                                                    <small class="text-primary">{{ pay.receipt_number }}</small>
+                                                    <small class="text-muted">{{ formatDate(pay.payment_date) }}</small>
+                                                </div>
+                                                <div class="d-flex justify-content-between mt-1">
+                                                    <span class="badge bg-info">{{ pay.payment_mode }}</span>
+                                                    <strong>Rs {{ pay.amount }}</strong>
+                                                </div>
+                                                <small v-if="pay.remarks" class="text-muted d-block mt-1">{{ pay.remarks }}</small>
+                                            </div>
+                                            <div v-if="admission.status === 'admitted'" class="ms-2">
+                                                <button class="btn btn-sm btn-outline-primary me-1" @click="editAdvancePayment(pay)" title="Edit">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" @click="deleteAdvancePayment(pay.advance_id)" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -893,8 +925,8 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Collect Advance Payment</h5>
-                        <button type="button" class="btn-close" @click="showAdvancePayment = false"></button>
+                        <h5 class="modal-title">{{ editingAdvanceId ? 'Edit Advance Payment' : 'Collect Advance Payment' }}</h5>
+                        <button type="button" class="btn-close" @click="closeAdvanceModal"></button>
                     </div>
                     <form @submit.prevent="saveAdvancePayment">
                         <div class="modal-body">
@@ -1145,6 +1177,99 @@
             </div>
         </div>
 
+        <!-- Add Service Modal -->
+        <div class="modal fade" :class="{ show: showAddService }" :style="{ display: showAddService ? 'block' : 'none' }" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">{{ editingServiceId ? 'Edit Service / Charge' : 'Add Service / Charge' }}</h5>
+                        <button type="button" class="btn-close" @click="closeServiceModal"></button>
+                    </div>
+                    <form @submit.prevent="saveService">
+                        <div class="modal-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Service Date *</label>
+                                    <input type="date" class="form-control" v-model="serviceForm.service_date" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Service Type *</label>
+                                    <select class="form-select" v-model="serviceForm.service_type" required>
+                                        <option value="">Select Type</option>
+                                        <option value="bed">Bed Charges</option>
+                                        <option value="doctor_visit">Doctor Visit</option>
+                                        <option value="nursing">Nursing Care</option>
+                                        <option value="procedure">Procedure</option>
+                                        <option value="lab">Laboratory</option>
+                                        <option value="radiology">Radiology</option>
+                                        <option value="pharmacy">Pharmacy</option>
+                                        <option value="ot">Operation Theater</option>
+                                        <option value="icu">ICU Charges</option>
+                                        <option value="consumable">Consumables</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Select from Hospital Services</label>
+                                <select class="form-select" v-model="serviceForm.hospital_service_id" @change="onHospitalServiceChange">
+                                    <option value="">-- Select Service (or enter manually below) --</option>
+                                    <option v-for="hs in hospitalServices" :key="hs.hospital_service_id" :value="hs.hospital_service_id">
+                                        {{ hs.service_name }} - Rs {{ hs.applicable_price || hs.base_price }}
+                                        <template v-if="hs.price_source === 'bed'">(Bed Rate)</template>
+                                        <template v-else-if="hs.price_source === 'room'">(Room Rate)</template>
+                                        <template v-else>(Base Rate)</template>
+                                        - {{ hs.cost_head_name }}
+                                    </option>
+                                </select>
+                                <small class="text-muted">Showing bed-specific or room-specific rates when available</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Service Name *</label>
+                                <input type="text" class="form-control" v-model="serviceForm.service_name" required placeholder="Enter service name">
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Quantity *</label>
+                                    <input type="number" class="form-control" v-model="serviceForm.quantity" min="1" required @input="calculateServiceAmount">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Rate (Rs) *</label>
+                                    <input type="number" class="form-control" v-model="serviceForm.rate" step="0.01" min="0" required @input="calculateServiceAmount">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Discount (Rs)</label>
+                                    <input type="number" class="form-control" v-model="serviceForm.discount" step="0.01" min="0" @input="calculateServiceAmount">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Total Amount</label>
+                                    <input type="text" class="form-control" :value="'Rs ' + serviceForm.total_amount" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check mt-4">
+                                        <input type="checkbox" class="form-check-input" id="isPackage" v-model="serviceForm.is_package">
+                                        <label class="form-check-label" for="isPackage">
+                                            This is a package service
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Remarks</label>
+                                <textarea class="form-control" v-model="serviceForm.remarks" rows="2" placeholder="Any additional notes..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @click="showAddService = false">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Add Service</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- Add Investigation Modal -->
         <div class="modal fade" :class="{ show: showAddInvestigation }" :style="{ display: showAddInvestigation ? 'block' : 'none' }" tabindex="-1">
             <div class="modal-dialog modal-lg">
@@ -1197,7 +1322,7 @@
         </div>
 
         <!-- Modal Backdrop -->
-        <div v-if="showAddNote || showAdvancePayment || showDischargeModal || showAddNursingChart || showAddMedication || showAddInvestigation" class="modal-backdrop fade show"></div>
+        <div v-if="showAddNote || showAdvancePayment || showDischargeModal || showAddNursingChart || showAddMedication || showAddInvestigation || showAddService" class="modal-backdrop fade show"></div>
     </div>
 </template>
 
@@ -1357,6 +1482,23 @@ export default {
             instructions: '',
         });
 
+        const serviceForm = ref({
+            service_date: new Date().toISOString().split('T')[0],
+            service_type: '',
+            hospital_service_id: '',
+            service_name: '',
+            quantity: 1,
+            rate: 0,
+            discount: 0,
+            total_amount: 0,
+            is_package: false,
+            remarks: '',
+        });
+
+        const hospitalServices = ref([]);
+        const editingServiceId = ref(null);
+        const editingAdvanceId = ref(null);
+
         const filteredDoctors = computed(() => {
             if (!form.value.department_id) return doctors.value;
             return doctors.value.filter(d => d.department_id == form.value.department_id);
@@ -1396,18 +1538,20 @@ export default {
 
         const loadMasterData = async () => {
             try {
-                const [deptsRes, docsRes, wardsRes, insuranceRes, drugsRes] = await Promise.all([
+                const [deptsRes, docsRes, wardsRes, insuranceRes, drugsRes, servicesRes] = await Promise.all([
                     axios.get('/api/departments'),
                     axios.get('/api/doctors'),
                     axios.get('/api/wards'),
                     axios.get('/api/insurance-companies-active'),
                     axios.get('/api/drugs'),
+                    axios.get('/api/hospital-services', { params: { active_only: 1 } }),
                 ]);
                 departments.value = deptsRes.data.data || deptsRes.data;
                 doctors.value = docsRes.data.data || docsRes.data;
                 wards.value = wardsRes.data.data || wardsRes.data;
                 insuranceCompanies.value = insuranceRes.data.data || insuranceRes.data;
                 drugs.value = drugsRes.data || [];
+                hospitalServices.value = servicesRes.data || [];
 
                 // Load today's OPD patients if in create mode
                 if (!isViewMode.value) {
@@ -1448,6 +1592,9 @@ export default {
                 const response = await axios.get(`/api/ipd-admissions/${route.params.id}`);
                 admission.value = response.data.admission;
                 runningBill.value = response.data.running_bill || {};
+
+                // Load hospital services with bed/room prices
+                await loadHospitalServicesForAdmission();
 
                 // Load related data
                 await Promise.all([
@@ -1648,15 +1795,52 @@ export default {
             }
         };
 
-        const saveAdvancePayment = async () => {
+        const editAdvancePayment = (payment) => {
+            editingAdvanceId.value = payment.advance_id;
+            advanceForm.value = {
+                amount: payment.amount,
+                payment_mode: payment.payment_mode,
+                reference_number: payment.reference_number || '',
+                remarks: payment.remarks || '',
+            };
+            showAdvancePayment.value = true;
+        };
+
+        const deleteAdvancePayment = async (advanceId) => {
+            if (!confirm('Are you sure you want to delete this advance payment?')) {
+                return;
+            }
+
             try {
-                await axios.post(`/api/ipd-admissions/${route.params.id}/advance-payments`, advanceForm.value);
-                showAdvancePayment.value = false;
-                advanceForm.value = { amount: '', payment_mode: 'cash', reference_number: '', remarks: '' };
+                await axios.delete(`/api/ipd-admissions/${route.params.id}/advance-payments/${advanceId}`);
                 loadAdvancePayments();
                 loadRunningBill();
             } catch (error) {
-                alert('Failed to collect payment: ' + (error.response?.data?.message || error.message));
+                alert('Failed to delete advance payment: ' + (error.response?.data?.message || error.message));
+            }
+        };
+
+        const closeAdvanceModal = () => {
+            showAdvancePayment.value = false;
+            editingAdvanceId.value = null;
+            advanceForm.value = { amount: '', payment_mode: 'cash', reference_number: '', remarks: '' };
+        };
+
+        const saveAdvancePayment = async () => {
+            try {
+                if (editingAdvanceId.value) {
+                    // Update existing advance payment
+                    await axios.put(`/api/ipd-admissions/${route.params.id}/advance-payments/${editingAdvanceId.value}`, advanceForm.value);
+                } else {
+                    // Create new advance payment
+                    await axios.post(`/api/ipd-admissions/${route.params.id}/advance-payments`, advanceForm.value);
+                }
+
+                closeAdvanceModal();
+                loadAdvancePayments();
+                loadRunningBill();
+            } catch (error) {
+                alert('Failed to save payment: ' + (error.response?.data?.message || error.message));
             }
         };
 
@@ -1741,6 +1925,168 @@ export default {
                 loadInvestigations();
             } catch (error) {
                 alert('Failed to order investigation: ' + (error.response?.data?.message || error.message));
+            }
+        };
+
+        const onHospitalServiceChange = () => {
+            const selectedService = hospitalServices.value.find(s => s.hospital_service_id == serviceForm.value.hospital_service_id);
+            if (selectedService) {
+                serviceForm.value.service_name = selectedService.service_name;
+                // Use applicable_price if available (bed > room > base), otherwise fallback to base_price
+                serviceForm.value.rate = parseFloat(selectedService.applicable_price || selectedService.base_price || 0);
+
+                // Auto-set service type based on cost head type
+                const costHeadType = selectedService.cost_head_type;
+                if (costHeadType === 'ipd_services') {
+                    serviceForm.value.service_type = 'bed';
+                } else if (costHeadType === 'opd_services') {
+                    serviceForm.value.service_type = 'doctor_visit';
+                } else if (costHeadType === 'lab_services') {
+                    serviceForm.value.service_type = 'lab';
+                } else if (costHeadType === 'radiology') {
+                    serviceForm.value.service_type = 'radiology';
+                } else if (costHeadType === 'pharmacy') {
+                    serviceForm.value.service_type = 'pharmacy';
+                } else if (costHeadType === 'procedure') {
+                    serviceForm.value.service_type = 'procedure';
+                } else {
+                    serviceForm.value.service_type = 'other';
+                }
+
+                calculateServiceAmount();
+            }
+        };
+
+        const calculateServiceAmount = () => {
+            const quantity = parseFloat(serviceForm.value.quantity) || 0;
+            const rate = parseFloat(serviceForm.value.rate) || 0;
+            const discount = parseFloat(serviceForm.value.discount) || 0;
+
+            const subtotal = quantity * rate;
+            serviceForm.value.total_amount = Math.max(0, subtotal - discount).toFixed(2);
+        };
+
+        const editServiceItem = (service) => {
+            editingServiceId.value = service.ipd_service_id;
+            serviceForm.value = {
+                service_date: service.service_date,
+                service_type: service.service_type,
+                hospital_service_id: service.service_id || '',
+                service_name: service.service_name,
+                quantity: service.quantity,
+                rate: service.rate,
+                discount: service.discount || 0,
+                total_amount: service.net_amount,
+                is_package: service.is_package || false,
+                remarks: service.remarks || '',
+            };
+            calculateServiceAmount();
+            showAddService.value = true;
+        };
+
+        const deleteServiceItem = async (serviceId) => {
+            if (!confirm('Are you sure you want to delete this service?')) {
+                return;
+            }
+
+            try {
+                await axios.delete(`/api/ipd-admissions/${route.params.id}/services/${serviceId}`);
+                await loadServices();
+                await loadAdmissionDetails();
+            } catch (error) {
+                alert('Failed to delete service: ' + (error.response?.data?.message || error.message));
+            }
+        };
+
+        const closeServiceModal = () => {
+            showAddService.value = false;
+            editingServiceId.value = null;
+            serviceForm.value = {
+                service_date: new Date().toISOString().split('T')[0],
+                service_type: '',
+                hospital_service_id: '',
+                service_name: '',
+                quantity: 1,
+                rate: 0,
+                discount: 0,
+                total_amount: 0,
+                is_package: false,
+                remarks: '',
+            };
+        };
+
+        const saveService = async () => {
+            try {
+                const payload = {
+                    service_date: serviceForm.value.service_date,
+                    service_type: serviceForm.value.service_type,
+                    service_id: serviceForm.value.hospital_service_id || null,
+                    service_name: serviceForm.value.service_name,
+                    quantity: serviceForm.value.quantity,
+                    rate: serviceForm.value.rate,
+                    discount: serviceForm.value.discount,
+                    is_package: serviceForm.value.is_package,
+                    remarks: serviceForm.value.remarks,
+                };
+
+                if (editingServiceId.value) {
+                    // Update existing service
+                    await axios.put(`/api/ipd-admissions/${route.params.id}/services/${editingServiceId.value}`, payload);
+                } else {
+                    // Create new service
+                    await axios.post(`/api/ipd-admissions/${route.params.id}/services`, payload);
+                }
+
+                closeServiceModal();
+                await loadServices();
+                await loadAdmissionDetails();
+            } catch (error) {
+                alert('Failed to save service: ' + (error.response?.data?.message || error.message));
+            }
+        };
+
+        const loadHospitalServices = async () => {
+            try {
+                const response = await axios.get('/api/hospital-services', {
+                    params: { active_only: 1 }
+                });
+                hospitalServices.value = response.data || [];
+            } catch (error) {
+                console.error('Failed to load hospital services:', error);
+            }
+        };
+
+        const loadHospitalServicesForAdmission = async () => {
+            if (!admission.value || !admission.value.bed_id) {
+                await loadHospitalServices();
+                return;
+            }
+
+            try {
+                // Get bed details to find room_id
+                const bedResponse = await axios.get(`/api/beds/${admission.value.bed_id}`);
+                const bed = bedResponse.data;
+
+                // Load services with bed and room pricing
+                const response = await axios.get('/api/hospital-services', {
+                    params: {
+                        active_only: 1,
+                        bed_id: admission.value.bed_id,
+                        room_id: bed.room_id
+                    }
+                });
+
+                hospitalServices.value = response.data || [];
+
+                console.log('Loaded hospital services with bed/room prices:', {
+                    bed_id: admission.value.bed_id,
+                    room_id: bed.room_id,
+                    services_count: hospitalServices.value.length
+                });
+            } catch (error) {
+                console.error('Failed to load hospital services with bed/room prices:', error);
+                // Fallback to loading without bed/room pricing
+                await loadHospitalServices();
             }
         };
 
@@ -1857,6 +2203,21 @@ export default {
             saveNursingChart,
             saveMedication,
             saveInvestigation,
+            serviceForm,
+            hospitalServices,
+            editingServiceId,
+            editingAdvanceId,
+            onHospitalServiceChange,
+            calculateServiceAmount,
+            saveService,
+            editServiceItem,
+            deleteServiceItem,
+            closeServiceModal,
+            editAdvancePayment,
+            deleteAdvancePayment,
+            closeAdvanceModal,
+            loadHospitalServices,
+            loadHospitalServicesForAdmission,
             formatDate,
             formatStatus,
             getStatusBadge,

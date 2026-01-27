@@ -136,6 +136,12 @@ import PrescriptionMaster from '../views/masters/prescription/PrescriptionMaster
 // Masters - Bed Allocation
 import BedAllocationMaster from '../views/masters/BedAllocationMaster.vue';
 
+// Masters - Hospital Services
+import HospitalServicesMaster from '../views/masters/HospitalServicesMaster.vue';
+
+// Masters - GST Plan
+import GstPlanMaster from '../views/masters/GstPlanMaster.vue';
+
 // Masters - Address
 import CountryList from '../views/masters/address/CountryList.vue';
 import StateList from '../views/masters/address/StateList.vue';
@@ -224,6 +230,16 @@ const routes = [
                 path: 'masters/bed-allocation',
                 name: 'masters.bed-allocation',
                 component: BedAllocationMaster
+            },
+            {
+                path: 'masters/hospital-services',
+                name: 'masters.hospital-services',
+                component: HospitalServicesMaster
+            },
+            {
+                path: 'masters/gst-plan',
+                name: 'masters.gst-plan',
+                component: GstPlanMaster
             },
             // Masters - Address
             {

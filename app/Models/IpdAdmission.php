@@ -288,17 +288,19 @@ class IpdAdmission extends Model
         $prefix = 'IPD';
         $year = date('Y');
         $month = date('m');
+        $datePrefix = $year . $month;
 
         $lastIpd = self::where('hospital_id', $hospitalId)
             ->whereYear('created_at', $year)
+            ->whereMonth('created_at', $month)
             ->orderBy('ipd_id', 'desc')
             ->first();
 
         $sequence = 1;
-        if ($lastIpd && preg_match('/(\d+)$/', $lastIpd->ipd_number, $matches)) {
+        if ($lastIpd && preg_match('/^IPD' . $datePrefix . '(\d{5})$/', $lastIpd->ipd_number, $matches)) {
             $sequence = (int)$matches[1] + 1;
         }
 
-        return $prefix . $year . $month . str_pad($sequence, 5, '0', STR_PAD_LEFT);
+        return $prefix . $datePrefix . str_pad($sequence, 5, '0', STR_PAD_LEFT);
     }
 }

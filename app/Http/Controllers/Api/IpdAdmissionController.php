@@ -688,6 +688,80 @@ class IpdAdmissionController extends Controller
     }
 
     /**
+     * Update service
+     */
+    public function updateService(Request $request, string $id, string $serviceId)
+    {
+        $request->validate([
+            'service_name' => 'required|string|max:200',
+            'service_type' => 'required|in:bed,doctor_visit,nursing,procedure,lab,radiology,pharmacy,ot,icu,consumable,other',
+            'quantity' => 'required|integer|min:1',
+            'rate' => 'required|numeric|min:0',
+        ]);
+
+        $hospitalId = Auth::user()->hospital_id;
+
+        $service = IpdService::where('hospital_id', $hospitalId)
+            ->where('ipd_id', $id)
+            ->where('ipd_service_id', $serviceId)
+            ->firstOrFail();
+
+        $service->update([
+            'service_date' => $request->service_date ?? $service->service_date,
+            'service_type' => $request->service_type,
+            'service_id' => $request->service_id,
+            'service_name' => $request->service_name,
+            'quantity' => $request->quantity,
+            'rate' => $request->rate,
+            'discount' => $request->discount ?? 0,
+            'is_package' => $request->is_package ?? false,
+            'remarks' => $request->remarks,
+        ]);
+
+        // Update admission totals
+        $admission = IpdAdmission::where('hospital_id', $hospitalId)
+            ->where('ipd_id', $id)
+            ->first();
+
+        if ($admission) {
+            $this->updateAdmissionBilling($admission);
+        }
+
+        return response()->json([
+            'message' => 'Service updated successfully',
+            'service' => $service,
+        ]);
+    }
+
+    /**
+     * Delete service
+     */
+    public function deleteService(string $id, string $serviceId)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+
+        $service = IpdService::where('hospital_id', $hospitalId)
+            ->where('ipd_id', $id)
+            ->where('ipd_service_id', $serviceId)
+            ->firstOrFail();
+
+        $service->delete();
+
+        // Update admission totals
+        $admission = IpdAdmission::where('hospital_id', $hospitalId)
+            ->where('ipd_id', $id)
+            ->first();
+
+        if ($admission) {
+            $this->updateAdmissionBilling($admission);
+        }
+
+        return response()->json([
+            'message' => 'Service deleted successfully',
+        ]);
+    }
+
+    /**
      * Add medication order
      */
     public function addMedication(Request $request, string $id)
@@ -942,6 +1016,81 @@ class IpdAdmissionController extends Controller
         return response()->json([
             'payments' => $payments,
             'summary' => $summary,
+        ]);
+    }
+
+    /**
+     * Update advance payment
+     */
+    public function updateAdvance(Request $request, string $id, string $advanceId)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'payment_mode' => 'required|in:cash,card,upi,neft,cheque,dd',
+        ]);
+
+        $hospitalId = Auth::user()->hospital_id;
+
+        $payment = IpdAdvancePayment::where('hospital_id', $hospitalId)
+            ->where('ipd_id', $id)
+            ->where('advance_id', $advanceId)
+            ->firstOrFail();
+
+        $payment->update([
+            'amount' => $request->amount,
+            'payment_mode' => $request->payment_mode,
+            'reference_number' => $request->reference_number,
+            'remarks' => $request->remarks,
+        ]);
+
+        // Update admission advance amount
+        $totalAdvance = IpdAdvancePayment::where('ipd_id', $id)
+            ->where('is_refunded', false)
+            ->sum('amount');
+
+        $admission = IpdAdmission::where('hospital_id', $hospitalId)
+            ->where('ipd_id', $id)
+            ->first();
+
+        if ($admission) {
+            $admission->update(['advance_amount' => $totalAdvance]);
+        }
+
+        return response()->json([
+            'message' => 'Advance payment updated successfully',
+            'payment' => $payment,
+        ]);
+    }
+
+    /**
+     * Delete advance payment
+     */
+    public function deleteAdvance(string $id, string $advanceId)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+
+        $payment = IpdAdvancePayment::where('hospital_id', $hospitalId)
+            ->where('ipd_id', $id)
+            ->where('advance_id', $advanceId)
+            ->firstOrFail();
+
+        $payment->delete();
+
+        // Update admission advance amount
+        $totalAdvance = IpdAdvancePayment::where('ipd_id', $id)
+            ->where('is_refunded', false)
+            ->sum('amount');
+
+        $admission = IpdAdmission::where('hospital_id', $hospitalId)
+            ->where('ipd_id', $id)
+            ->first();
+
+        if ($admission) {
+            $admission->update(['advance_amount' => $totalAdvance]);
+        }
+
+        return response()->json([
+            'message' => 'Advance payment deleted successfully',
         ]);
     }
 

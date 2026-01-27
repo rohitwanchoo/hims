@@ -216,7 +216,9 @@ const menuSections = [
             { path: '/masters/reception/qualification', label: 'Qualification' },
             { path: '/masters/reception/consult-master', label: 'Consult Master' },
             { path: '/masters/prescription', label: 'Prescription Master' },
-            { path: '/masters/bed-allocation', label: 'Bed Allocation' }
+            { path: '/masters/bed-allocation', label: 'Bed Allocation' },
+            { path: '/masters/hospital-services', label: 'Hospital Services' },
+            { path: '/masters/gst-plan', label: 'GST Plan Master' }
         ]
     },
     {
