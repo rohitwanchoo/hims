@@ -343,7 +343,8 @@ const menuSections = [
         items: [
             { path: '/settings/opd-configuration', label: 'OPD Configuration' },
             { path: '/settings/opd-time-slots', label: 'OPD Time Slots' },
-            { path: '/settings/rate-requests', label: 'Rate Requests' }
+            { path: '/settings/rate-requests', label: 'Rate Requests' },
+            { path: '/discharge-summary-custom-fields', label: 'Discharge Summary Fields' }
         ]
     },
     {
@@ -415,6 +416,7 @@ const pageTitle = computed(() => {
         '/settings/opd-configuration': 'OPD Configuration',
         '/settings/opd-time-slots': 'OPD Time Slots',
         '/settings/rate-requests': 'Rate Change Requests',
+        '/discharge-summary-custom-fields': 'Discharge Summary Custom Fields',
         '/hospitals': 'Hospitals',
         '/admin/claude-chat': 'AI Assistant',
     };

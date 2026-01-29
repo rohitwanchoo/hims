@@ -45,6 +45,7 @@ import IpdForm from '../views/ipd/IpdForm.vue';
 // Discharge Summary
 import DischargeSummaryList from '../views/discharge-summary/DischargeSummaryList.vue';
 import DischargeSummaryForm from '../views/discharge-summary/DischargeSummaryForm.vue';
+import DischargeSummaryCustomFields from '../views/discharge-summary/DischargeSummaryCustomFields.vue';
 
 // Bed Transfer
 import BedTransferMaster from '../views/clinical/BedTransferMaster.vue';
@@ -421,6 +422,11 @@ const routes = [
                 path: 'discharge-summary/:id',
                 name: 'discharge-summary.view',
                 component: DischargeSummaryForm
+            },
+            {
+                path: 'discharge-summary-custom-fields',
+                name: 'discharge-summary-custom-fields',
+                component: DischargeSummaryCustomFields
             },
             {
                 path: 'bed-transfers',

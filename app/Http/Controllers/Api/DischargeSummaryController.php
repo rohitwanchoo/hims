@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\DischargeSummary;
+use App\Models\DischargeSummaryCustomFieldValue;
 use App\Models\IpdAdmission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -139,14 +140,37 @@ class DischargeSummaryController extends Controller
         $validated['patient_id'] = $ipdAdmission->patient_id;
         $validated['created_by'] = Auth::id();
 
-        $summary = DischargeSummary::create($validated);
+        // Handle custom fields
+        $customFields = $request->input('custom_fields', []);
 
-        return response()->json($summary->load([
-            'patient',
-            'ipdAdmission',
-            'treatingDoctor',
-            'consultantDoctor'
-        ]), 201);
+        DB::beginTransaction();
+        try {
+            $summary = DischargeSummary::create($validated);
+
+            // Save custom field values
+            foreach ($customFields as $fieldId => $value) {
+                if ($value !== null && $value !== '') {
+                    DischargeSummaryCustomFieldValue::create([
+                        'discharge_summary_id' => $summary->discharge_summary_id,
+                        'field_id' => $fieldId,
+                        'field_value' => is_array($value) ? json_encode($value) : $value,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json($summary->load([
+                'patient',
+                'ipdAdmission',
+                'treatingDoctor',
+                'consultantDoctor',
+                'customFieldValues.customField'
+            ]), 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Error creating discharge summary: ' . $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -163,7 +187,8 @@ class DischargeSummaryController extends Controller
                 'ipdAdmission.ward',
                 'treatingDoctor',
                 'consultantDoctor',
-                'creator'
+                'creator',
+                'customFieldValues.customField'
             ])
             ->findOrFail($id);
 
@@ -217,14 +242,39 @@ class DischargeSummaryController extends Controller
             'status' => 'sometimes|in:draft,completed,signed',
         ]);
 
-        $summary->update($validated);
+        // Handle custom fields
+        $customFields = $request->input('custom_fields', []);
 
-        return response()->json($summary->load([
-            'patient',
-            'ipdAdmission',
-            'treatingDoctor',
-            'consultantDoctor'
-        ]));
+        DB::beginTransaction();
+        try {
+            $summary->update($validated);
+
+            // Update custom field values
+            foreach ($customFields as $fieldId => $value) {
+                DischargeSummaryCustomFieldValue::updateOrCreate(
+                    [
+                        'discharge_summary_id' => $summary->discharge_summary_id,
+                        'field_id' => $fieldId,
+                    ],
+                    [
+                        'field_value' => is_array($value) ? json_encode($value) : $value,
+                    ]
+                );
+            }
+
+            DB::commit();
+
+            return response()->json($summary->load([
+                'patient',
+                'ipdAdmission',
+                'treatingDoctor',
+                'consultantDoctor',
+                'customFieldValues.customField'
+            ]));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Error updating discharge summary: ' . $e->getMessage()], 500);
+        }
     }
 
     /**

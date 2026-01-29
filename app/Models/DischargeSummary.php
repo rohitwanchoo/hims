@@ -91,6 +91,11 @@ class DischargeSummary extends Model
         return $this->belongsTo(Hospital::class, 'hospital_id', 'hospital_id');
     }
 
+    public function customFieldValues()
+    {
+        return $this->hasMany(DischargeSummaryCustomFieldValue::class, 'discharge_summary_id', 'discharge_summary_id');
+    }
+
     protected static function boot()
     {
         parent::boot();

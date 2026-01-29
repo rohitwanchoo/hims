@@ -310,6 +310,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('discharge-summaries/{id}/print', [\App\Http\Controllers\Api\DischargeSummaryController::class, 'print']);
     Route::apiResource('discharge-summaries', \App\Http\Controllers\Api\DischargeSummaryController::class);
 
+    // Discharge Summary Custom Fields
+    Route::get('discharge-summary-custom-fields/active', [\App\Http\Controllers\Api\DischargeSummaryCustomFieldController::class, 'getActiveFields']);
+    Route::apiResource('discharge-summary-custom-fields', \App\Http\Controllers\Api\DischargeSummaryCustomFieldController::class);
+
     // Wards, Rooms & Beds
     Route::apiResource('wards', \App\Http\Controllers\Api\WardController::class);
     Route::apiResource('rooms', \App\Http\Controllers\Api\RoomController::class);
