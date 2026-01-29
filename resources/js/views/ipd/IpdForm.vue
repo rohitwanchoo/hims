@@ -24,9 +24,9 @@
                         </a></li>
                     </ul>
                 </div>
-                <router-link v-if="isViewMode" :to="`/discharge-summary/create?ipd_id=${admission.ipd_id}`" class="btn btn-primary">
+                <button v-if="isViewMode" class="btn btn-primary" @click="openDischargeSummary">
                     <i class="bi bi-file-medical"></i> Discharge Summary
-                </router-link>
+                </button>
                 <button v-if="isViewMode && admission.status === 'admitted'" class="btn btn-success" @click="finalDischarge">
                     <i class="bi bi-box-arrow-right"></i> Final Discharge
                 </button>
@@ -2003,6 +2003,26 @@ export default {
             }
         };
 
+        const openDischargeSummary = async () => {
+            try {
+                // Check if a discharge summary already exists for this IPD admission
+                const response = await axios.get(`/api/discharge-summaries?ipd_id=${admission.value.ipd_id}`);
+                const summaries = response.data.data || response.data || [];
+
+                if (summaries.length > 0) {
+                    // Open existing discharge summary
+                    router.push(`/discharge-summary/${summaries[0].discharge_summary_id}`);
+                } else {
+                    // Create new discharge summary
+                    router.push(`/discharge-summary/create?ipd_id=${admission.value.ipd_id}`);
+                }
+            } catch (error) {
+                console.error('Error checking discharge summary:', error);
+                // Default to create page if check fails
+                router.push(`/discharge-summary/create?ipd_id=${admission.value.ipd_id}`);
+            }
+        };
+
         const finalDischarge = async () => {
             if (!confirm('Are you sure you want to discharge this patient? This will mark the patient as discharged.')) return;
             try {
@@ -2491,6 +2511,7 @@ export default {
             submitAdmission,
             saveProgressNote,
             saveAdvancePayment,
+            openDischargeSummary,
             finalDischarge,
             stopMedication,
             saveNursingChart,

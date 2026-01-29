@@ -53,6 +53,10 @@ class DischargeSummaryController extends Controller
             $query->whereDate('discharge_date', '<=', $request->to_date);
         }
 
+        if ($request->has('ipd_id')) {
+            $query->where('ipd_id', $request->ipd_id);
+        }
+
         $perPage = $request->get('per_page', 15);
         return response()->json($query->paginate($perPage));
     }
