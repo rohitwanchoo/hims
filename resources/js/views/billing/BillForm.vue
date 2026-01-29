@@ -197,14 +197,18 @@
                                         <thead class="table-light">
                                             <tr class="small">
                                                 <th>Service</th>
-                                                <th width="60" class="text-center">Qty</th>
-                                                <th width="90" class="text-end">Rate</th>
-                                                <th width="100" class="text-end">Amount</th>
+                                                <th width="130">Date & Time</th>
+                                                <th width="120">Doctor</th>
+                                                <th width="50" class="text-center">Qty</th>
+                                                <th width="80" class="text-end">Rate</th>
+                                                <th width="90" class="text-end">Amount</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <tr v-for="item in group.items" :key="item.service_id" class="small">
                                                 <td>{{ getServiceName(item.service_id) }}</td>
+                                                <td>{{ formatDateTime(item.service_date) }}</td>
+                                                <td>{{ getDoctorName(item.doctor_id) }}</td>
                                                 <td class="text-center">{{ item.quantity }}</td>
                                                 <td class="text-end">{{ formatCurrency(item.unit_price) }}</td>
                                                 <td class="text-end">{{ formatCurrency(item.amount) }}</td>
@@ -220,11 +224,13 @@
                             <table class="table table-sm table-hover mb-0">
                                 <thead class="table-light sticky-top">
                                     <tr class="small">
-                                        <th width="180">Cost Head</th>
-                                        <th>Service</th>
-                                        <th width="60">Qty</th>
-                                        <th width="90">Rate</th>
-                                        <th width="100">Amount</th>
+                                        <th width="150">Cost Head</th>
+                                        <th width="180">Service</th>
+                                        <th width="130">Date & Time</th>
+                                        <th width="120">Doctor</th>
+                                        <th width="50">Qty</th>
+                                        <th width="80">Rate</th>
+                                        <th width="90">Amount</th>
                                         <th width="40"></th>
                                     </tr>
                                 </thead>
@@ -243,6 +249,17 @@
                                                 <option value="">Select</option>
                                                 <option v-for="svc in getFilteredServices(item.cost_head_id)" :key="svc.hospital_service_id" :value="svc.hospital_service_id">
                                                     {{ svc.service_name }}
+                                                </option>
+                                            </select>
+                                        </td>
+                                        <td class="p-1">
+                                            <input type="datetime-local" class="form-control form-control-sm" v-model="item.service_date">
+                                        </td>
+                                        <td class="p-1">
+                                            <select class="form-select form-select-sm" v-model="item.doctor_id">
+                                                <option value="">Select</option>
+                                                <option v-for="doctor in doctors" :key="doctor.doctor_id" :value="doctor.doctor_id">
+                                                    {{ doctor.full_name }}
                                                 </option>
                                             </select>
                                         </td>
@@ -393,6 +410,7 @@ const selectedIpdId = ref('');
 const runningBill = ref(null);
 const ipdServices = ref([]);
 const costHeads = ref([]);
+const doctors = ref([]);
 const editMode = ref(false);
 const originalFormData = ref(null);
 const canEdit = ref(false);
@@ -481,10 +499,11 @@ const cancelEdit = () => {
 
 onMounted(async () => {
     try {
-        const [patientsRes, servicesRes, costHeadsRes] = await Promise.all([
+        const [patientsRes, servicesRes, costHeadsRes, doctorsRes] = await Promise.all([
             axios.get('/api/patients?per_page=1000'),
             axios.get('/api/hospital-services'),
-            axios.get('/api/cost-heads')
+            axios.get('/api/cost-heads'),
+            axios.get('/api/doctors')
         ]);
 
         // Filter out any null/undefined entries
@@ -493,6 +512,7 @@ onMounted(async () => {
 
         allServices.value = servicesRes.data || [];
         costHeads.value = costHeadsRes.data || [];
+        doctors.value = doctorsRes.data.data || doctorsRes.data || [];
 
         if (route.params.id) {
             const billRes = await axios.get(`/api/bills/${route.params.id}`);
@@ -654,7 +674,18 @@ const onServiceChange = (item) => {
 };
 
 const addItem = () => {
-    form.value.items.push({ cost_head_id: '', service_id: '', item_name: '', quantity: 1, unit_price: 0, amount: 0 });
+    const now = new Date();
+    const dateTimeLocal = now.toISOString().slice(0, 16);
+    form.value.items.push({
+        cost_head_id: '',
+        service_id: '',
+        item_name: '',
+        service_date: dateTimeLocal,
+        doctor_id: '',
+        quantity: 1,
+        unit_price: 0,
+        amount: 0
+    });
 };
 
 const removeItem = (index) => {
@@ -668,6 +699,25 @@ const calculateAmount = (item) => {
 };
 
 const formatCurrency = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount || 0);
+
+const formatDateTime = (dateTime) => {
+    if (!dateTime) return '-';
+    const date = new Date(dateTime);
+    return date.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    });
+};
+
+const getDoctorName = (doctorId) => {
+    if (!doctorId) return '-';
+    const doctor = doctors.value.find(d => d.doctor_id == doctorId);
+    return doctor ? doctor.full_name : '-';
+};
 
 const getPatientName = () => {
     const patient = patients.value.find(p => p?.patient_id === form.value.patient_id);
