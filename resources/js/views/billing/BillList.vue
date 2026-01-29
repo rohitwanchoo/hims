@@ -60,14 +60,20 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <router-link :to="`/billing/${bill.bill_id}`" class="btn btn-outline-primary">
+                                    <router-link :to="`/billing/${bill.bill_id}`" class="btn btn-outline-primary" title="View">
                                         <i class="bi bi-eye"></i>
                                     </router-link>
-                                    <button class="btn btn-outline-success" @click="addPayment(bill)" v-if="bill.due_amount > 0">
+                                    <router-link :to="`/billing/${bill.bill_id}`" class="btn btn-outline-warning" title="Edit" v-if="bill.payment_status === 'pending'">
+                                        <i class="bi bi-pencil"></i>
+                                    </router-link>
+                                    <button class="btn btn-outline-success" @click="addPayment(bill)" v-if="bill.due_amount > 0" title="Add Payment">
                                         <i class="bi bi-cash"></i>
                                     </button>
-                                    <button class="btn btn-outline-secondary" @click="printBill(bill)">
+                                    <button class="btn btn-outline-secondary" @click="printBill(bill)" title="Print">
                                         <i class="bi bi-printer"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" @click="deleteBill(bill)" v-if="bill.payment_status === 'pending'" title="Delete">
+                                        <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
                             </td>
@@ -124,5 +130,20 @@ const addPayment = (bill) => {
 const printBill = (bill) => {
     // TODO: Implement print bill
     window.open(`/api/bills/${bill.bill_id}/print`, '_blank');
+};
+
+const deleteBill = async (bill) => {
+    if (!confirm(`Are you sure you want to delete bill ${bill.bill_number}? This action cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        await axios.delete(`/api/bills/${bill.bill_id}`);
+        alert('Bill deleted successfully!');
+        fetchBills(); // Refresh the list
+    } catch (error) {
+        console.error('Error deleting bill:', error);
+        alert(error.response?.data?.message || 'Error deleting bill');
+    }
 };
 </script>
