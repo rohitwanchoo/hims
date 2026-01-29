@@ -16,7 +16,7 @@ class BillDetail extends Model
         'item_name',
         'description',
         'quantity',
-        'unit_price',
+        'rate',
         'discount_amount',
         'tax_amount',
         'amount',
@@ -24,11 +24,24 @@ class BillDetail extends Model
 
     protected $casts = [
         'quantity' => 'integer',
-        'unit_price' => 'decimal:2',
+        'rate' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'amount' => 'decimal:2',
     ];
+
+    protected $appends = ['unit_price'];
+
+    // Add accessor for backwards compatibility with frontend
+    public function getUnitPriceAttribute()
+    {
+        return $this->rate;
+    }
+
+    public function setUnitPriceAttribute($value)
+    {
+        $this->attributes['rate'] = $value;
+    }
 
     public function bill()
     {
