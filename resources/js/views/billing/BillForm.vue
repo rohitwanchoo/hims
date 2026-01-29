@@ -57,7 +57,15 @@
                                     <option value="lab">Laboratory</option>
                                 </select>
                             </div>
-                            <div class="col-md-6" v-if="form.bill_type === 'ipd'">
+                            <div class="col-md-3">
+                                <label class="form-label small mb-1">Payment Mode</label>
+                                <select class="form-select form-select-sm" v-model="form.payment_mode" :disabled="isViewMode">
+                                    <option value="cash">Cash</option>
+                                    <option value="cashless">Cashless</option>
+                                    <option value="insurance">Insurance</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3" v-if="form.bill_type === 'ipd'">
                                 <label class="form-label small mb-1">IPD Admission</label>
                                 <select class="form-select form-select-sm" v-model="selectedIpdId" :disabled="isViewMode" @change="onIpdAdmissionChange">
                                     <option value="">Select IPD Patient</option>
@@ -66,7 +74,7 @@
                                     </option>
                                 </select>
                             </div>
-                            <div class="col-md-6" v-else>
+                            <div class="col-md-3" v-else>
                                 <label class="form-label small mb-1">Patient</label>
                                 <select class="form-select form-select-sm" v-model="form.patient_id" :disabled="isViewMode">
                                     <option value="">Select Patient</option>
@@ -78,6 +86,21 @@
                             <div class="col-md-3">
                                 <label class="form-label small mb-1">Bill Date</label>
                                 <input type="date" class="form-control form-control-sm" v-model="form.bill_date" :disabled="isViewMode">
+                            </div>
+                        </div>
+                        <!-- Insurance/Cashless Details -->
+                        <div v-if="form.payment_mode === 'cashless' || form.payment_mode === 'insurance'" class="row g-2 mt-1 pt-2 border-top">
+                            <div class="col-md-4">
+                                <label class="form-label small mb-1">Insurance Company</label>
+                                <input type="text" class="form-control form-control-sm" v-model="form.insurance_company" :disabled="isViewMode" placeholder="Enter insurance company">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small mb-1">Policy Number</label>
+                                <input type="text" class="form-control form-control-sm" v-model="form.policy_number" :disabled="isViewMode" placeholder="Enter policy number">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small mb-1">Approved Amount</label>
+                                <input type="number" class="form-control form-control-sm" v-model.number="form.approved_amount" :disabled="isViewMode" step="0.01" placeholder="0.00">
                             </div>
                         </div>
                     </div>
@@ -232,6 +255,20 @@
                             <strong>Total:</strong>
                             <strong class="text-primary fs-5">{{ formatCurrency(total) }}</strong>
                         </div>
+
+                        <!-- Insurance/Cashless Billing -->
+                        <div v-if="form.payment_mode === 'cashless' || form.payment_mode === 'insurance'" class="mt-2 pt-2 border-top">
+                            <div class="d-flex justify-content-between align-items-center mb-2 small">
+                                <span>Insurance Amount:</span>
+                                <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.insurance_amount" :disabled="isViewMode" step="0.01">
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 small">
+                                <span>Co-pay (Patient):</span>
+                                <strong class="text-warning">{{ formatCurrency(copayAmount) }}</strong>
+                            </div>
+                        </div>
+
+                        <!-- IPD Balance Due -->
                         <div v-if="form.bill_type === 'ipd' && runningBill" class="d-flex justify-content-between mb-2 pt-2 border-top">
                             <strong class="text-danger">Balance Due:</strong>
                             <strong class="text-danger fs-5">{{ formatCurrency(balanceDue) }}</strong>
@@ -345,6 +382,12 @@ const form = ref({
     ipd_id: '',
     bill_date: new Date().toISOString().split('T')[0],
     bill_type: 'general',
+    payment_mode: 'cash',
+    insurance_company: '',
+    policy_number: '',
+    approved_amount: 0,
+    copay_amount: 0,
+    insurance_amount: 0,
     discount_amount: 0,
     discount_percent: 0,
     tax_amount: 0,
@@ -385,6 +428,11 @@ const refundAmount = computed(() => {
     }
     // For non-IPD bills, use manual refund amount
     return form.value.refund_amount || 0;
+});
+
+const copayAmount = computed(() => {
+    const insurance = form.value.insurance_amount || 0;
+    return Math.max(0, total.value - insurance);
 });
 
 const balanceDue = computed(() => {
@@ -489,6 +537,12 @@ onMounted(async () => {
                 ipd_id: bill.ipd_id,
                 bill_date: bill.bill_date ? bill.bill_date.split('T')[0] : '',
                 bill_type: bill.bill_type,
+                payment_mode: bill.payment_mode || 'cash',
+                insurance_company: bill.insurance_company || '',
+                policy_number: bill.policy_number || '',
+                approved_amount: Number(bill.approved_amount) || 0,
+                copay_amount: Number(bill.copay_amount) || 0,
+                insurance_amount: Number(bill.insurance_amount) || 0,
                 discount_amount: Number(bill.discount_amount) || 0,
                 discount_percent: Number(bill.discount_percent) || 0,
                 tax_amount: Number(bill.tax_amount) || 0,
@@ -763,6 +817,12 @@ const updateBill = async () => {
     try {
         // Send all updatable fields including items for service_date and doctor_id
         const updateData = {
+            payment_mode: form.value.payment_mode,
+            insurance_company: form.value.insurance_company,
+            policy_number: form.value.policy_number,
+            approved_amount: form.value.approved_amount,
+            copay_amount: copayAmount.value,
+            insurance_amount: form.value.insurance_amount,
             discount_amount: form.value.discount_amount,
             discount_percent: form.value.discount_percent,
             tax_amount: form.value.tax_amount,

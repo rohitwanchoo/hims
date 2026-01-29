@@ -19,6 +19,9 @@ class Bill extends Model
         'ipd_id',
         'bill_date',
         'bill_type',
+        'payment_mode',
+        'insurance_company',
+        'policy_number',
         'subtotal',
         'discount_amount',
         'discount_percent',
@@ -30,6 +33,8 @@ class Bill extends Model
         'payment_status',
         'insurance_claim_id',
         'approved_amount',
+        'copay_amount',
+        'insurance_amount',
         'notes',
         'created_by',
     ];
@@ -45,6 +50,8 @@ class Bill extends Model
         'paid_amount' => 'decimal:2',
         'due_amount' => 'decimal:2',
         'approved_amount' => 'decimal:2',
+        'copay_amount' => 'decimal:2',
+        'insurance_amount' => 'decimal:2',
     ];
 
     public function patient()

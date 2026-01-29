@@ -60,6 +60,12 @@ class BillController extends Controller
             'ipd_id' => 'nullable|exists:ipd_admissions,ipd_id',
             'bill_date' => 'required|date',
             'bill_type' => 'required|in:opd,ipd,pharmacy,lab,general',
+            'payment_mode' => 'nullable|in:cash,cashless,insurance',
+            'insurance_company' => 'nullable|string|max:255',
+            'policy_number' => 'nullable|string|max:100',
+            'approved_amount' => 'nullable|numeric|min:0',
+            'copay_amount' => 'nullable|numeric|min:0',
+            'insurance_amount' => 'nullable|numeric|min:0',
             'discount_amount' => 'nullable|numeric|min:0',
             'discount_percent' => 'nullable|numeric|min:0|max:100',
             'tax_amount' => 'nullable|numeric|min:0',
@@ -96,6 +102,12 @@ class BillController extends Controller
                 'ipd_id' => $validated['ipd_id'] ?? null,
                 'bill_date' => $validated['bill_date'],
                 'bill_type' => $validated['bill_type'],
+                'payment_mode' => $validated['payment_mode'] ?? 'cash',
+                'insurance_company' => $validated['insurance_company'] ?? null,
+                'policy_number' => $validated['policy_number'] ?? null,
+                'approved_amount' => $validated['approved_amount'] ?? 0,
+                'copay_amount' => $validated['copay_amount'] ?? 0,
+                'insurance_amount' => $validated['insurance_amount'] ?? 0,
                 'subtotal' => $subtotal,
                 'discount_amount' => $discountAmount,
                 'discount_percent' => $validated['discount_percent'] ?? 0,
@@ -144,6 +156,12 @@ class BillController extends Controller
         }
 
         $validated = $request->validate([
+            'payment_mode' => 'nullable|in:cash,cashless,insurance',
+            'insurance_company' => 'nullable|string|max:255',
+            'policy_number' => 'nullable|string|max:100',
+            'approved_amount' => 'nullable|numeric|min:0',
+            'copay_amount' => 'nullable|numeric|min:0',
+            'insurance_amount' => 'nullable|numeric|min:0',
             'discount_amount' => 'nullable|numeric|min:0',
             'discount_percent' => 'nullable|numeric|min:0|max:100',
             'tax_amount' => 'nullable|numeric|min:0',
@@ -189,6 +207,12 @@ class BillController extends Controller
             $totalAmount = $bill->subtotal - $discountAmount + $taxAmount + $adjustment;
 
             $bill->update([
+                'payment_mode' => $validated['payment_mode'] ?? $bill->payment_mode,
+                'insurance_company' => $validated['insurance_company'] ?? $bill->insurance_company,
+                'policy_number' => $validated['policy_number'] ?? $bill->policy_number,
+                'approved_amount' => $validated['approved_amount'] ?? $bill->approved_amount,
+                'copay_amount' => $validated['copay_amount'] ?? $bill->copay_amount,
+                'insurance_amount' => $validated['insurance_amount'] ?? $bill->insurance_amount,
                 'discount_amount' => $discountAmount,
                 'discount_percent' => $validated['discount_percent'] ?? $bill->discount_percent,
                 'tax_amount' => $taxAmount,
