@@ -720,7 +720,7 @@ const getDoctorName = (doctorId) => {
 };
 
 const getPatientName = () => {
-    const patient = patients.value.find(p => p?.patient_id === form.value.patient_id);
+    const patient = patients.value.find(p => p?.patient_id == form.value.patient_id);
     if (patient) {
         return `${patient.patient_code} - ${patient.first_name} ${patient.last_name}`;
     }
