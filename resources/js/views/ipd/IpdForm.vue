@@ -24,13 +24,10 @@
                         </a></li>
                     </ul>
                 </div>
-                <router-link v-if="isViewMode" :to="`/billing/create?ipd_id=${admission.ipd_id}`" class="btn btn-info">
-                    <i class="bi bi-receipt"></i> Billing
-                </router-link>
                 <router-link v-if="isViewMode" :to="`/discharge-summary/create?ipd_id=${admission.ipd_id}`" class="btn btn-primary">
                     <i class="bi bi-file-medical"></i> Discharge Summary
                 </router-link>
-                <button v-if="isViewMode && admission.status === 'admitted'" class="btn btn-success" @click="showDischargeModal = true">
+                <button v-if="isViewMode && admission.status === 'admitted'" class="btn btn-success" @click="finalDischarge">
                     <i class="bi bi-box-arrow-right"></i> Final Discharge
                 </button>
             </div>
@@ -1021,207 +1018,6 @@
             </div>
         </div>
 
-        <!-- Discharge Modal - ABHA/ABDM Compliant -->
-        <div class="modal fade" :class="{ show: showDischargeModal }" :style="{ display: showDischargeModal ? 'block' : 'none' }" tabindex="-1">
-            <div class="modal-dialog modal-xl">
-                <div class="modal-content">
-                    <div class="modal-header bg-success text-white">
-                        <h5 class="modal-title">
-                            <i class="bi bi-file-medical"></i> Discharge Summary (ABHA/ABDM Compliant)
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" @click="showDischargeModal = false"></button>
-                    </div>
-                    <form @submit.prevent="completeDischarge">
-                        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-                            <!-- Basic Discharge Information -->
-                            <div class="card mb-3">
-                                <div class="card-header bg-light">
-                                    <strong>Basic Discharge Information</strong>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row mb-3">
-                                        <div class="col-md-4">
-                                            <label class="form-label">Discharge Date & Time *</label>
-                                            <input type="datetime-local" class="form-control" v-model="dischargeForm.discharge_datetime" required>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label">Discharge Type *</label>
-                                            <select class="form-select" v-model="dischargeForm.discharge_type" required>
-                                                <option value="normal">Normal Discharge</option>
-                                                <option value="lama">LAMA (Left Against Medical Advice)</option>
-                                                <option value="dor">DOR (Discharge on Request)</option>
-                                                <option value="referred">Referred to Another Hospital</option>
-                                                <option value="absconded">Absconded</option>
-                                                <option value="expired">Expired</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label">Condition at Discharge *</label>
-                                            <select class="form-select" v-model="dischargeForm.condition_at_discharge" required>
-                                                <option value="improved">Improved</option>
-                                                <option value="cured">Cured</option>
-                                                <option value="same">Same</option>
-                                                <option value="deteriorated">Deteriorated</option>
-                                                <option value="expired">Expired</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Clinical Summary -->
-                            <div class="card mb-3">
-                                <div class="card-header bg-light">
-                                    <strong>Clinical Summary</strong>
-                                </div>
-                                <div class="card-body">
-                                    <div class="mb-3">
-                                        <label class="form-label">Chief Complaints *</label>
-                                        <textarea class="form-control" v-model="dischargeForm.chief_complaints" rows="2" required placeholder="Main symptoms and complaints at admission"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">History of Present Illness *</label>
-                                        <textarea class="form-control" v-model="dischargeForm.history_present_illness" rows="3" required placeholder="Detailed history of current illness"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Past Medical History</label>
-                                        <textarea class="form-control" v-model="dischargeForm.past_medical_history" rows="2" placeholder="Previous illnesses, surgeries, allergies"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Physical Examination Findings *</label>
-                                        <textarea class="form-control" v-model="dischargeForm.examination_findings" rows="3" required placeholder="Clinical examination findings"></textarea>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Diagnosis -->
-                            <div class="card mb-3">
-                                <div class="card-header bg-light">
-                                    <strong>Diagnosis (ICD-10 Codes)</strong>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row mb-3">
-                                        <div class="col-md-6">
-                                            <label class="form-label">Primary Diagnosis *</label>
-                                            <input type="text" class="form-control" v-model="dischargeForm.primary_diagnosis" required placeholder="e.g., Acute Myocardial Infarction">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">ICD-10 Code</label>
-                                            <input type="text" class="form-control" v-model="dischargeForm.primary_diagnosis_icd" placeholder="e.g., I21.9">
-                                        </div>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Secondary Diagnosis</label>
-                                        <textarea class="form-control" v-model="dischargeForm.secondary_diagnosis" rows="2" placeholder="Other co-morbidities and conditions"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Final Diagnosis *</label>
-                                        <textarea class="form-control" v-model="dischargeForm.final_diagnosis" rows="2" required placeholder="Confirmed diagnosis at discharge"></textarea>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Investigations & Treatment -->
-                            <div class="card mb-3">
-                                <div class="card-header bg-light">
-                                    <strong>Investigations & Treatment</strong>
-                                </div>
-                                <div class="card-body">
-                                    <div class="mb-3">
-                                        <label class="form-label">Investigations Performed *</label>
-                                        <textarea class="form-control" v-model="dischargeForm.investigations" rows="3" required placeholder="Lab tests, imaging, and other investigations"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Treatment Given *</label>
-                                        <textarea class="form-control" v-model="dischargeForm.treatment_given" rows="3" required placeholder="Medications, procedures, and other treatments during admission"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Procedures Performed</label>
-                                        <textarea class="form-control" v-model="dischargeForm.procedures" rows="2" placeholder="Surgical or other procedures with dates"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Course in Hospital *</label>
-                                        <textarea class="form-control" v-model="dischargeForm.course_in_hospital" rows="3" required placeholder="Patient's progress and response to treatment during stay"></textarea>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Discharge Medications -->
-                            <div class="card mb-3">
-                                <div class="card-header bg-light">
-                                    <strong>Discharge Medications *</strong>
-                                </div>
-                                <div class="card-body">
-                                    <PrescriptionForm :patient-id="admission?.patient_id" v-if="admission && admission.patient_id" />
-                                    <div v-else class="alert alert-info">
-                                        <i class="bi bi-info-circle"></i> Patient information is required to add medications
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Discharge Instructions & Follow-up -->
-                            <div class="card mb-3">
-                                <div class="card-header bg-light">
-                                    <strong>Discharge Instructions & Follow-up</strong>
-                                </div>
-                                <div class="card-body">
-                                    <div class="mb-3">
-                                        <label class="form-label">Dietary Advice</label>
-                                        <textarea class="form-control" v-model="dischargeForm.dietary_advice" rows="2" placeholder="Diet restrictions and recommendations"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Activity/Rest Advice</label>
-                                        <textarea class="form-control" v-model="dischargeForm.activity_advice" rows="2" placeholder="Physical activity restrictions and recommendations"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Discharge Instructions *</label>
-                                        <textarea class="form-control" v-model="dischargeForm.discharge_instructions" rows="3" required placeholder="Important instructions for patient care at home"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Follow-up Advice *</label>
-                                        <textarea class="form-control" v-model="dischargeForm.followup_advice" rows="2" required placeholder="When and why to follow-up"></textarea>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <label class="form-label">Follow-up Date</label>
-                                            <input type="date" class="form-control" v-model="dischargeForm.followup_date">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Follow-up With</label>
-                                            <input type="text" class="form-control" v-model="dischargeForm.followup_doctor" placeholder="Doctor name for follow-up">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Additional Information -->
-                            <div class="card mb-3">
-                                <div class="card-header bg-light">
-                                    <strong>Additional Information</strong>
-                                </div>
-                                <div class="card-body">
-                                    <div class="mb-3">
-                                        <label class="form-label">Referral Details (if referred)</label>
-                                        <textarea class="form-control" v-model="dischargeForm.referral_details" rows="2" placeholder="Hospital name, doctor name, reason for referral"></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">Additional Remarks</label>
-                                        <textarea class="form-control" v-model="dischargeForm.remarks" rows="2" placeholder="Any other important information"></textarea>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" @click="showDischargeModal = false">Cancel</button>
-                            <button type="submit" class="btn btn-success">
-                                <i class="bi bi-check-circle"></i> Complete Discharge
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
         <!-- Add Nursing Chart Modal -->
         <div class="modal fade" :class="{ show: showAddNursingChart }" :style="{ display: showAddNursingChart ? 'block' : 'none' }" tabindex="-1">
             <div class="modal-dialog modal-lg">
@@ -1588,7 +1384,7 @@
         </div>
 
         <!-- Modal Backdrop -->
-        <div v-if="showAddNote || showAdvancePayment || showRefundAdvance || showDischargeModal || showAddNursingChart || showAddMedication || showAddInvestigation || showAddService" class="modal-backdrop fade show"></div>
+        <div v-if="showAddNote || showAdvancePayment || showRefundAdvance || showAddNursingChart || showAddMedication || showAddInvestigation || showAddService" class="modal-backdrop fade show"></div>
     </div>
 </template>
 
@@ -1685,7 +1481,6 @@ export default {
         const showAddNote = ref(false);
         const showAdvancePayment = ref(false);
         const showRefundAdvance = ref(false);
-        const showDischargeModal = ref(false);
         const showTransferBed = ref(false);
         const showAddService = ref(false);
         const showAddMedication = ref(false);
@@ -2208,30 +2003,16 @@ export default {
             }
         };
 
-        const completeDischarge = async () => {
-            if (!confirm('Are you sure you want to discharge this patient?')) return;
+        const finalDischarge = async () => {
+            if (!confirm('Are you sure you want to discharge this patient? This will mark the patient as discharged.')) return;
             try {
-                // Fetch latest prescription to include in discharge medications
-                if (admission.value && admission.value.patient_id) {
-                    try {
-                        const prescriptionResponse = await axios.get(`/api/prescriptions/last/${admission.value.patient_id}`);
-                        if (prescriptionResponse.data && prescriptionResponse.data.drugs) {
-                            // Format prescription drugs as text
-                            const medicationsText = prescriptionResponse.data.drugs.map((drug, index) => {
-                                return `${index + 1}. ${drug.drug_name} ${drug.drug_type ? '(' + drug.drug_type + ')' : ''} - ${drug.dose_advice} - ${drug.days} days - Qty: ${drug.qty}`;
-                            }).join('\n');
-                            dischargeForm.value.discharge_medications = medicationsText;
-                        }
-                    } catch (prescError) {
-                        console.log('No prescription found or error fetching:', prescError);
-                        // Continue with discharge even if prescription fetch fails
-                    }
-                }
-
-                await axios.post(`/api/ipd-admissions/${route.params.id}/complete-discharge`, dischargeForm.value);
-                showDischargeModal.value = false;
+                // Simple discharge - just update status to discharged
+                await axios.patch(`/api/ipd-admissions/${route.params.id}`, {
+                    status: 'discharged',
+                    discharge_date: new Date().toISOString()
+                });
                 alert('Patient discharged successfully!');
-                router.push('/ipd');
+                await loadAdmission();
             } catch (error) {
                 alert('Failed to discharge: ' + (error.response?.data?.message || error.message));
             }
@@ -2687,7 +2468,6 @@ export default {
             showAddNote,
             showAdvancePayment,
             showRefundAdvance,
-            showDischargeModal,
             showTransferBed,
             showAddService,
             showAddMedication,
@@ -2711,7 +2491,7 @@ export default {
             submitAdmission,
             saveProgressNote,
             saveAdvancePayment,
-            completeDischarge,
+            finalDischarge,
             stopMedication,
             saveNursingChart,
             saveMedication,
