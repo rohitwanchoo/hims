@@ -78,6 +78,23 @@ class DischargeSummaryController extends Controller
     }
 
     /**
+     * Get doctors for discharge summary
+     */
+    public function getDoctors()
+    {
+        $hospitalId = Auth::user()->hospital_id;
+
+        $doctors = \App\Models\User::where('hospital_id', $hospitalId)
+            ->where('role', 'doctor')
+            ->where('is_active', true)
+            ->select('user_id', 'full_name', 'email', 'department_id')
+            ->orderBy('full_name')
+            ->get();
+
+        return response()->json($doctors);
+    }
+
+    /**
      * Store a newly created discharge summary
      */
     public function store(Request $request)

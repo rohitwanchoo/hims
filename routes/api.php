@@ -306,6 +306,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Discharge Summaries
     Route::get('discharge-summaries/discharged-patients', [\App\Http\Controllers\Api\DischargeSummaryController::class, 'getDischargedPatients']);
+    Route::get('discharge-summaries/doctors', [\App\Http\Controllers\Api\DischargeSummaryController::class, 'getDoctors']);
     Route::get('discharge-summaries/{id}/print', [\App\Http\Controllers\Api\DischargeSummaryController::class, 'print']);
     Route::apiResource('discharge-summaries', \App\Http\Controllers\Api\DischargeSummaryController::class);
 
