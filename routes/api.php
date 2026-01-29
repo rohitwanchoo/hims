@@ -304,6 +304,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('ipd-admissions/{admission}/initiate-discharge', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'initiateDischarge']);
     Route::post('ipd-admissions/{admission}/complete-discharge', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'completeDischarge']);
 
+    // Discharge Summaries
+    Route::get('discharge-summaries/discharged-patients', [\App\Http\Controllers\Api\DischargeSummaryController::class, 'getDischargedPatients']);
+    Route::get('discharge-summaries/{id}/print', [\App\Http\Controllers\Api\DischargeSummaryController::class, 'print']);
+    Route::apiResource('discharge-summaries', \App\Http\Controllers\Api\DischargeSummaryController::class);
+
     // Wards, Rooms & Beds
     Route::apiResource('wards', \App\Http\Controllers\Api\WardController::class);
     Route::apiResource('rooms', \App\Http\Controllers\Api\RoomController::class);

@@ -1,18 +1,55 @@
 <template>
-    <div>
-        <h4 class="mb-4">{{ getPageTitle() }}</h4>
+    <div class="bill-form-container">
+        <!-- Compact Header with Summary -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h5 class="mb-0">{{ getPageTitle() }}</h5>
+                <small class="text-muted">
+                    {{ form.patient_id ? getPatientName() : 'Select patient to continue' }}
+                </small>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <div class="text-end me-3">
+                    <small class="text-muted d-block">Total Amount</small>
+                    <h4 class="mb-0 text-primary">{{ formatCurrency(total) }}</h4>
+                </div>
+                <div class="btn-group" v-if="!$route.params.id">
+                    <button class="btn btn-primary" @click="saveBill" :disabled="loading">
+                        <i class="bi bi-save"></i> Save
+                    </button>
+                    <router-link to="/billing" class="btn btn-outline-secondary">Cancel</router-link>
+                </div>
+                <div class="btn-group" v-else-if="editMode">
+                    <button class="btn btn-success" @click="updateBill" :disabled="loading">
+                        <i class="bi bi-save"></i> Save
+                    </button>
+                    <button class="btn btn-outline-secondary" @click="cancelEdit">Cancel</button>
+                </div>
+                <div class="btn-group" v-else>
+                    <button class="btn btn-outline-primary" @click="printBill" title="Print">
+                        <i class="bi bi-printer"></i>
+                    </button>
+                    <router-link to="/billing" class="btn btn-outline-secondary">Back</router-link>
+                </div>
+            </div>
+        </div>
 
-        <div class="row">
+        <div class="row g-3">
+            <!-- Left Column -->
             <div class="col-md-8">
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h6 class="mb-0">Patient Information</h6>
+                <!-- Compact Patient Information -->
+                <div class="card shadow-sm mb-2">
+                    <div class="card-header bg-white py-2 cursor-pointer" @click="showPatientInfo = !showPatientInfo">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 small"><i class="bi bi-person-circle me-2"></i>Patient Information</h6>
+                            <i :class="showPatientInfo ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="row g-3">
+                    <div class="card-body py-2" v-show="showPatientInfo">
+                        <div class="row g-2">
                             <div class="col-md-3">
-                                <label class="form-label">Bill Type</label>
-                                <select class="form-select" v-model="form.bill_type" :disabled="isViewMode" @change="onBillTypeChange">
+                                <label class="form-label small mb-1">Bill Type</label>
+                                <select class="form-select form-select-sm" v-model="form.bill_type" :disabled="isViewMode" @change="onBillTypeChange">
                                     <option value="general">General</option>
                                     <option value="opd">OPD</option>
                                     <option value="ipd">IPD</option>
@@ -21,8 +58,8 @@
                                 </select>
                             </div>
                             <div class="col-md-6" v-if="form.bill_type === 'ipd'">
-                                <label class="form-label">IPD Admission</label>
-                                <select class="form-select" v-model="selectedIpdId" :disabled="isViewMode" @change="onIpdAdmissionChange">
+                                <label class="form-label small mb-1">IPD Admission</label>
+                                <select class="form-select form-select-sm" v-model="selectedIpdId" :disabled="isViewMode" @change="onIpdAdmissionChange">
                                     <option value="">Select IPD Patient</option>
                                     <option v-for="admission in ipdAdmissions" :key="admission.ipd_id" :value="admission.ipd_id">
                                         {{ admission.ipd_number }} - {{ admission.patient?.first_name }} {{ admission.patient?.last_name }}
@@ -30,8 +67,8 @@
                                 </select>
                             </div>
                             <div class="col-md-6" v-else>
-                                <label class="form-label">Patient</label>
-                                <select class="form-select" v-model="form.patient_id" :disabled="isViewMode">
+                                <label class="form-label small mb-1">Patient</label>
+                                <select class="form-select form-select-sm" v-model="form.patient_id" :disabled="isViewMode">
                                     <option value="">Select Patient</option>
                                     <option v-for="p in patients" :key="p?.patient_id" :value="p?.patient_id" v-if="p && p.patient_id">
                                         {{ p.patient_code }} - {{ p.first_name }} {{ p.last_name }}
@@ -39,186 +76,210 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Bill Date</label>
-                                <input type="date" class="form-control" v-model="form.bill_date" :disabled="isViewMode">
+                                <label class="form-label small mb-1">Bill Date</label>
+                                <input type="date" class="form-control form-control-sm" v-model="form.bill_date" :disabled="isViewMode">
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Running Bill Display for IPD -->
-                <div class="card mb-3" v-if="form.bill_type === 'ipd' && runningBill">
-                    <div class="card-header">
-                        <h6 class="mb-0">IPD Running Bill</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <p class="mb-1"><strong>Patient:</strong> {{ runningBill.patient?.name }}</p>
-                                <p class="mb-1"><strong>IPD Number:</strong> {{ runningBill.patient?.ipd_number }}</p>
-                                <p class="mb-1"><strong>Admission Date:</strong> {{ runningBill.patient?.admission_date }}</p>
-                                <p class="mb-1"><strong>Length of Stay:</strong> {{ runningBill.patient?.los_days }} days</p>
-                            </div>
-                            <div class="col-md-6">
-                                <p class="mb-1"><strong>Ward:</strong> {{ runningBill.bed_details?.ward }}</p>
-                                <p class="mb-1"><strong>Bed:</strong> {{ runningBill.bed_details?.bed }}</p>
-                                <p class="mb-1"><strong>Bed Charges/Day:</strong> {{ formatCurrency(runningBill.bed_details?.charges_per_day) }}</p>
-                                <p class="mb-1"><strong>Total Bed Charges:</strong> {{ formatCurrency(runningBill.bed_details?.total_charges) }}</p>
+                <!-- Compact IPD Running Bill -->
+                <div class="card shadow-sm mb-2" v-if="form.bill_type === 'ipd' && runningBill">
+                    <div class="card-header bg-white py-2 cursor-pointer" @click="showIpdBill = !showIpdBill">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 small"><i class="bi bi-clipboard-data me-2"></i>IPD Running Bill Summary</h6>
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="badge bg-primary">{{ formatCurrency(runningBill.billing?.net_total) }}</span>
+                                <i :class="showIpdBill ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
                             </div>
                         </div>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Service Type</th>
-                                        <th class="text-end">Count</th>
-                                        <th class="text-end">Total Amount</th>
-                                    </tr>
-                                </thead>
+                    </div>
+                    <div class="card-body py-2" v-show="showIpdBill">
+                        <div class="row g-2 mb-2 small">
+                            <div class="col-md-6">
+                                <span class="text-muted">IPD #:</span> {{ runningBill.patient?.ipd_number }} |
+                                <span class="text-muted">LOS:</span> {{ runningBill.patient?.los_days }} days
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <span class="text-muted">Ward:</span> {{ runningBill.bed_details?.ward }} |
+                                <span class="text-muted">Bed:</span> {{ runningBill.bed_details?.bed }}
+                            </div>
+                        </div>
+                        <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                            <table class="table table-sm table-bordered mb-0">
                                 <tbody>
-                                    <tr v-for="(summary, type) in runningBill.services_summary" :key="type" v-if="type !== 'bed'">
+                                    <tr v-for="(summary, type) in runningBill.services_summary" :key="type" v-if="type !== 'bed'" class="small">
                                         <td>{{ type.replace('_', ' ').toUpperCase() }}</td>
-                                        <td class="text-end">{{ summary.count }}</td>
-                                        <td class="text-end">{{ formatCurrency(summary.total) }}</td>
+                                        <td class="text-end" width="60">{{ summary.count }}</td>
+                                        <td class="text-end" width="100">{{ formatCurrency(summary.total) }}</td>
                                     </tr>
-                                    <tr class="table-light">
-                                        <td colspan="2"><strong>Services Total</strong></td>
-                                        <td class="text-end"><strong>{{ formatCurrency(runningBill.billing?.services_total) }}</strong></td>
+                                    <tr class="table-light cursor-pointer" @click="showBillItems = !showBillItems">
+                                        <td colspan="2">
+                                            <strong class="small">Services Total</strong>
+                                            <i :class="showBillItems ? 'bi bi-chevron-up' : 'bi bi-chevron-down'" class="ms-2"></i>
+                                        </td>
+                                        <td class="text-end"><strong class="small">{{ formatCurrency(runningBill.billing?.services_total) }}</strong></td>
                                     </tr>
-                                    <tr class="table-primary">
+                                    <tr class="table-primary small">
                                         <td colspan="2"><strong>Gross Total</strong></td>
                                         <td class="text-end"><strong>{{ formatCurrency(runningBill.billing?.gross_total) }}</strong></td>
                                     </tr>
-                                    <tr>
+                                    <tr class="small">
                                         <td colspan="2">Discount</td>
                                         <td class="text-end">{{ formatCurrency(runningBill.billing?.discount) }}</td>
                                     </tr>
-                                    <tr class="table-success">
+                                    <tr class="table-success small">
                                         <td colspan="2"><strong>Net Total</strong></td>
                                         <td class="text-end"><strong>{{ formatCurrency(runningBill.billing?.net_total) }}</strong></td>
                                     </tr>
-                                    <tr>
+                                    <tr class="small">
                                         <td colspan="2">Advance Paid</td>
                                         <td class="text-end">{{ formatCurrency(runningBill.billing?.advance_paid) }}</td>
                                     </tr>
-                                    <tr class="table-warning">
+                                    <tr class="table-warning small">
                                         <td colspan="2"><strong>Balance Due</strong></td>
                                         <td class="text-end"><strong>{{ formatCurrency(runningBill.billing?.balance_due) }}</strong></td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- Bill Items Details - Toggleable -->
+                        <div v-if="showBillItems && ipdServices.length > 0" class="mt-2">
+                            <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                                <table class="table table-sm table-bordered mb-0">
+                                    <thead class="table-light sticky-top">
+                                        <tr class="small">
+                                            <th>Service Name</th>
+                                            <th width="100">Cost Head</th>
+                                            <th class="text-end" width="50">Qty</th>
+                                            <th class="text-end" width="80">Rate</th>
+                                            <th class="text-end" width="100">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(service, index) in ipdServices" :key="index" class="small">
+                                            <td>{{ service.service_name }}</td>
+                                            <td>{{ service.cost_head_name }}</td>
+                                            <td class="text-end">{{ service.quantity }}</td>
+                                            <td class="text-end">{{ formatCurrency(service.rate) }}</td>
+                                            <td class="text-end">{{ formatCurrency(service.net_amount || (service.quantity * service.rate)) }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="card mb-3">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0">Bill Items</h6>
+                <!-- Compact Bill Items with Scrollable Table -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 small"><i class="bi bi-list-ul me-2"></i>Bill Items ({{ form.items.length }})</h6>
                         <button class="btn btn-sm btn-primary" @click="addItem" v-if="!isViewMode">
-                            <i class="bi bi-plus"></i> Add Services
+                            <i class="bi bi-plus"></i> Add
                         </button>
                     </div>
-                    <div class="card-body">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th width="200">Cost Head</th>
-                                    <th>Service</th>
-                                    <th width="80">Qty</th>
-                                    <th width="100">Rate</th>
-                                    <th width="100">Amount</th>
-                                    <th width="50" v-if="!isViewMode"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="(item, index) in form.items" :key="index">
-                                    <td>
-                                        <select class="form-select form-select-sm" v-model="item.cost_head_id" :disabled="isViewMode" @change="onCostHeadChange(item, index)">
-                                            <option value="">Select Cost Head</option>
-                                            <option v-for="ch in costHeads" :key="ch.cost_head_id" :value="ch.cost_head_id">
-                                                {{ ch.cost_head_name }}
-                                            </option>
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <select class="form-select form-select-sm" v-model="item.service_id" :disabled="!!$route.params.id || !item.cost_head_id" @change="onServiceChange(item)">
-                                            <option value="">Select Service</option>
-                                            <option v-for="svc in getFilteredServices(item.cost_head_id)" :key="svc.hospital_service_id" :value="svc.hospital_service_id">
-                                                {{ svc.service_name }}
-                                            </option>
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <input type="number" class="form-control form-control-sm" v-model.number="item.quantity" @input="calculateAmount(item)" min="1" :disabled="isViewMode">
-                                    </td>
-                                    <td>
-                                        <input type="number" class="form-control form-control-sm" v-model.number="item.unit_price" @input="calculateAmount(item)" :disabled="isViewMode">
-                                    </td>
-                                    <td>
-                                        <input type="number" class="form-control form-control-sm" v-model.number="item.amount" readonly>
-                                    </td>
-                                    <td v-if="!isViewMode">
-                                        <button class="btn btn-sm btn-outline-danger" @click="removeItem(index)">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr class="small">
+                                        <th width="180">Cost Head</th>
+                                        <th>Service</th>
+                                        <th width="60">Qty</th>
+                                        <th width="90">Rate</th>
+                                        <th width="100">Amount</th>
+                                        <th width="40" v-if="!isViewMode"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(item, index) in form.items" :key="index" class="small">
+                                        <td class="p-1">
+                                            <select class="form-select form-select-sm" v-model="item.cost_head_id" :disabled="isViewMode" @change="onCostHeadChange(item, index)">
+                                                <option value="">Select</option>
+                                                <option v-for="ch in costHeads" :key="ch.cost_head_id" :value="ch.cost_head_id">
+                                                    {{ ch.cost_head_name }}
+                                                </option>
+                                            </select>
+                                        </td>
+                                        <td class="p-1">
+                                            <select class="form-select form-select-sm" v-model="item.service_id" :disabled="!!$route.params.id || !item.cost_head_id" @change="onServiceChange(item)">
+                                                <option value="">Select</option>
+                                                <option v-for="svc in getFilteredServices(item.cost_head_id)" :key="svc.hospital_service_id" :value="svc.hospital_service_id">
+                                                    {{ svc.service_name }}
+                                                </option>
+                                            </select>
+                                        </td>
+                                        <td class="p-1">
+                                            <input type="number" class="form-control form-control-sm" v-model.number="item.quantity" @input="calculateAmount(item)" min="1" :disabled="isViewMode">
+                                        </td>
+                                        <td class="p-1">
+                                            <input type="number" class="form-control form-control-sm" v-model.number="item.unit_price" @input="calculateAmount(item)" :disabled="isViewMode">
+                                        </td>
+                                        <td class="p-1">
+                                            <input type="number" class="form-control form-control-sm" v-model.number="item.amount" readonly>
+                                        </td>
+                                        <td class="p-1 text-center" v-if="!isViewMode">
+                                            <button class="btn btn-sm btn-outline-danger" @click="removeItem(index)" style="padding: 0.15rem 0.3rem;">
+                                                <i class="bi bi-trash" style="font-size: 0.75rem;"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
 
+            <!-- Right Column - Compact Summary -->
             <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="mb-0">Bill Summary</h6>
+                <div class="card shadow-sm sticky-summary">
+                    <div class="card-header bg-primary text-white py-2">
+                        <h6 class="mb-0 small"><i class="bi bi-calculator me-2"></i>Bill Summary</h6>
                     </div>
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between mb-2">
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between mb-2 small">
                             <span>Subtotal:</span>
-                            <span>{{ formatCurrency(subtotal) }}</span>
+                            <strong>{{ formatCurrency(subtotal) }}</strong>
                         </div>
-                        <div class="d-flex justify-content-between mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-2 small">
                             <span>Discount:</span>
-                            <div class="input-group input-group-sm" style="width: 120px;">
-                                <input type="number" class="form-control" v-model.number="form.discount_amount" :disabled="isViewMode" step="0.01">
-                            </div>
+                            <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.discount_amount" :disabled="isViewMode" step="0.01">
                         </div>
-                        <div class="d-flex justify-content-between mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-2 small">
                             <span>Tax:</span>
-                            <div class="input-group input-group-sm" style="width: 120px;">
-                                <input type="number" class="form-control" v-model.number="form.tax_amount" :disabled="isViewMode" step="0.01">
-                            </div>
+                            <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.tax_amount" :disabled="isViewMode" step="0.01">
                         </div>
-                        <div class="d-flex justify-content-between mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-2 small">
                             <span>Adjustment:</span>
-                            <div class="input-group input-group-sm" style="width: 120px;">
-                                <input type="number" class="form-control" v-model.number="form.adjustment" :disabled="isViewMode" step="0.01">
-                            </div>
+                            <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.adjustment" :disabled="isViewMode" step="0.01">
                         </div>
-                        <hr>
-                        <div class="d-flex justify-content-between mb-3">
+                        <hr class="my-2">
+                        <div class="d-flex justify-content-between mb-2">
                             <strong>Total:</strong>
-                            <strong class="text-primary">{{ formatCurrency(total) }}</strong>
+                            <strong class="text-primary fs-5">{{ formatCurrency(total) }}</strong>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="d-grid gap-2" v-if="!$route.params.id">
-                            <button class="btn btn-primary" @click="saveBill" :disabled="loading">
-                                <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span>
-                                Save Bill
+                <!-- Quick Actions -->
+                <div class="card shadow-sm mt-2" v-if="$route.params.id && !editMode">
+                    <div class="card-header bg-white py-2">
+                        <h6 class="mb-0 small"><i class="bi bi-lightning me-2"></i>Quick Actions</h6>
+                    </div>
+                    <div class="card-body py-2">
+                        <div class="d-grid gap-1">
+                            <button class="btn btn-sm btn-outline-primary" @click="printBill">
+                                <i class="bi bi-printer"></i> Print Bill
                             </button>
-                            <router-link to="/billing" class="btn btn-secondary">Cancel</router-link>
-                        </div>
-                        <div class="d-grid gap-2" v-else-if="editMode">
-                            <button class="btn btn-success" @click="updateBill" :disabled="loading">
-                                <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span>
-                                Save Changes
+                            <button class="btn btn-sm btn-outline-success" v-if="canEdit" @click="enableEditMode">
+                                <i class="bi bi-pencil"></i> Edit Bill
                             </button>
-                            <button class="btn btn-secondary" @click="cancelEdit">Cancel</button>
-                        </div>
-                        <div class="d-grid" v-else>
-                            <router-link to="/billing" class="btn btn-secondary">Back to List</router-link>
+                            <button class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-share"></i> Share Bill
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -226,6 +287,51 @@
         </div>
     </div>
 </template>
+
+<style scoped>
+.bill-form-container {
+    max-height: calc(100vh - 120px);
+    overflow: hidden;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.sticky-summary {
+    position: sticky;
+    top: 10px;
+}
+
+.table-responsive {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e0 #f7fafc;
+}
+
+.table-responsive::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f7fafc;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background-color: #cbd5e0;
+    border-radius: 3px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background-color: #a0aec0;
+}
+
+.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+</style>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
@@ -246,6 +352,9 @@ const costHeads = ref([]);
 const editMode = ref(false);
 const originalFormData = ref(null);
 const canEdit = ref(false);
+const showBillItems = ref(false);
+const showPatientInfo = ref(true);
+const showIpdBill = ref(true);
 
 const form = ref({
     patient_id: '',
@@ -472,6 +581,20 @@ const calculateAmount = (item) => {
 };
 
 const formatCurrency = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount || 0);
+
+const getPatientName = () => {
+    const patient = patients.value.find(p => p?.patient_id === form.value.patient_id);
+    if (patient) {
+        return `${patient.patient_code} - ${patient.first_name} ${patient.last_name}`;
+    }
+    return '';
+};
+
+const printBill = () => {
+    if (route.params.id) {
+        window.open(`/api/bills/${route.params.id}/print`, '_blank');
+    }
+};
 
 const saveBill = async () => {
     if (!form.value.patient_id) {
