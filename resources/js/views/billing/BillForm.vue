@@ -245,7 +245,7 @@
                                             </select>
                                         </td>
                                         <td class="p-1">
-                                            <select class="form-select form-select-sm" v-model="item.service_id" :disabled="!!$route.params.id || !item.cost_head_id" @change="onServiceChange(item)">
+                                            <select class="form-select form-select-sm" v-model="item.service_id" :disabled="isViewMode || !item.cost_head_id" @change="onServiceChange(item)">
                                                 <option value="">Select</option>
                                                 <option v-for="svc in getFilteredServices(item.cost_head_id)" :key="svc.hospital_service_id" :value="svc.hospital_service_id">
                                                     {{ svc.service_name }}
@@ -784,13 +784,25 @@ const updateBill = async () => {
 
     loading.value = true;
     try {
-        // Only send updatable fields
+        // Send all updatable fields including items for service_date and doctor_id
         const updateData = {
             discount_amount: form.value.discount_amount,
             discount_percent: form.value.discount_percent,
             tax_amount: form.value.tax_amount,
             refund_amount: form.value.refund_amount,
-            adjustment: form.value.refund_amount // For backward compatibility
+            adjustment: form.value.refund_amount, // For backward compatibility
+            items: form.value.items.map(item => ({
+                bill_detail_id: item.bill_detail_id,
+                item_id: item.service_id || item.item_id,
+                cost_head_id: item.cost_head_id,
+                service_id: item.service_id,
+                service_date: item.service_date,
+                doctor_id: item.doctor_id,
+                item_name: item.item_name,
+                quantity: item.quantity,
+                rate: item.unit_price,
+                amount: item.amount
+            }))
         };
 
         await axios.put(`/api/bills/${route.params.id}`, updateData);
