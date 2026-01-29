@@ -301,12 +301,12 @@
                             <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.discount_amount" :disabled="isViewMode" step="0.01">
                         </div>
                         <div class="d-flex justify-content-between align-items-center mb-2 small">
-                            <span>Tax:</span>
+                            <span>GST:</span>
                             <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.tax_amount" :disabled="isViewMode" step="0.01">
                         </div>
                         <div class="d-flex justify-content-between align-items-center mb-2 small">
-                            <span>Adjustment:</span>
-                            <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.adjustment" :disabled="isViewMode" step="0.01">
+                            <span>Refund:</span>
+                            <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.refund_amount" :disabled="isViewMode" step="0.01">
                         </div>
                         <hr class="my-2">
                         <div class="d-flex justify-content-between mb-2">
@@ -427,7 +427,7 @@ const form = ref({
     discount_amount: 0,
     discount_percent: 0,
     tax_amount: 0,
-    adjustment: 0,
+    refund_amount: 0,
     items: [{ cost_head_id: '', service_id: '', item_name: '', quantity: 1, unit_price: 0, amount: 0 }]
 });
 
@@ -436,8 +436,8 @@ const total = computed(() => {
     const sub = subtotal.value;
     const discount = form.value.discount_amount || 0;
     const tax = form.value.tax_amount || 0;
-    const adj = form.value.adjustment || 0;
-    return sub - discount + tax + adj;
+    const refund = form.value.refund_amount || 0;
+    return sub - discount + tax - refund;
 });
 
 const isViewMode = computed(() => !!route.params.id && !editMode.value);
@@ -534,7 +534,7 @@ onMounted(async () => {
                 discount_amount: Number(bill.discount_amount) || 0,
                 discount_percent: Number(bill.discount_percent) || 0,
                 tax_amount: Number(bill.tax_amount) || 0,
-                adjustment: Number(bill.adjustment) || 0,
+                refund_amount: Number(bill.refund_amount || bill.adjustment) || 0,
                 items: (bill.details || []).map(detail => ({
                     ...detail,
                     service_id: detail.item_id,
@@ -789,7 +789,8 @@ const updateBill = async () => {
             discount_amount: form.value.discount_amount,
             discount_percent: form.value.discount_percent,
             tax_amount: form.value.tax_amount,
-            adjustment: form.value.adjustment
+            refund_amount: form.value.refund_amount,
+            adjustment: form.value.refund_amount // For backward compatibility
         };
 
         await axios.put(`/api/bills/${route.params.id}`, updateData);
