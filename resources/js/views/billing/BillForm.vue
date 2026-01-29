@@ -550,6 +550,14 @@ onMounted(async () => {
             if (bill.bill_type === 'ipd' && bill.ipd_id) {
                 await fetchIpdAdmissions(true); // Include all statuses for existing bills
                 selectedIpdId.value = bill.ipd_id;
+
+                // Load running bill to show advance payments and billing summary
+                try {
+                    const billResponse = await axios.get(`/api/ipd-admissions/${bill.ipd_id}/running-bill`);
+                    runningBill.value = billResponse.data;
+                } catch (error) {
+                    console.error('Failed to load running bill:', error);
+                }
             }
         } else {
             // Auto-select IPD patient if ipd_id query parameter is present
