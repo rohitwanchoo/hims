@@ -216,10 +216,14 @@
                             <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.tax_amount" :disabled="isViewMode" step="0.01">
                         </div>
                         <div v-if="form.bill_type === 'ipd' && runningBill" class="d-flex justify-content-between mb-2 small">
-                            <span>Advance Paid:</span>
+                            <span>Advance Paid</span>
                             <strong class="text-success">{{ formatCurrency(advancePaid) }}</strong>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center mb-2 small">
+                        <div v-if="form.bill_type === 'ipd' && runningBill" class="d-flex justify-content-between mb-2 small">
+                            <span>Refund</span>
+                            <strong class="text-info">{{ formatCurrency(refundAmount) }}</strong>
+                        </div>
+                        <div v-else class="d-flex justify-content-between align-items-center mb-2 small">
                             <span>Refund:</span>
                             <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.refund_amount" :disabled="isViewMode" step="0.01">
                         </div>
@@ -353,7 +357,7 @@ const total = computed(() => {
     const sub = subtotal.value;
     const discount = form.value.discount_amount || 0;
     const tax = form.value.tax_amount || 0;
-    const refund = form.value.refund_amount || 0;
+    const refund = refundAmount.value;
     return sub - discount + tax - refund;
 });
 
@@ -361,6 +365,23 @@ const isViewMode = computed(() => !!route.params.id && !editMode.value);
 
 const advancePaid = computed(() => {
     return Number(runningBill.value?.billing?.advance_paid) || 0;
+});
+
+const refundAmount = computed(() => {
+    if (form.value.bill_type === 'ipd' && runningBill.value) {
+        const sub = subtotal.value;
+        const discount = form.value.discount_amount || 0;
+        const tax = form.value.tax_amount || 0;
+        const totalBeforeRefund = sub - discount + tax;
+
+        // If advance is more than total, calculate refund
+        if (advancePaid.value > totalBeforeRefund) {
+            return advancePaid.value - totalBeforeRefund;
+        }
+        return 0;
+    }
+    // For non-IPD bills, use manual refund amount
+    return form.value.refund_amount || 0;
 });
 
 const balanceDue = computed(() => {
@@ -733,8 +754,8 @@ const updateBill = async () => {
             discount_amount: form.value.discount_amount,
             discount_percent: form.value.discount_percent,
             tax_amount: form.value.tax_amount,
-            refund_amount: form.value.refund_amount,
-            adjustment: form.value.refund_amount, // For backward compatibility
+            refund_amount: refundAmount.value,
+            adjustment: refundAmount.value, // For backward compatibility
             items: form.value.items.map(item => ({
                 bill_detail_id: item.bill_detail_id,
                 item_id: item.service_id || item.item_id,
