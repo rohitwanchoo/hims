@@ -10,7 +10,10 @@ class BedController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Bed::with('ward');
+        $hospitalId = $request->user()->hospital_id;
+
+        $query = Bed::where('hospital_id', $hospitalId)
+            ->with('ward');
 
         if ($request->ward_id) {
             $query->where('ward_id', $request->ward_id);
@@ -20,7 +23,12 @@ class BedController extends Controller
             $query->where('status', $request->status);
         }
 
-        return response()->json($query->get());
+        // Include room information for bed transfer modal
+        if ($request->include_room) {
+            $query->with(['room.ward']);
+        }
+
+        return response()->json(['data' => $query->get()]);
     }
 
     public function store(Request $request)

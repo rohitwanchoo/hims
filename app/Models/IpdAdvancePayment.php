@@ -23,6 +23,10 @@ class IpdAdvancePayment extends Model
         'is_refunded',
         'refund_amount',
         'refund_date',
+        'refund_reason',
+        'refund_mode',
+        'authorized_by',
+        'refunded_by',
         'received_by',
     ];
 
@@ -49,6 +53,11 @@ class IpdAdvancePayment extends Model
     public function receivedByUser()
     {
         return $this->belongsTo(User::class, 'received_by', 'user_id');
+    }
+
+    public function refundedByUser()
+    {
+        return $this->belongsTo(User::class, 'refunded_by', 'user_id');
     }
 
     // Scopes

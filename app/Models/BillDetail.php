@@ -10,17 +10,24 @@ class BillDetail extends Model
 
     protected $fillable = [
         'bill_id',
-        'service_id',
+        'item_type',
+        'item_id',
+        'cost_head_id',
+        'item_name',
         'description',
         'quantity',
         'unit_price',
-        'total_price',
+        'discount_amount',
+        'tax_amount',
+        'amount',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
         'unit_price' => 'decimal:2',
-        'total_price' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
+        'amount' => 'decimal:2',
     ];
 
     public function bill()
@@ -30,6 +37,11 @@ class BillDetail extends Model
 
     public function service()
     {
-        return $this->belongsTo(Service::class, 'service_id', 'service_id');
+        return $this->belongsTo(Service::class, 'item_id', 'service_id');
+    }
+
+    public function costHead()
+    {
+        return $this->belongsTo(CostHead::class, 'cost_head_id', 'cost_head_id');
     }
 }

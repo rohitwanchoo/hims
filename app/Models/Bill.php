@@ -15,17 +15,21 @@ class Bill extends Model
         'hospital_id',
         'bill_number',
         'patient_id',
-        'visit_id',
-        'admission_id',
+        'opd_id',
+        'ipd_id',
         'bill_date',
+        'bill_type',
         'subtotal',
-        'discount',
-        'tax',
-        'total',
+        'discount_amount',
+        'discount_percent',
+        'tax_amount',
+        'adjustment',
+        'total_amount',
         'paid_amount',
         'due_amount',
         'payment_status',
         'insurance_claim_id',
+        'approved_amount',
         'notes',
         'created_by',
     ];
@@ -33,11 +37,14 @@ class Bill extends Model
     protected $casts = [
         'bill_date' => 'date',
         'subtotal' => 'decimal:2',
-        'discount' => 'decimal:2',
-        'tax' => 'decimal:2',
-        'total' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
+        'discount_percent' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
+        'adjustment' => 'decimal:2',
+        'total_amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
         'due_amount' => 'decimal:2',
+        'approved_amount' => 'decimal:2',
     ];
 
     public function patient()
@@ -47,12 +54,12 @@ class Bill extends Model
 
     public function opdVisit()
     {
-        return $this->belongsTo(OpdVisit::class, 'visit_id', 'visit_id');
+        return $this->belongsTo(OpdVisit::class, 'opd_id', 'opd_id');
     }
 
     public function ipdAdmission()
     {
-        return $this->belongsTo(IpdAdmission::class, 'admission_id', 'admission_id');
+        return $this->belongsTo(IpdAdmission::class, 'ipd_id', 'ipd_id');
     }
 
     public function details()

@@ -14,18 +14,24 @@ class BedTransfer extends Model
     protected $fillable = [
         'hospital_id',
         'ipd_id',
+        'transfer_type',
+        'is_move_completed',
         'from_bed_id',
         'to_bed_id',
         'from_ward_id',
         'to_ward_id',
+        'swap_ipd_id',
+        'parent_move_transfer_id',
+        'move_completion_type',
         'transfer_datetime',
-        'transfer_reason',
+        'reason',
         'remarks',
         'transferred_by',
     ];
 
     protected $casts = [
         'transfer_datetime' => 'datetime',
+        'is_move_completed' => 'boolean',
     ];
 
     public function ipdAdmission()
@@ -56,5 +62,28 @@ class BedTransfer extends Model
     public function transferredByUser()
     {
         return $this->belongsTo(User::class, 'transferred_by', 'user_id');
+    }
+
+    public function swapIpdAdmission()
+    {
+        return $this->belongsTo(IpdAdmission::class, 'swap_ipd_id', 'ipd_id');
+    }
+
+    public function parentMoveTransfer()
+    {
+        return $this->belongsTo(BedTransfer::class, 'parent_move_transfer_id', 'transfer_id');
+    }
+
+    public function completionTransfer()
+    {
+        return $this->hasOne(BedTransfer::class, 'parent_move_transfer_id', 'transfer_id');
+    }
+
+    // Scope to find active moves (not completed)
+    public function scopeActiveMoves($query, $ipdId)
+    {
+        return $query->where('ipd_id', $ipdId)
+            ->where('transfer_type', 'move')
+            ->where('is_move_completed', false);
     }
 }

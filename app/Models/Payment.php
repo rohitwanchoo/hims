@@ -13,11 +13,15 @@ class Payment extends Model
 
     protected $fillable = [
         'hospital_id',
+        'payment_number',
         'bill_id',
-        'payment_date',
+        'patient_id',
         'amount',
-        'payment_method',
+        'payment_date',
+        'payment_mode',
+        'reference_number',
         'transaction_id',
+        'status',
         'notes',
         'received_by',
     ];
@@ -32,7 +36,12 @@ class Payment extends Model
         return $this->belongsTo(Bill::class, 'bill_id', 'bill_id');
     }
 
-    public function receivedBy()
+    public function patient()
+    {
+        return $this->belongsTo(Patient::class, 'patient_id', 'patient_id');
+    }
+
+    public function receivedByUser()
     {
         return $this->belongsTo(User::class, 'received_by', 'user_id');
     }

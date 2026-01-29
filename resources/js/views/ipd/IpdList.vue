@@ -1745,4 +1745,155 @@ export default {
     }
 }
 
+
+/* IPD List Table Fixes */
+.ipd-list .table {
+    table-layout: auto;
+    width: 100%;
+}
+
+.ipd-list .table thead th {
+    white-space: nowrap;
+    vertical-align: middle;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.75rem 0.5rem;
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.ipd-list .table tbody td {
+    vertical-align: middle;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Column widths */
+.ipd-list .table th:nth-child(1), .ipd-list .table td:nth-child(1) { width: 10%; min-width: 100px; }
+.ipd-list .table th:nth-child(2), .ipd-list .table td:nth-child(2) { width: 15%; min-width: 150px; }
+.ipd-list .table th:nth-child(3), .ipd-list .table td:nth-child(3) { width: 12%; min-width: 120px; }
+.ipd-list .table th:nth-child(4), .ipd-list .table td:nth-child(4) { width: 15%; min-width: 150px; }
+.ipd-list .table th:nth-child(5), .ipd-list .table td:nth-child(5) { width: 10%; min-width: 100px; }
+.ipd-list .table th:nth-child(6), .ipd-list .table td:nth-child(6) { width: 8%; min-width: 80px; text-align: center; }
+.ipd-list .table th:nth-child(7), .ipd-list .table td:nth-child(7) { width: 10%; min-width: 100px; text-align: center; }
+.ipd-list .table th:nth-child(8), .ipd-list .table td:nth-child(8) { width: 10%; min-width: 100px; text-align: center; }
+.ipd-list .table th:nth-child(9), .ipd-list .table td:nth-child(9) { width: 10%; min-width: 120px; text-align: center; }
+
+/* Text wrapping */
+.ipd-list .table td > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.ipd-list .table td small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Responsive table */
+@media (max-width: 1200px) {
+    .ipd-list .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .ipd-list .table { min-width: 1000px; }
+}
 </style>
+
+/* IPD List Table Fixes */
+.ipd-list .table {
+    table-layout: auto;
+    width: 100%;
+}
+
+.ipd-list .table thead th {
+    white-space: nowrap;
+    vertical-align: middle;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.75rem 0.5rem;
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.ipd-list .table tbody td {
+    vertical-align: middle;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Column widths */
+.ipd-list .table th:nth-child(1),
+.ipd-list .table td:nth-child(1) {
+    width: 10%;
+    min-width: 100px;
+}
+
+.ipd-list .table th:nth-child(2),
+.ipd-list .table td:nth-child(2) {
+    width: 15%;
+    min-width: 150px;
+}
+
+.ipd-list .table th:nth-child(3),
+.ipd-list .table td:nth-child(3) {
+    width: 12%;
+    min-width: 120px;
+}
+
+.ipd-list .table th:nth-child(4),
+.ipd-list .table td:nth-child(4) {
+    width: 15%;
+    min-width: 150px;
+}
+
+.ipd-list .table th:nth-child(5),
+.ipd-list .table td:nth-child(5) {
+    width: 10%;
+    min-width: 100px;
+}
+
+.ipd-list .table th:nth-child(6),
+.ipd-list .table td:nth-child(6) {
+    width: 8%;
+    min-width: 80px;
+    text-align: center;
+}
+
+.ipd-list .table th:nth-child(7),
+.ipd-list .table td:nth-child(7) {
+    width: 10%;
+    min-width: 100px;
+    text-align: center;
+}
+
+.ipd-list .table th:nth-child(8),
+.ipd-list .table td:nth-child(8) {
+    width: 10%;
+    min-width: 100px;
+    text-align: center;
+}
+
+.ipd-list .table th:nth-child(9),
+.ipd-list .table td:nth-child(9) {
+    width: 10%;
+    min-width: 120px;
+    text-align: center;
+}
+
+/* Text wrapping */
+.ipd-list .table td > div {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.ipd-list .table td small {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Responsive table */
+@media (max-width: 1200px) {
+    .ipd-list .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .ipd-list .table {
+        min-width: 1000px;
+    }
+}

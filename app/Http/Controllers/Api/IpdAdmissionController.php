@@ -96,6 +96,21 @@ class IpdAdmissionController extends Controller
             ->orderBy('ipd_id', 'desc')
             ->paginate($request->per_page ?? 15);
 
+        // Transform data for bed transfer modal only (when minimal=true is specified)
+        if ($request->has('minimal') && $request->minimal == 'true' && $request->has('status') && $request->status === 'admitted') {
+            $admissions->getCollection()->transform(function ($admission) {
+                return [
+                    'ipd_id' => $admission->ipd_id,
+                    'ipd_number' => $admission->ipd_number,
+                    'patient_name' => $admission->patient->full_name ?? '',
+                    'ward_name' => $admission->ward->ward_name ?? '',
+                    'bed_number' => $admission->bed->bed_number ?? '',
+                    'bed_id' => $admission->bed_id,
+                    'ward_id' => $admission->ward_id,
+                ];
+            });
+        }
+
         return response()->json($admissions);
     }
 
@@ -326,7 +341,7 @@ class IpdAdmissionController extends Controller
                 'opdVisit',
                 'progressNotes' => fn($q) => $q->limit(10)->with('doctor'),
                 'nursingCharts' => fn($q) => $q->limit(10),
-                'services' => fn($q) => $q->limit(20),
+                'services' => fn($q) => $q->limit(20)->with(['doctor', 'costHead']),
                 'investigations' => fn($q) => $q->limit(20),
                 'medications' => fn($q) => $q->active(),
                 'advancePayments',
@@ -626,6 +641,8 @@ class IpdAdmissionController extends Controller
             'quantity' => 'required|integer|min:1',
             'rate' => 'required|numeric|min:0',
             'doctor_id' => 'nullable|exists:doctors,doctor_id',
+            'cost_head_id' => 'nullable|exists:cost_heads,cost_head_id',
+            'cost_head_name' => 'nullable|string|max:200',
         ]);
 
         $hospitalId = Auth::user()->hospital_id;
@@ -647,6 +664,8 @@ class IpdAdmissionController extends Controller
             'doctor_id' => $request->doctor_id,
             'service_type' => $request->service_type,
             'service_id' => $request->service_id,
+            'cost_head_id' => $request->cost_head_id,
+            'cost_head_name' => $request->cost_head_name,
             'service_name' => $request->service_name,
             'quantity' => $request->quantity,
             'rate' => $request->rate,
@@ -674,7 +693,7 @@ class IpdAdmissionController extends Controller
 
         $query = IpdService::where('hospital_id', $hospitalId)
             ->where('ipd_id', $id)
-            ->with('doctor:doctor_id,full_name,specialization');
+            ->with(['doctor:doctor_id,full_name,specialization', 'costHead:cost_head_id,cost_head_name']);
 
         if ($request->has('service_type') && $request->service_type) {
             $query->where('service_type', $request->service_type);
@@ -702,6 +721,8 @@ class IpdAdmissionController extends Controller
             'quantity' => 'required|integer|min:1',
             'rate' => 'required|numeric|min:0',
             'doctor_id' => 'nullable|exists:doctors,doctor_id',
+            'cost_head_id' => 'nullable|exists:cost_heads,cost_head_id',
+            'cost_head_name' => 'nullable|string|max:200',
         ]);
 
         $hospitalId = Auth::user()->hospital_id;
@@ -717,6 +738,8 @@ class IpdAdmissionController extends Controller
             'doctor_id' => $request->doctor_id,
             'service_type' => $request->service_type,
             'service_id' => $request->service_id,
+            'cost_head_id' => $request->cost_head_id,
+            'cost_head_name' => $request->cost_head_name,
             'service_name' => $request->service_name,
             'quantity' => $request->quantity,
             'rate' => $request->rate,
@@ -1102,6 +1125,66 @@ class IpdAdmissionController extends Controller
     }
 
     /**
+     * Refund advance payment (requires authority)
+     */
+    public function refundAdvance(Request $request, string $id, string $advanceId)
+    {
+        $request->validate([
+            'refund_reason' => 'required|string',
+            'authorized_by' => 'required|string',
+            'authorization_password' => 'required|string',
+            'refund_mode' => 'required|in:cash,bank_transfer,cheque,original_mode',
+            'remarks' => 'nullable|string',
+        ]);
+
+        $hospitalId = Auth::user()->hospital_id;
+
+        // Verify authorization password
+        // This is a simple check - in production, you might want to verify against a specific admin/manager password
+        // or check user roles/permissions
+        $authPassword = env('REFUND_AUTH_PASSWORD', 'admin123'); // Set this in .env file
+        if ($request->authorization_password !== $authPassword) {
+            return response()->json(['message' => 'Invalid authorization password'], 403);
+        }
+
+        $payment = IpdAdvancePayment::where('hospital_id', $hospitalId)
+            ->where('ipd_id', $id)
+            ->where('advance_id', $advanceId)
+            ->where('is_refunded', false)
+            ->firstOrFail();
+
+        // Process refund
+        $payment->update([
+            'is_refunded' => true,
+            'refund_amount' => $payment->amount, // Full refund
+            'refund_date' => now(),
+            'refund_reason' => $request->refund_reason,
+            'refund_mode' => $request->refund_mode,
+            'authorized_by' => $request->authorized_by,
+            'refunded_by' => Auth::id(),
+            'remarks' => ($payment->remarks ? $payment->remarks . ' | ' : '') . 'REFUND: ' . ($request->remarks ?? ''),
+        ]);
+
+        // Update admission advance amount
+        $totalAdvance = IpdAdvancePayment::where('ipd_id', $id)
+            ->where('is_refunded', false)
+            ->sum('amount');
+
+        $admission = IpdAdmission::where('hospital_id', $hospitalId)
+            ->where('ipd_id', $id)
+            ->first();
+
+        if ($admission) {
+            $admission->update(['advance_amount' => $totalAdvance]);
+        }
+
+        return response()->json([
+            'message' => 'Advance payment refunded successfully',
+            'payment' => $payment,
+        ]);
+    }
+
+    /**
      * Get running bill for an admission
      */
     public function getRunningBill(string $id)
@@ -1206,8 +1289,20 @@ class IpdAdmissionController extends Controller
     public function completeDischarge(Request $request, string $id)
     {
         $request->validate([
-            'discharge_summary' => 'required|string',
             'discharge_type' => 'required|in:normal,lama,dor,absconded,referred,expired',
+            'condition_at_discharge' => 'required|string',
+            // ABDM Required Fields
+            'chief_complaints' => 'required|string',
+            'history_present_illness' => 'required|string',
+            'examination_findings' => 'required|string',
+            'primary_diagnosis' => 'required|string',
+            'final_diagnosis' => 'required|string',
+            'investigations' => 'required|string',
+            'treatment_given' => 'required|string',
+            'course_in_hospital' => 'required|string',
+            'discharge_medications' => 'required|string',
+            'discharge_instructions' => 'required|string',
+            'followup_advice' => 'required|string',
         ]);
 
         $hospitalId = Auth::user()->hospital_id;
@@ -1223,17 +1318,45 @@ class IpdAdmissionController extends Controller
 
         DB::beginTransaction();
         try {
-            // Update admission
+            // Generate consolidated discharge summary from all fields
+            $consolidatedSummary = $this->generateConsolidatedSummary($request);
+
+            // Update admission with ABDM fields
             $admission->update([
                 'status' => 'discharged',
                 'discharge_date' => now()->toDateString(),
                 'discharge_time' => now()->format('H:i:s'),
+                'discharge_datetime' => $request->discharge_datetime ?? now(),
                 'discharge_type' => $request->discharge_type,
-                'discharge_summary' => $request->discharge_summary,
                 'condition_at_discharge' => $request->condition_at_discharge,
+                'discharged_by' => Auth::id(),
+                // Clinical Summary
+                'chief_complaints' => $request->chief_complaints,
+                'history_present_illness' => $request->history_present_illness,
+                'past_medical_history' => $request->past_medical_history,
+                'examination_findings' => $request->examination_findings,
+                // Diagnosis
+                'primary_diagnosis' => $request->primary_diagnosis,
+                'primary_diagnosis_icd' => $request->primary_diagnosis_icd,
+                'secondary_diagnosis' => $request->secondary_diagnosis,
+                'final_diagnosis' => $request->final_diagnosis,
+                // Investigations & Treatment
+                'investigations' => $request->investigations,
+                'treatment_given' => $request->treatment_given,
+                'procedures' => $request->procedures,
+                'course_in_hospital' => $request->course_in_hospital,
+                // Discharge Medications
+                'discharge_medications' => $request->discharge_medications,
+                // Discharge Instructions
+                'dietary_advice' => $request->dietary_advice,
+                'activity_advice' => $request->activity_advice,
+                'discharge_instructions' => $request->discharge_instructions,
+                'discharge_summary' => $consolidatedSummary, // Legacy field
                 'followup_advice' => $request->followup_advice,
                 'followup_date' => $request->followup_date,
-                'discharged_by' => Auth::id(),
+                'followup_doctor' => $request->followup_doctor,
+                // Additional
+                'referral_details' => $request->referral_details,
             ]);
 
             // Handle death case
@@ -1261,6 +1384,62 @@ class IpdAdmissionController extends Controller
             DB::rollBack();
             return response()->json(['message' => 'Discharge failed: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Generate consolidated discharge summary from ABDM fields
+     */
+    private function generateConsolidatedSummary($request)
+    {
+        $summary = "DISCHARGE SUMMARY\n\n";
+
+        $summary .= "CHIEF COMPLAINTS:\n" . $request->chief_complaints . "\n\n";
+        $summary .= "HISTORY OF PRESENT ILLNESS:\n" . $request->history_present_illness . "\n\n";
+
+        if ($request->past_medical_history) {
+            $summary .= "PAST MEDICAL HISTORY:\n" . $request->past_medical_history . "\n\n";
+        }
+
+        $summary .= "PHYSICAL EXAMINATION:\n" . $request->examination_findings . "\n\n";
+
+        $summary .= "DIAGNOSIS:\n";
+        $summary .= "Primary: " . $request->primary_diagnosis;
+        if ($request->primary_diagnosis_icd) {
+            $summary .= " (ICD-10: " . $request->primary_diagnosis_icd . ")";
+        }
+        $summary .= "\n";
+        if ($request->secondary_diagnosis) {
+            $summary .= "Secondary: " . $request->secondary_diagnosis . "\n";
+        }
+        $summary .= "Final: " . $request->final_diagnosis . "\n\n";
+
+        $summary .= "INVESTIGATIONS:\n" . $request->investigations . "\n\n";
+        $summary .= "TREATMENT GIVEN:\n" . $request->treatment_given . "\n\n";
+
+        if ($request->procedures) {
+            $summary .= "PROCEDURES PERFORMED:\n" . $request->procedures . "\n\n";
+        }
+
+        $summary .= "COURSE IN HOSPITAL:\n" . $request->course_in_hospital . "\n\n";
+        $summary .= "CONDITION AT DISCHARGE: " . ucfirst($request->condition_at_discharge) . "\n\n";
+        $summary .= "MEDICATIONS AT DISCHARGE:\n" . $request->discharge_medications . "\n\n";
+
+        if ($request->dietary_advice) {
+            $summary .= "DIETARY ADVICE:\n" . $request->dietary_advice . "\n\n";
+        }
+
+        if ($request->activity_advice) {
+            $summary .= "ACTIVITY ADVICE:\n" . $request->activity_advice . "\n\n";
+        }
+
+        $summary .= "DISCHARGE INSTRUCTIONS:\n" . $request->discharge_instructions . "\n\n";
+        $summary .= "FOLLOW-UP:\n" . $request->followup_advice . "\n";
+
+        if ($request->referral_details) {
+            $summary .= "\nREFERRAL DETAILS:\n" . $request->referral_details . "\n";
+        }
+
+        return $summary;
     }
 
     /**

@@ -235,9 +235,9 @@
                         <div class="card-header">Quick Actions</div>
                         <div class="card-body">
                             <div class="d-grid gap-2">
-                                <button class="btn btn-outline-primary btn-sm" @click="showTransferBed = true">
+                                <router-link to="/bed-transfers" class="btn btn-outline-primary btn-sm">
                                     <i class="bi bi-arrows-move"></i> Transfer Bed
-                                </button>
+                                </router-link>
                                 <button class="btn btn-outline-success btn-sm" @click="showAddService = true">
                                     <i class="bi bi-plus-circle"></i> Add Service
                                 </button>
@@ -339,48 +339,15 @@
 
             <!-- Medications Tab -->
             <div v-show="activeTab === 'medications'">
+                <!-- Prescription Form -->
                 <div class="card">
-                    <div class="card-header d-flex justify-content-between">
-                        <span>Medications</span>
-                        <button class="btn btn-sm btn-primary" @click="showAddMedication = true" v-if="admission.status === 'admitted'">
-                            <i class="bi bi-plus"></i> Add Medication
-                        </button>
+                    <div class="card-header bg-primary text-white">
+                        <i class="bi bi-prescription2"></i> Medications / Prescription
                     </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Drug</th>
-                                        <th>Dosage</th>
-                                        <th>Route</th>
-                                        <th>Frequency</th>
-                                        <th>Duration</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-if="medications.length === 0">
-                                        <td colspan="7" class="text-center text-muted py-3">No medications ordered</td>
-                                    </tr>
-                                    <tr v-for="med in medications" :key="med.medication_id">
-                                        <td>{{ med.drug_name }}</td>
-                                        <td>{{ med.dosage }}</td>
-                                        <td>{{ med.route }}</td>
-                                        <td>{{ med.frequency }}</td>
-                                        <td>{{ med.duration_days }} days</td>
-                                        <td>
-                                            <span :class="getMedicationStatusBadge(med.status)">{{ med.status }}</span>
-                                        </td>
-                                        <td>
-                                            <button v-if="med.status === 'ordered'" class="btn btn-xs btn-outline-danger" @click="stopMedication(med)">
-                                                Stop
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                    <div class="card-body">
+                        <PrescriptionForm :patient-id="admission?.patient_id" v-if="admission && admission.patient_id" />
+                        <div v-else class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Patient information is required to add medications
                         </div>
                     </div>
                 </div>
@@ -449,7 +416,7 @@
                                             <tr>
                                                 <th>Date</th>
                                                 <th>Time</th>
-                                                <th>Type</th>
+                                                <th>Cost Head</th>
                                                 <th>Doctor</th>
                                                 <th>Service</th>
                                                 <th>Qty</th>
@@ -465,9 +432,7 @@
                                             <tr v-for="svc in services" :key="svc.ipd_service_id">
                                                 <td>{{ formatDate(svc.service_date) }}</td>
                                                 <td>{{ svc.service_time || '-' }}</td>
-                                                <td>
-                                                    <span class="badge bg-secondary">{{ svc.service_type }}</span>
-                                                </td>
+                                                <td>{{ svc.cost_head_name || svc.costHead?.cost_head_name || '-' }}</td>
                                                 <td>{{ svc.doctor ? svc.doctor.full_name : '-' }}</td>
                                                 <td>
                                                     {{ svc.service_name }}
@@ -518,16 +483,23 @@
                                                 </div>
                                                 <div class="d-flex justify-content-between mt-1">
                                                     <span class="badge bg-info">{{ pay.payment_mode }}</span>
-                                                    <strong>Rs {{ pay.amount }}</strong>
+                                                    <strong :class="pay.is_refunded ? 'text-decoration-line-through text-muted' : ''">Rs {{ pay.amount }}</strong>
                                                 </div>
+                                                <span v-if="pay.is_refunded" class="badge bg-danger mt-1">
+                                                    <i class="bi bi-arrow-return-left"></i> Refunded
+                                                </span>
                                                 <small v-if="pay.remarks" class="text-muted d-block mt-1">{{ pay.remarks }}</small>
+                                                <small v-if="pay.refund_date" class="text-danger d-block mt-1">
+                                                    Refunded on {{ formatDate(pay.refund_date) }}
+                                                    <span v-if="pay.refund_reason"> - {{ pay.refund_reason }}</span>
+                                                </small>
                                             </div>
-                                            <div v-if="admission.status === 'admitted'" class="ms-2">
+                                            <div v-if="admission.status === 'admitted' && !pay.is_refunded" class="ms-2">
                                                 <button class="btn btn-sm btn-outline-primary me-1" @click="editAdvancePayment(pay)" title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-outline-danger" @click="deleteAdvancePayment(pay.advance_id)" title="Delete">
-                                                    <i class="bi bi-trash"></i>
+                                                <button class="btn btn-sm btn-outline-danger" @click="showRefundModal(pay)" title="Refund">
+                                                    <i class="bi bi-arrow-return-left"></i>
                                                 </button>
                                             </div>
                                         </div>
@@ -966,55 +938,278 @@
             </div>
         </div>
 
-        <!-- Discharge Modal -->
-        <div class="modal fade" :class="{ show: showDischargeModal }" :style="{ display: showDischargeModal ? 'block' : 'none' }" tabindex="-1">
-            <div class="modal-dialog modal-lg">
+        <!-- Refund Advance Payment Modal -->
+        <div class="modal fade" :class="{ show: showRefundAdvance }" :style="{ display: showRefundAdvance ? 'block' : 'none' }" tabindex="-1">
+            <div class="modal-dialog">
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Discharge Patient</h5>
-                        <button type="button" class="btn-close" @click="showDischargeModal = false"></button>
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-arrow-return-left"></i> Refund Advance Payment
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @click="closeRefundModal"></button>
+                    </div>
+                    <form @submit.prevent="processRefund">
+                        <div class="modal-body">
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <strong>Warning:</strong> This action requires authority approval and cannot be undone.
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Receipt Number</label>
+                                <input type="text" class="form-control" :value="refundForm.receipt_number" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Amount to Refund</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">Rs</span>
+                                    <input type="text" class="form-control" :value="refundForm.amount" readonly>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Refund Reason *</label>
+                                <select class="form-select" v-model="refundForm.refund_reason" required>
+                                    <option value="">-- Select Reason --</option>
+                                    <option value="duplicate_payment">Duplicate Payment</option>
+                                    <option value="excess_payment">Excess Payment</option>
+                                    <option value="patient_request">Patient Request</option>
+                                    <option value="cancelled_admission">Cancelled Admission</option>
+                                    <option value="early_discharge">Early Discharge</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="mb-3" v-if="refundForm.refund_reason === 'other'">
+                                <label class="form-label">Specify Reason *</label>
+                                <textarea class="form-control" v-model="refundForm.other_reason" rows="2" required></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Authorized By *</label>
+                                <input type="text" class="form-control" v-model="refundForm.authorized_by" required placeholder="Name of authorizing person">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Authorization Password *</label>
+                                <input type="password" class="form-control" v-model="refundForm.authorization_password" required placeholder="Enter authorization password">
+                                <small class="text-muted">Only authorized personnel can approve refunds</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Refund Mode *</label>
+                                <select class="form-select" v-model="refundForm.refund_mode" required>
+                                    <option value="cash">Cash</option>
+                                    <option value="bank_transfer">Bank Transfer</option>
+                                    <option value="cheque">Cheque</option>
+                                    <option value="original_mode">Reverse to Original Payment Mode</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Remarks</label>
+                                <textarea class="form-control" v-model="refundForm.remarks" rows="2" placeholder="Additional notes..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @click="closeRefundModal">Cancel</button>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-arrow-return-left"></i> Process Refund
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Discharge Modal - ABHA/ABDM Compliant -->
+        <div class="modal fade" :class="{ show: showDischargeModal }" :style="{ display: showDischargeModal ? 'block' : 'none' }" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-file-medical"></i> Discharge Summary (ABHA/ABDM Compliant)
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @click="showDischargeModal = false"></button>
                     </div>
                     <form @submit.prevent="completeDischarge">
-                        <div class="modal-body">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Discharge Type *</label>
-                                    <select class="form-select" v-model="dischargeForm.discharge_type" required>
-                                        <option value="normal">Normal Discharge</option>
-                                        <option value="lama">LAMA (Left Against Medical Advice)</option>
-                                        <option value="dor">DOR (Discharge on Request)</option>
-                                        <option value="referred">Referred to Another Hospital</option>
-                                        <option value="absconded">Absconded</option>
-                                        <option value="expired">Expired</option>
-                                    </select>
+                        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                            <!-- Basic Discharge Information -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <strong>Basic Discharge Information</strong>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Condition at Discharge</label>
-                                    <select class="form-select" v-model="dischargeForm.condition_at_discharge">
-                                        <option value="improved">Improved</option>
-                                        <option value="cured">Cured</option>
-                                        <option value="same">Same</option>
-                                        <option value="deteriorated">Deteriorated</option>
-                                        <option value="expired">Expired</option>
-                                    </select>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label">Discharge Date & Time *</label>
+                                            <input type="datetime-local" class="form-control" v-model="dischargeForm.discharge_datetime" required>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Discharge Type *</label>
+                                            <select class="form-select" v-model="dischargeForm.discharge_type" required>
+                                                <option value="normal">Normal Discharge</option>
+                                                <option value="lama">LAMA (Left Against Medical Advice)</option>
+                                                <option value="dor">DOR (Discharge on Request)</option>
+                                                <option value="referred">Referred to Another Hospital</option>
+                                                <option value="absconded">Absconded</option>
+                                                <option value="expired">Expired</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Condition at Discharge *</label>
+                                            <select class="form-select" v-model="dischargeForm.condition_at_discharge" required>
+                                                <option value="improved">Improved</option>
+                                                <option value="cured">Cured</option>
+                                                <option value="same">Same</option>
+                                                <option value="deteriorated">Deteriorated</option>
+                                                <option value="expired">Expired</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Discharge Summary *</label>
-                                <textarea class="form-control" v-model="dischargeForm.discharge_summary" rows="4" required></textarea>
+
+                            <!-- Clinical Summary -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <strong>Clinical Summary</strong>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Chief Complaints *</label>
+                                        <textarea class="form-control" v-model="dischargeForm.chief_complaints" rows="2" required placeholder="Main symptoms and complaints at admission"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">History of Present Illness *</label>
+                                        <textarea class="form-control" v-model="dischargeForm.history_present_illness" rows="3" required placeholder="Detailed history of current illness"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Past Medical History</label>
+                                        <textarea class="form-control" v-model="dischargeForm.past_medical_history" rows="2" placeholder="Previous illnesses, surgeries, allergies"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Physical Examination Findings *</label>
+                                        <textarea class="form-control" v-model="dischargeForm.examination_findings" rows="3" required placeholder="Clinical examination findings"></textarea>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Follow-up Advice</label>
-                                <textarea class="form-control" v-model="dischargeForm.followup_advice" rows="2"></textarea>
+
+                            <!-- Diagnosis -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <strong>Diagnosis (ICD-10 Codes)</strong>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Primary Diagnosis *</label>
+                                            <input type="text" class="form-control" v-model="dischargeForm.primary_diagnosis" required placeholder="e.g., Acute Myocardial Infarction">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">ICD-10 Code</label>
+                                            <input type="text" class="form-control" v-model="dischargeForm.primary_diagnosis_icd" placeholder="e.g., I21.9">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Secondary Diagnosis</label>
+                                        <textarea class="form-control" v-model="dischargeForm.secondary_diagnosis" rows="2" placeholder="Other co-morbidities and conditions"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Final Diagnosis *</label>
+                                        <textarea class="form-control" v-model="dischargeForm.final_diagnosis" rows="2" required placeholder="Confirmed diagnosis at discharge"></textarea>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Follow-up Date</label>
-                                <input type="date" class="form-control" v-model="dischargeForm.followup_date">
+
+                            <!-- Investigations & Treatment -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <strong>Investigations & Treatment</strong>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Investigations Performed *</label>
+                                        <textarea class="form-control" v-model="dischargeForm.investigations" rows="3" required placeholder="Lab tests, imaging, and other investigations"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Treatment Given *</label>
+                                        <textarea class="form-control" v-model="dischargeForm.treatment_given" rows="3" required placeholder="Medications, procedures, and other treatments during admission"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Procedures Performed</label>
+                                        <textarea class="form-control" v-model="dischargeForm.procedures" rows="2" placeholder="Surgical or other procedures with dates"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Course in Hospital *</label>
+                                        <textarea class="form-control" v-model="dischargeForm.course_in_hospital" rows="3" required placeholder="Patient's progress and response to treatment during stay"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Discharge Medications -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <strong>Discharge Medications *</strong>
+                                </div>
+                                <div class="card-body">
+                                    <PrescriptionForm :patient-id="admission?.patient_id" v-if="admission && admission.patient_id" />
+                                    <div v-else class="alert alert-info">
+                                        <i class="bi bi-info-circle"></i> Patient information is required to add medications
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Discharge Instructions & Follow-up -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <strong>Discharge Instructions & Follow-up</strong>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Dietary Advice</label>
+                                        <textarea class="form-control" v-model="dischargeForm.dietary_advice" rows="2" placeholder="Diet restrictions and recommendations"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Activity/Rest Advice</label>
+                                        <textarea class="form-control" v-model="dischargeForm.activity_advice" rows="2" placeholder="Physical activity restrictions and recommendations"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Discharge Instructions *</label>
+                                        <textarea class="form-control" v-model="dischargeForm.discharge_instructions" rows="3" required placeholder="Important instructions for patient care at home"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Follow-up Advice *</label>
+                                        <textarea class="form-control" v-model="dischargeForm.followup_advice" rows="2" required placeholder="When and why to follow-up"></textarea>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Follow-up Date</label>
+                                            <input type="date" class="form-control" v-model="dischargeForm.followup_date">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Follow-up With</label>
+                                            <input type="text" class="form-control" v-model="dischargeForm.followup_doctor" placeholder="Doctor name for follow-up">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Additional Information -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <strong>Additional Information</strong>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Referral Details (if referred)</label>
+                                        <textarea class="form-control" v-model="dischargeForm.referral_details" rows="2" placeholder="Hospital name, doctor name, reason for referral"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Additional Remarks</label>
+                                        <textarea class="form-control" v-model="dischargeForm.remarks" rows="2" placeholder="Any other important information"></textarea>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" @click="showDischargeModal = false">Cancel</button>
-                            <button type="submit" class="btn btn-success">Complete Discharge</button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Complete Discharge
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -1212,18 +1407,26 @@
                                 </div>
                             </div>
                             <div class="mb-3">
+                                <label class="form-label">Cost Head *</label>
+                                <select class="form-select" v-model="serviceForm.cost_head_id" @change="onCostHeadChange">
+                                    <option value="">-- Select Cost Head --</option>
+                                    <option v-for="ch in ipdCostHeads" :key="ch.cost_head_id" :value="ch.cost_head_id">
+                                        {{ ch.cost_head_name }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="mb-3" v-if="serviceForm.cost_head_id">
                                 <label class="form-label">Select from Hospital Services</label>
                                 <select class="form-select" v-model="serviceForm.hospital_service_id" @change="onHospitalServiceChange">
                                     <option value="">-- Select Service (or enter manually below) --</option>
-                                    <option v-for="hs in hospitalServices" :key="hs.hospital_service_id" :value="hs.hospital_service_id">
+                                    <option v-for="hs in filteredHospitalServices" :key="hs.hospital_service_id" :value="hs.hospital_service_id">
                                         {{ hs.service_name }} - Rs {{ hs.applicable_price || hs.base_price }}
                                         <template v-if="hs.price_source === 'bed'">(Bed Rate)</template>
                                         <template v-else-if="hs.price_source === 'room'">(Room Rate)</template>
                                         <template v-else>(Base Rate)</template>
-                                        - {{ hs.cost_head_name }}
                                     </option>
                                 </select>
-                                <small class="text-muted">Showing bed-specific or room-specific rates when available</small>
+                                <small class="text-muted">Showing only services under selected cost head with bed/room-specific rates when available</small>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Service Name *</label>
@@ -1379,7 +1582,7 @@
         </div>
 
         <!-- Modal Backdrop -->
-        <div v-if="showAddNote || showAdvancePayment || showDischargeModal || showAddNursingChart || showAddMedication || showAddInvestigation || showAddService" class="modal-backdrop fade show"></div>
+        <div v-if="showAddNote || showAdvancePayment || showRefundAdvance || showDischargeModal || showAddNursingChart || showAddMedication || showAddInvestigation || showAddService" class="modal-backdrop fade show"></div>
     </div>
 </template>
 
@@ -1387,9 +1590,13 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
+import PrescriptionForm from '../../components/prescription/PrescriptionForm.vue';
 
 export default {
     name: 'IpdForm',
+    components: {
+        PrescriptionForm
+    },
     setup() {
         const route = useRoute();
         const router = useRouter();
@@ -1471,6 +1678,7 @@ export default {
         // Modals
         const showAddNote = ref(false);
         const showAdvancePayment = ref(false);
+        const showRefundAdvance = ref(false);
         const showDischargeModal = ref(false);
         const showTransferBed = ref(false);
         const showAddService = ref(false);
@@ -1496,12 +1704,50 @@ export default {
             remarks: '',
         });
 
+        const refundForm = ref({
+            advance_id: null,
+            receipt_number: '',
+            amount: 0,
+            refund_reason: '',
+            other_reason: '',
+            authorized_by: '',
+            authorization_password: '',
+            refund_mode: 'cash',
+            remarks: '',
+        });
+
         const dischargeForm = ref({
+            discharge_datetime: new Date().toISOString().slice(0, 16),
             discharge_type: 'normal',
             condition_at_discharge: 'improved',
-            discharge_summary: '',
+            // Clinical Summary
+            chief_complaints: '',
+            history_present_illness: '',
+            past_medical_history: '',
+            examination_findings: '',
+            // Diagnosis
+            primary_diagnosis: '',
+            primary_diagnosis_icd: '',
+            secondary_diagnosis: '',
+            final_diagnosis: '',
+            // Investigations & Treatment
+            investigations: '',
+            treatment_given: '',
+            procedures: '',
+            course_in_hospital: '',
+            // Discharge Medications
+            discharge_medications: '',
+            // Discharge Instructions
+            dietary_advice: '',
+            activity_advice: '',
+            discharge_instructions: '',
+            discharge_summary: '', // Legacy field - will contain consolidated summary
             followup_advice: '',
             followup_date: '',
+            followup_doctor: '',
+            // Additional
+            referral_details: '',
+            remarks: '',
         });
 
         const nursingChartForm = ref({
@@ -1545,6 +1791,8 @@ export default {
             doctor_id: '',
             service_type: '',
             hospital_service_id: '',
+            cost_head_id: '',
+            cost_head_name: '',
             service_name: '',
             quantity: 1,
             rate: 0,
@@ -1555,6 +1803,7 @@ export default {
         });
 
         const hospitalServices = ref([]);
+        const ipdCostHeads = ref([]);
         const editingServiceId = ref(null);
         const editingAdvanceId = ref(null);
         const bulkServicesList = ref([]);
@@ -1566,6 +1815,11 @@ export default {
         const filteredDoctors = computed(() => {
             if (!form.value.department_id) return doctors.value;
             return doctors.value.filter(d => d.department_id == form.value.department_id);
+        });
+
+        const filteredHospitalServices = computed(() => {
+            if (!serviceForm.value.cost_head_id) return [];
+            return hospitalServices.value.filter(hs => hs.cost_head_id == serviceForm.value.cost_head_id);
         });
 
         const canSubmit = computed(() => {
@@ -1870,17 +2124,57 @@ export default {
             showAdvancePayment.value = true;
         };
 
-        const deleteAdvancePayment = async (advanceId) => {
-            if (!confirm('Are you sure you want to delete this advance payment?')) {
-                return;
-            }
+        const showRefundModal = (payment) => {
+            refundForm.value = {
+                advance_id: payment.advance_id,
+                receipt_number: payment.receipt_number,
+                amount: payment.amount,
+                refund_reason: '',
+                other_reason: '',
+                authorized_by: '',
+                authorization_password: '',
+                refund_mode: 'cash',
+                remarks: '',
+            };
+            showRefundAdvance.value = true;
+        };
 
+        const closeRefundModal = () => {
+            showRefundAdvance.value = false;
+            refundForm.value = {
+                advance_id: null,
+                receipt_number: '',
+                amount: 0,
+                refund_reason: '',
+                other_reason: '',
+                authorized_by: '',
+                authorization_password: '',
+                refund_mode: 'cash',
+                remarks: '',
+            };
+        };
+
+        const processRefund = async () => {
             try {
-                await axios.delete(`/api/ipd-admissions/${route.params.id}/advance-payments/${advanceId}`);
-                loadAdvancePayments();
-                loadRunningBill();
+                const payload = {
+                    refund_reason: refundForm.value.refund_reason === 'other'
+                        ? refundForm.value.other_reason
+                        : refundForm.value.refund_reason,
+                    authorized_by: refundForm.value.authorized_by,
+                    authorization_password: refundForm.value.authorization_password,
+                    refund_mode: refundForm.value.refund_mode,
+                    remarks: refundForm.value.remarks,
+                };
+
+                await axios.post(`/api/ipd-admissions/${route.params.id}/advance-payments/${refundForm.value.advance_id}/refund`, payload);
+
+                closeRefundModal();
+                await loadAdvancePayments();
+                await loadRunningBill();
+                await loadAdmission();
+                alert('Refund processed successfully');
             } catch (error) {
-                alert('Failed to delete advance payment: ' + (error.response?.data?.message || error.message));
+                alert('Failed to process refund: ' + (error.response?.data?.message || error.message));
             }
         };
 
@@ -1911,6 +2205,23 @@ export default {
         const completeDischarge = async () => {
             if (!confirm('Are you sure you want to discharge this patient?')) return;
             try {
+                // Fetch latest prescription to include in discharge medications
+                if (admission.value && admission.value.patient_id) {
+                    try {
+                        const prescriptionResponse = await axios.get(`/api/prescriptions/last/${admission.value.patient_id}`);
+                        if (prescriptionResponse.data && prescriptionResponse.data.drugs) {
+                            // Format prescription drugs as text
+                            const medicationsText = prescriptionResponse.data.drugs.map((drug, index) => {
+                                return `${index + 1}. ${drug.drug_name} ${drug.drug_type ? '(' + drug.drug_type + ')' : ''} - ${drug.dose_advice} - ${drug.days} days - Qty: ${drug.qty}`;
+                            }).join('\n');
+                            dischargeForm.value.discharge_medications = medicationsText;
+                        }
+                    } catch (prescError) {
+                        console.log('No prescription found or error fetching:', prescError);
+                        // Continue with discharge even if prescription fetch fails
+                    }
+                }
+
                 await axios.post(`/api/ipd-admissions/${route.params.id}/complete-discharge`, dischargeForm.value);
                 showDischargeModal.value = false;
                 alert('Patient discharged successfully!');
@@ -1992,6 +2303,19 @@ export default {
             }
         };
 
+        const onCostHeadChange = () => {
+            const selectedCostHead = ipdCostHeads.value.find(ch => ch.cost_head_id == serviceForm.value.cost_head_id);
+            if (selectedCostHead) {
+                serviceForm.value.cost_head_name = selectedCostHead.cost_head_name;
+                // Reset hospital service selection when cost head changes
+                serviceForm.value.hospital_service_id = '';
+                serviceForm.value.service_name = '';
+                serviceForm.value.rate = 0;
+            } else {
+                serviceForm.value.cost_head_name = '';
+            }
+        };
+
         const onHospitalServiceChange = () => {
             const selectedService = hospitalServices.value.find(s => s.hospital_service_id == serviceForm.value.hospital_service_id);
             if (selectedService) {
@@ -2052,6 +2376,8 @@ export default {
                 doctor_id: service.doctor_id || '',
                 service_type: service.service_type,
                 hospital_service_id: service.service_id || '',
+                cost_head_id: service.cost_head_id || '',
+                cost_head_name: service.cost_head_name || (service.costHead?.cost_head_name || ''),
                 service_name: service.service_name,
                 quantity: service.quantity,
                 rate: service.rate,
@@ -2088,6 +2414,8 @@ export default {
                 doctor_id: '',
                 service_type: '',
                 hospital_service_id: '',
+                cost_head_id: '',
+                cost_head_name: '',
                 service_name: '',
                 quantity: 1,
                 rate: 0,
@@ -2125,6 +2453,8 @@ export default {
                 doctor_name: doctorName,
                 service_type: serviceType,
                 service_id: serviceForm.value.hospital_service_id || null,
+                cost_head_id: serviceForm.value.cost_head_id || null,
+                cost_head_name: serviceForm.value.cost_head_name || null,
                 service_name: serviceForm.value.service_name,
                 quantity: parseFloat(serviceForm.value.quantity) || 1,
                 rate: parseFloat(serviceForm.value.rate) || 0,
@@ -2136,7 +2466,7 @@ export default {
 
             console.log('Service added to bulk list', bulkServicesList.value);
 
-            // Reset form for next entry (keep date and doctor_id)
+            // Reset form for next entry (keep date, doctor_id, and cost_head)
             serviceForm.value.hospital_service_id = '';
             serviceForm.value.service_name = '';
             serviceForm.value.quantity = 1;
@@ -2146,7 +2476,7 @@ export default {
             serviceForm.value.is_package = false;
             serviceForm.value.remarks = '';
             serviceForm.value.service_type = '';
-            // Keep service_date and doctor_id as is for faster bulk entry
+            // Keep service_date, doctor_id, cost_head_id, and cost_head_name for faster bulk entry
         };
 
         const removeFromBulkList = (index) => {
@@ -2182,6 +2512,8 @@ export default {
                     doctor_id: serviceForm.value.doctor_id || null,
                     service_type: serviceForm.value.service_type,
                     service_id: serviceForm.value.hospital_service_id || null,
+                    cost_head_id: serviceForm.value.cost_head_id || null,
+                    cost_head_name: serviceForm.value.cost_head_name || null,
                     service_name: serviceForm.value.service_name,
                     quantity: serviceForm.value.quantity,
                     rate: serviceForm.value.rate,
@@ -2251,6 +2583,17 @@ export default {
             }
         };
 
+        const loadIpdCostHeads = async () => {
+            try {
+                const response = await axios.get('/api/cost-heads', {
+                    params: { type: 'ipd_services' }
+                });
+                ipdCostHeads.value = response.data.data || response.data || [];
+            } catch (error) {
+                console.error('Failed to load IPD cost heads:', error);
+            }
+        };
+
         const formatDate = (date) => {
             if (!date) return '';
             return new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -2301,6 +2644,7 @@ export default {
 
         onMounted(() => {
             loadMasterData();
+            loadIpdCostHeads();
             if (isViewMode.value) {
                 loadAdmission();
             }
@@ -2336,6 +2680,7 @@ export default {
             bedsByRoom,
             showAddNote,
             showAdvancePayment,
+            showRefundAdvance,
             showDischargeModal,
             showTransferBed,
             showAddService,
@@ -2345,6 +2690,7 @@ export default {
             showEditAdmission,
             noteForm,
             advanceForm,
+            refundForm,
             dischargeForm,
             nursingChartForm,
             medicationForm,
@@ -2366,10 +2712,13 @@ export default {
             saveInvestigation,
             serviceForm,
             hospitalServices,
+            ipdCostHeads,
+            filteredHospitalServices,
             editingServiceId,
             editingAdvanceId,
             bulkServicesList,
             bulkServicesTotal,
+            onCostHeadChange,
             onHospitalServiceChange,
             calculateServiceAmount,
             saveService,
@@ -2380,10 +2729,13 @@ export default {
             deleteServiceItem,
             closeServiceModal,
             editAdvancePayment,
-            deleteAdvancePayment,
+            showRefundModal,
+            closeRefundModal,
+            processRefund,
             closeAdvanceModal,
             loadHospitalServices,
             loadHospitalServicesForAdmission,
+            loadIpdCostHeads,
             formatDate,
             formatStatus,
             getStatusBadge,

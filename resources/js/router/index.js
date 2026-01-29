@@ -42,6 +42,9 @@ import ConsultationForm from '../views/consultation-forms/ConsultationForm.vue';
 import IpdList from '../views/ipd/IpdList.vue';
 import IpdForm from '../views/ipd/IpdForm.vue';
 
+// Bed Transfer
+import BedTransferMaster from '../views/clinical/BedTransferMaster.vue';
+
 // Laboratory
 import LabTestList from '../views/laboratory/LabTestList.vue';
 import LabOrderList from '../views/laboratory/LabOrderList.vue';
@@ -399,6 +402,11 @@ const routes = [
                 path: 'ipd/:id',
                 name: 'ipd.view',
                 component: IpdForm
+            },
+            {
+                path: 'bed-transfers',
+                name: 'bed-transfers',
+                component: BedTransferMaster
             },
             // Laboratory
             {

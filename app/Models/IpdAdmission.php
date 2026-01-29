@@ -70,6 +70,7 @@ class IpdAdmission extends Model
         'status',
         'discharge_date',
         'discharge_time',
+        'discharge_datetime',
         'discharge_type',
         'discharged_by',
         'discharge_summary',
@@ -77,6 +78,24 @@ class IpdAdmission extends Model
         'condition_at_discharge',
         'followup_advice',
         'followup_date',
+        'followup_doctor',
+        // ABDM Discharge Fields
+        'chief_complaints',
+        'history_present_illness',
+        'past_medical_history',
+        'examination_findings',
+        'primary_diagnosis',
+        'primary_diagnosis_icd',
+        'secondary_diagnosis',
+        'investigations',
+        'treatment_given',
+        'procedures',
+        'course_in_hospital',
+        'discharge_medications',
+        'dietary_advice',
+        'activity_advice',
+        'discharge_instructions',
+        'referral_details',
         // Death
         'death_date',
         'death_time',
@@ -89,6 +108,7 @@ class IpdAdmission extends Model
     protected $casts = [
         'admission_date' => 'date',
         'discharge_date' => 'date',
+        'discharge_datetime' => 'datetime',
         'followup_date' => 'date',
         'death_date' => 'date',
         'mlc_case' => 'boolean',
@@ -272,13 +292,24 @@ class IpdAdmission extends Model
         $totalServices = $this->services()->where('is_billed', false)->sum('net_amount');
         $bedChargesPerDay = $this->bed->charges_per_day ?? $this->ward->charges_per_day ?? 0;
         $bedCharges = $this->los_days * $bedChargesPerDay;
+        $grossTotal = $totalServices + $bedCharges;
+        $discount = $this->discount_amount ?? 0;
+        $netTotal = $grossTotal - $discount;
 
         return [
-            'services_total' => $totalServices,
-            'bed_charges' => $bedCharges,
-            'total' => $totalServices + $bedCharges,
-            'advance_paid' => $this->advance_amount,
-            'balance_due' => ($totalServices + $bedCharges) - $this->advance_amount,
+            'bed_details' => [
+                'total_days' => $this->los_days,
+                'charges_per_day' => $bedChargesPerDay,
+            ],
+            'billing' => [
+                'services_total' => $totalServices,
+                'bed_charges' => $bedCharges,
+                'gross_total' => $grossTotal,
+                'discount' => $discount,
+                'net_total' => $netTotal,
+                'advance_paid' => $this->advance_amount ?? 0,
+                'balance_due' => $netTotal - ($this->advance_amount ?? 0),
+            ],
         ];
     }
 

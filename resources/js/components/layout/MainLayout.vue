@@ -252,6 +252,7 @@ const menuSections = [
             { path: '/departments', label: 'Departments' },
             { path: '/opd', label: 'OPD Visits' },
             { path: '/ipd', label: 'IPD Admissions' },
+            { path: '/bed-transfers', label: 'Bed Transfer' },
             { path: '/consultation-forms', label: 'Consultation Forms' }
         ]
     },
@@ -388,6 +389,7 @@ const pageTitle = computed(() => {
         '/appointments': 'Appointments',
         '/opd': 'OPD Visits',
         '/ipd': 'IPD Admissions',
+        '/bed-transfers': 'Bed Transfer',
         '/laboratory/tests': 'Lab Tests',
         '/laboratory/orders': 'Lab Orders',
         '/radiology/orders': 'Radiology Orders',

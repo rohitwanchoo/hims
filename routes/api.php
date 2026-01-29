@@ -299,6 +299,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('ipd-admissions/{admission}/advance-payments', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'getAdvancePayments']);
     Route::put('ipd-admissions/{admission}/advance-payments/{advance}', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'updateAdvance']);
     Route::delete('ipd-admissions/{admission}/advance-payments/{advance}', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'deleteAdvance']);
+    Route::post('ipd-admissions/{admission}/advance-payments/{advance}/refund', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'refundAdvance']);
     Route::get('ipd-admissions/{admission}/running-bill', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'getRunningBill']);
     Route::post('ipd-admissions/{admission}/initiate-discharge', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'initiateDischarge']);
     Route::post('ipd-admissions/{admission}/complete-discharge', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'completeDischarge']);
@@ -308,6 +309,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('rooms', \App\Http\Controllers\Api\RoomController::class);
     Route::apiResource('beds', \App\Http\Controllers\Api\BedController::class);
     Route::get('beds/available', [\App\Http\Controllers\Api\BedController::class, 'available']);
+
+    // Bed Transfers
+    Route::get('bed-transfers', [\App\Http\Controllers\Api\BedTransferController::class, 'index']);
+    Route::get('bed-transfers/active-move', [\App\Http\Controllers\Api\BedTransferController::class, 'getActiveMove']);
+    Route::post('bed-transfers', [\App\Http\Controllers\Api\BedTransferController::class, 'store']);
 
     // Cost Heads & Hospital Services
     Route::apiResource('cost-heads', \App\Http\Controllers\Api\CostHeadController::class);

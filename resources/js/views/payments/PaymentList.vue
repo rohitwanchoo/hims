@@ -85,12 +85,12 @@
                     </thead>
                     <tbody>
                         <tr v-for="payment in payments" :key="payment.payment_id">
-                            <td class="fw-semibold">{{ payment.receipt_number }}</td>
+                            <td class="fw-semibold">{{ payment.payment_number }}</td>
                             <td>{{ formatDate(payment.payment_date) }}</td>
-                            <td>{{ payment.bill?.bill_number }}</td>
-                            <td>{{ payment.bill?.patient?.first_name }} {{ payment.bill?.patient?.last_name }}</td>
+                            <td>{{ payment.bill?.bill_number || '-' }}</td>
+                            <td>{{ payment.patient?.first_name }} {{ payment.patient?.last_name }}</td>
                             <td class="fw-semibold text-success">{{ formatCurrency(payment.amount) }}</td>
-                            <td><span class="badge bg-light-primary text-primary">{{ payment.payment_mode }}</span></td>
+                            <td><span class="badge bg-primary text-white text-capitalize">{{ payment.payment_mode }}</span></td>
                             <td>{{ payment.received_by_user?.full_name || '-' }}</td>
                             <td>
                                 <button class="btn btn-sm btn-light" @click="printReceipt(payment)">
@@ -121,7 +121,7 @@
                                 <select class="form-select" v-model="form.bill_id" required @change="onBillSelect">
                                     <option value="">Select Bill</option>
                                     <option v-for="bill in unpaidBills" :key="bill.bill_id" :value="bill.bill_id">
-                                        {{ bill.bill_number }} - {{ bill.patient?.first_name }} {{ bill.patient?.last_name }} (Balance: {{ formatCurrency(bill.balance_amount) }})
+                                        {{ bill.bill_number }} - {{ bill.patient?.first_name }} {{ bill.patient?.last_name }} (Due: {{ formatCurrency(bill.due_amount) }})
                                     </option>
                                 </select>
                             </div>
@@ -136,8 +136,8 @@
                                         <strong>{{ formatCurrency(selectedBill.paid_amount) }}</strong>
                                     </div>
                                     <div class="d-flex justify-content-between">
-                                        <span>Balance:</span>
-                                        <strong class="text-danger">{{ formatCurrency(selectedBill.balance_amount) }}</strong>
+                                        <span>Due:</span>
+                                        <strong class="text-danger">{{ formatCurrency(selectedBill.due_amount) }}</strong>
                                     </div>
                                 </div>
                             </div>
@@ -212,31 +212,42 @@ const summary = reactive({
 const selectedBill = computed(() => unpaidBills.value.find(b => b.bill_id === form.bill_id));
 
 const fetchPayments = async () => {
-    const params = {};
-    if (filters.from_date) params.from_date = filters.from_date;
-    if (filters.to_date) params.to_date = filters.to_date;
-    if (filters.payment_mode) params.payment_mode = filters.payment_mode;
-    if (filters.search) params.search = filters.search;
+    try {
+        const params = {};
+        if (filters.from_date) params.from_date = filters.from_date;
+        if (filters.to_date) params.to_date = filters.to_date;
+        if (filters.payment_mode) params.payment_mode = filters.payment_mode;
+        if (filters.search) params.search = filters.search;
 
-    const response = await axios.get('/api/payments', { params });
-    payments.value = response.data.data || response.data;
+        const response = await axios.get('/api/payments', { params });
+        payments.value = response.data.data || [];
 
-    // Calculate summary
-    summary.total = payments.value.reduce((sum, p) => sum + parseFloat(p.amount), 0);
-    summary.count = payments.value.length;
-    const today = new Date().toISOString().split('T')[0];
-    summary.today = payments.value.filter(p => p.payment_date?.startsWith(today)).reduce((sum, p) => sum + parseFloat(p.amount), 0);
+        // Use server-calculated summary if available
+        if (response.data.summary) {
+            summary.total = response.data.summary.total;
+            summary.count = response.data.summary.count;
+            summary.today = response.data.summary.today;
+        }
+    } catch (error) {
+        console.error('Error fetching payments:', error);
+        alert('Error loading payments');
+    }
 };
 
 const fetchUnpaidBills = async () => {
-    const response = await axios.get('/api/bills', { params: { status: 'unpaid' } });
-    const bills = response.data.data || response.data;
-    unpaidBills.value = bills.filter(b => parseFloat(b.balance_amount) > 0);
+    try {
+        const response = await axios.get('/api/bills', { params: { status: 'pending,partial' } });
+        const bills = response.data.data || response.data;
+        unpaidBills.value = Array.isArray(bills) ? bills.filter(b => parseFloat(b.due_amount) > 0) : [];
+    } catch (error) {
+        console.error('Error fetching unpaid bills:', error);
+        unpaidBills.value = [];
+    }
 };
 
 const onBillSelect = () => {
     if (selectedBill.value) {
-        form.amount = selectedBill.value.balance_amount;
+        form.amount = selectedBill.value.due_amount;
     }
 };
 
@@ -252,6 +263,7 @@ const savePayment = async () => {
             ...form,
             payment_date: new Date().toISOString().split('T')[0]
         });
+        alert('Payment recorded successfully!');
         await fetchPayments();
         await fetchUnpaidBills();
         closeModal();
@@ -261,9 +273,12 @@ const savePayment = async () => {
     saving.value = false;
 };
 
-const formatDate = (date) => new Date(date).toLocaleDateString();
-const formatCurrency = (amount) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
-const printReceipt = (payment) => alert('Print functionality coming soon');
+const formatDate = (date) => new Date(date).toLocaleDateString('en-IN');
+const formatCurrency = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount || 0);
+const printReceipt = (payment) => {
+    // TODO: Implement print receipt
+    window.open(`/api/payments/${payment.payment_id}/receipt`, '_blank');
+};
 
 onMounted(() => {
     fetchPayments();

@@ -50,8 +50,8 @@
                             <td>{{ formatDate(bill.bill_date) }}</td>
                             <td>{{ formatCurrency(bill.total_amount) }}</td>
                             <td>{{ formatCurrency(bill.paid_amount) }}</td>
-                            <td class="fw-bold" :class="bill.balance_amount > 0 ? 'text-danger' : 'text-success'">
-                                {{ formatCurrency(bill.balance_amount) }}
+                            <td class="fw-bold" :class="bill.due_amount > 0 ? 'text-danger' : 'text-success'">
+                                {{ formatCurrency(bill.due_amount) }}
                             </td>
                             <td>
                                 <span class="badge" :class="getStatusClass(bill.payment_status)">
@@ -63,7 +63,7 @@
                                     <router-link :to="`/billing/${bill.bill_id}`" class="btn btn-outline-primary">
                                         <i class="bi bi-eye"></i>
                                     </router-link>
-                                    <button class="btn btn-outline-success" @click="addPayment(bill)" v-if="bill.balance_amount > 0">
+                                    <button class="btn btn-outline-success" @click="addPayment(bill)" v-if="bill.due_amount > 0">
                                         <i class="bi bi-cash"></i>
                                     </button>
                                     <button class="btn btn-outline-secondary" @click="printBill(bill)">
@@ -88,30 +88,41 @@ const search = ref('');
 const statusFilter = ref('');
 
 const fetchBills = async () => {
-    const params = {};
-    if (search.value) params.search = search.value;
-    if (statusFilter.value) params.status = statusFilter.value;
-    const response = await axios.get('/api/bills', { params });
-    bills.value = response.data.data || response.data;
+    try {
+        const params = {};
+        if (search.value) params.search = search.value;
+        if (statusFilter.value) params.status = statusFilter.value;
+        const response = await axios.get('/api/bills', { params });
+        bills.value = response.data.data || response.data;
+    } catch (error) {
+        console.error('Error fetching bills:', error);
+        alert('Error loading bills');
+    }
 };
 
 onMounted(fetchBills);
 
-const formatDate = (date) => new Date(date).toLocaleDateString();
-const formatCurrency = (amount) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
+const formatDate = (date) => new Date(date).toLocaleDateString('en-IN');
+const formatCurrency = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount || 0);
 
 const getStatusClass = (status) => {
-    const classes = { 'unpaid': 'bg-danger', 'partial': 'bg-warning', 'paid': 'bg-success' };
+    const classes = {
+        'pending': 'bg-danger',
+        'partial': 'bg-warning',
+        'paid': 'bg-success',
+        'cancelled': 'bg-secondary',
+        'refunded': 'bg-info'
+    };
     return classes[status] || 'bg-secondary';
 };
 
 const addPayment = (bill) => {
-    // TODO: Open payment modal
-    alert('Payment functionality coming soon');
+    // Redirect to payments page with bill selected
+    window.location.href = `/payments?bill_id=${bill.bill_id}`;
 };
 
 const printBill = (bill) => {
-    // TODO: Print bill
-    alert('Print functionality coming soon');
+    // TODO: Implement print bill
+    window.open(`/api/bills/${bill.bill_id}/print`, '_blank');
 };
 </script>

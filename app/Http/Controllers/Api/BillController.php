@@ -12,7 +12,10 @@ class BillController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Bill::with(['patient', 'details']);
+        $hospitalId = auth()->user()->hospital_id;
+
+        $query = Bill::where('hospital_id', $hospitalId)
+            ->with(['patient', 'details', 'payments']);
 
         if ($request->search) {
             $search = $request->search;
@@ -30,6 +33,10 @@ class BillController extends Controller
             $query->where('payment_status', $request->status);
         }
 
+        if ($request->bill_type) {
+            $query->where('bill_type', $request->bill_type);
+        }
+
         if ($request->from_date) {
             $query->whereDate('bill_date', '>=', $request->from_date);
         }
@@ -45,43 +52,72 @@ class BillController extends Controller
 
     public function store(Request $request)
     {
+        $hospitalId = auth()->user()->hospital_id;
+
         $validated = $request->validate([
             'patient_id' => 'required|exists:patients,patient_id',
+            'opd_id' => 'nullable|exists:opd_visits,opd_id',
+            'ipd_id' => 'nullable|exists:ipd_admissions,ipd_id',
             'bill_date' => 'required|date',
+            'bill_type' => 'required|in:opd,ipd,pharmacy,lab,general',
             'discount_amount' => 'nullable|numeric|min:0',
+            'discount_percent' => 'nullable|numeric|min:0|max:100',
+            'tax_amount' => 'nullable|numeric|min:0',
+            'adjustment' => 'nullable|numeric',
             'items' => 'required|array|min:1',
-            'items.*.service_id' => 'required|exists:services,service_id',
+            'items.*.item_type' => 'nullable|in:service,procedure,consumable,room,medicine,lab,other',
+            'items.*.item_id' => 'nullable|integer',
+            'items.*.cost_head_id' => 'nullable|exists:cost_heads,cost_head_id',
+            'items.*.item_name' => 'required|string',
             'items.*.quantity' => 'required|integer|min:1',
-            'items.*.rate' => 'required|numeric|min:0',
+            'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.amount' => 'required|numeric|min:0',
         ]);
 
-        return DB::transaction(function () use ($validated) {
-            $lastBill = Bill::whereDate('created_at', today())->count();
+        return DB::transaction(function () use ($validated, $hospitalId) {
+            // Generate bill number
+            $lastBill = Bill::where('hospital_id', $hospitalId)
+                ->whereDate('created_at', today())->count();
             $billNumber = 'BILL-' . date('Ymd') . '-' . str_pad($lastBill + 1, 4, '0', STR_PAD_LEFT);
 
-            $totalAmount = collect($validated['items'])->sum('amount');
+            // Calculate amounts
+            $subtotal = collect($validated['items'])->sum('amount');
             $discountAmount = $validated['discount_amount'] ?? 0;
+            $taxAmount = $validated['tax_amount'] ?? 0;
+            $adjustment = $validated['adjustment'] ?? 0;
+            $totalAmount = $subtotal - $discountAmount + $taxAmount + $adjustment;
 
+            // Create bill
             $bill = Bill::create([
+                'hospital_id' => $hospitalId,
                 'bill_number' => $billNumber,
                 'patient_id' => $validated['patient_id'],
+                'opd_id' => $validated['opd_id'] ?? null,
+                'ipd_id' => $validated['ipd_id'] ?? null,
                 'bill_date' => $validated['bill_date'],
-                'total_amount' => $totalAmount,
+                'bill_type' => $validated['bill_type'],
+                'subtotal' => $subtotal,
                 'discount_amount' => $discountAmount,
-                'net_amount' => $totalAmount - $discountAmount,
+                'discount_percent' => $validated['discount_percent'] ?? 0,
+                'tax_amount' => $taxAmount,
+                'adjustment' => $adjustment,
+                'total_amount' => $totalAmount,
                 'paid_amount' => 0,
-                'balance_amount' => $totalAmount - $discountAmount,
-                'payment_status' => 'unpaid',
+                'due_amount' => $totalAmount,
+                'payment_status' => 'pending',
                 'created_by' => auth()->id(),
             ]);
 
+            // Create bill details
             foreach ($validated['items'] as $item) {
                 BillDetail::create([
                     'bill_id' => $bill->bill_id,
-                    'service_id' => $item['service_id'],
+                    'item_type' => $item['item_type'] ?? 'service',
+                    'item_id' => $item['item_id'] ?? null,
+                    'cost_head_id' => $item['cost_head_id'] ?? null,
+                    'item_name' => $item['item_name'],
                     'quantity' => $item['quantity'],
-                    'unit_rate' => $item['rate'],
+                    'unit_price' => $item['unit_price'],
                     'amount' => $item['amount'],
                 ]);
             }
@@ -92,7 +128,8 @@ class BillController extends Controller
 
     public function show(string $id)
     {
-        $bill = Bill::with(['patient', 'details.service', 'payments'])->findOrFail($id);
+        $bill = Bill::with(['patient', 'details.costHead', 'payments.receivedByUser', 'opdVisit', 'ipdAdmission'])
+            ->findOrFail($id);
         return response()->json($bill);
     }
 
@@ -106,13 +143,35 @@ class BillController extends Controller
 
         $validated = $request->validate([
             'discount_amount' => 'nullable|numeric|min:0',
+            'discount_percent' => 'nullable|numeric|min:0|max:100',
+            'tax_amount' => 'nullable|numeric|min:0',
+            'adjustment' => 'nullable|numeric',
         ]);
 
+        $discountAmount = $validated['discount_amount'] ?? $bill->discount_amount;
+        $taxAmount = $validated['tax_amount'] ?? $bill->tax_amount;
+        $adjustment = $validated['adjustment'] ?? $bill->adjustment;
+
+        $totalAmount = $bill->subtotal - $discountAmount + $taxAmount + $adjustment;
+
         $bill->update([
-            'discount_amount' => $validated['discount_amount'] ?? $bill->discount_amount,
-            'net_amount' => $bill->total_amount - ($validated['discount_amount'] ?? $bill->discount_amount),
-            'balance_amount' => $bill->total_amount - ($validated['discount_amount'] ?? $bill->discount_amount) - $bill->paid_amount,
+            'discount_amount' => $discountAmount,
+            'discount_percent' => $validated['discount_percent'] ?? $bill->discount_percent,
+            'tax_amount' => $taxAmount,
+            'adjustment' => $adjustment,
+            'total_amount' => $totalAmount,
+            'due_amount' => $totalAmount - $bill->paid_amount,
         ]);
+
+        // Update payment status
+        if ($bill->due_amount == 0 && $bill->paid_amount > 0) {
+            $bill->payment_status = 'paid';
+        } elseif ($bill->paid_amount > 0) {
+            $bill->payment_status = 'partial';
+        } else {
+            $bill->payment_status = 'pending';
+        }
+        $bill->save();
 
         return response()->json($bill);
     }

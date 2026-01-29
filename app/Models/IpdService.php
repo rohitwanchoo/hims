@@ -19,6 +19,8 @@ class IpdService extends Model
         'doctor_id',
         'service_type',
         'service_id',
+        'cost_head_id',
+        'cost_head_name',
         'service_name',
         'quantity',
         'rate',
@@ -61,6 +63,11 @@ class IpdService extends Model
     public function createdByUser()
     {
         return $this->belongsTo(User::class, 'created_by', 'user_id');
+    }
+
+    public function costHead()
+    {
+        return $this->belongsTo(CostHead::class, 'cost_head_id', 'cost_head_id');
     }
 
     // Scopes
