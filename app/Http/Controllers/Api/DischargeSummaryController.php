@@ -64,14 +64,14 @@ class DischargeSummaryController extends Controller
         $hospitalId = Auth::user()->hospital_id;
 
         $patients = IpdAdmission::where('hospital_id', $hospitalId)
-            ->where('status', 'discharged')
+            ->whereIn('status', ['admitted', 'discharged'])
             ->whereNotIn('ipd_id', function ($query) {
                 $query->select('ipd_id')
                       ->from('discharge_summaries')
                       ->whereNull('deleted_at');
             })
             ->with(['patient', 'bed', 'ward'])
-            ->orderBy('discharge_date', 'desc')
+            ->orderBy('created_at', 'desc')
             ->get();
 
         return response()->json($patients);

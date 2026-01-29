@@ -40,13 +40,14 @@
                         <div v-show="activeTab === 'basic'">
                             <div class="row g-3">
                                 <div class="col-md-6" v-if="!$route.params.id">
-                                    <label class="form-label">Select Discharged IPD Patient *</label>
+                                    <label class="form-label">Select IPD Patient *</label>
                                     <select class="form-select" v-model="form.ipd_id" @change="loadPatientData" :disabled="loading">
                                         <option value="">Choose patient...</option>
                                         <option v-for="admission in dischargedPatients" :key="admission.ipd_id" :value="admission.ipd_id">
-                                            {{ admission.ipd_number }} - {{ admission.patient?.first_name }} {{ admission.patient?.last_name }}
+                                            {{ admission.ipd_number }} - {{ admission.patient?.first_name }} {{ admission.patient?.last_name }} - {{ admission.status }}
                                         </option>
                                     </select>
+                                    <small class="text-muted">Shows all admitted and discharged IPD patients</small>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Admission Date *</label>
