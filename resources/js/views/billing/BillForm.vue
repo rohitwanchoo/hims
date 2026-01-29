@@ -538,6 +538,7 @@ onMounted(async () => {
                 items: (bill.details || []).map(detail => ({
                     ...detail,
                     service_id: detail.item_id,
+                    service_date: detail.service_date ? detail.service_date.slice(0, 16) : null,
                     quantity: Number(detail.quantity) || 1,
                     amount: Number(detail.amount) || 0,
                     // If unit_price is 0 or missing but amount exists, calculate it
