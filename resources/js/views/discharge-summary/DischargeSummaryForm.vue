@@ -738,8 +738,17 @@ onMounted(async () => {
 
             // Auto-select IPD patient if ipd_id query parameter is present
             if (route.query.ipd_id) {
-                form.value.ipd_id = route.query.ipd_id;
+                const ipdId = parseInt(route.query.ipd_id);
+                form.value.ipd_id = ipdId;
+                // Give a small delay to ensure reactivity updates
+                await new Promise(resolve => setTimeout(resolve, 100));
                 await loadPatientData();
+
+                // Collapse patient selection since it's auto-filled
+                expandedSections.value.patient = false;
+                // Expand important sections
+                expandedSections.value.basic = true;
+                expandedSections.value.diagnosis = true;
             }
         }
     } catch (error) {
@@ -754,19 +763,21 @@ const loadPatientData = async () => {
     if (!form.value.ipd_id) return;
 
     try {
+        const ipdId = parseInt(form.value.ipd_id);
+
         // First try to find in the cached list
-        let admission = dischargedPatients.value.find(a => a.ipd_id == form.value.ipd_id);
+        let admission = dischargedPatients.value.find(a => parseInt(a.ipd_id) === ipdId);
 
         // If not found or we need more details, fetch from API
         if (!admission || route.query.ipd_id) {
             try {
-                const response = await axios.get(`/api/ipd-admissions/${form.value.ipd_id}`);
+                const response = await axios.get(`/api/ipd-admissions/${ipdId}`);
                 admission = response.data;
                 selectedPatient.value = admission;
             } catch (error) {
                 console.error('Error fetching IPD admission details:', error);
                 // Fall back to cached data if API fails
-                admission = dischargedPatients.value.find(a => a.ipd_id == form.value.ipd_id);
+                admission = dischargedPatients.value.find(a => parseInt(a.ipd_id) === ipdId);
             }
         }
 
