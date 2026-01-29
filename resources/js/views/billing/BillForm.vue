@@ -83,95 +83,6 @@
                     </div>
                 </div>
 
-                <!-- Compact IPD Running Bill -->
-                <div class="card shadow-sm mb-2" v-if="form.bill_type === 'ipd' && runningBill">
-                    <div class="card-header bg-white py-2 cursor-pointer" @click="showIpdBill = !showIpdBill">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0 small"><i class="bi bi-clipboard-data me-2"></i>IPD Running Bill Summary</h6>
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="badge bg-primary">{{ formatCurrency(runningBill.billing?.net_total) }}</span>
-                                <i :class="showIpdBill ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body py-2" v-show="showIpdBill">
-                        <div class="row g-2 mb-2 small">
-                            <div class="col-md-6">
-                                <span class="text-muted">IPD #:</span> {{ runningBill.patient?.ipd_number }} |
-                                <span class="text-muted">LOS:</span> {{ runningBill.patient?.los_days }} days
-                            </div>
-                            <div class="col-md-6 text-end">
-                                <span class="text-muted">Ward:</span> {{ runningBill.bed_details?.ward }} |
-                                <span class="text-muted">Bed:</span> {{ runningBill.bed_details?.bed }}
-                            </div>
-                        </div>
-                        <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
-                            <table class="table table-sm table-bordered mb-0">
-                                <tbody>
-                                    <tr v-for="(summary, type) in runningBill.services_summary" :key="type" v-if="type !== 'bed'" class="small">
-                                        <td>{{ type.replace('_', ' ').toUpperCase() }}</td>
-                                        <td class="text-end" width="60">{{ summary.count }}</td>
-                                        <td class="text-end" width="100">{{ formatCurrency(summary.total) }}</td>
-                                    </tr>
-                                    <tr class="table-light cursor-pointer" @click="showBillItems = !showBillItems">
-                                        <td colspan="2">
-                                            <strong class="small">Services Total</strong>
-                                            <i :class="showBillItems ? 'bi bi-chevron-up' : 'bi bi-chevron-down'" class="ms-2"></i>
-                                        </td>
-                                        <td class="text-end"><strong class="small">{{ formatCurrency(runningBill.billing?.services_total) }}</strong></td>
-                                    </tr>
-                                    <tr class="table-primary small">
-                                        <td colspan="2"><strong>Gross Total</strong></td>
-                                        <td class="text-end"><strong>{{ formatCurrency(runningBill.billing?.gross_total) }}</strong></td>
-                                    </tr>
-                                    <tr class="small">
-                                        <td colspan="2">Discount</td>
-                                        <td class="text-end">{{ formatCurrency(runningBill.billing?.discount) }}</td>
-                                    </tr>
-                                    <tr class="table-success small">
-                                        <td colspan="2"><strong>Net Total</strong></td>
-                                        <td class="text-end"><strong>{{ formatCurrency(runningBill.billing?.net_total) }}</strong></td>
-                                    </tr>
-                                    <tr class="small">
-                                        <td colspan="2">Advance Paid</td>
-                                        <td class="text-end">{{ formatCurrency(runningBill.billing?.advance_paid) }}</td>
-                                    </tr>
-                                    <tr class="table-warning small">
-                                        <td colspan="2"><strong>Balance Due</strong></td>
-                                        <td class="text-end"><strong>{{ formatCurrency(runningBill.billing?.balance_due) }}</strong></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- Bill Items Details - Toggleable -->
-                        <div v-if="showBillItems && ipdServices.length > 0" class="mt-2">
-                            <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
-                                <table class="table table-sm table-bordered mb-0">
-                                    <thead class="table-light sticky-top">
-                                        <tr class="small">
-                                            <th>Service Name</th>
-                                            <th width="100">Cost Head</th>
-                                            <th class="text-end" width="50">Qty</th>
-                                            <th class="text-end" width="80">Rate</th>
-                                            <th class="text-end" width="100">Amount</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="(service, index) in ipdServices" :key="index" class="small">
-                                            <td>{{ service.service_name }}</td>
-                                            <td>{{ service.cost_head_name }}</td>
-                                            <td class="text-end">{{ service.quantity }}</td>
-                                            <td class="text-end">{{ formatCurrency(service.rate) }}</td>
-                                            <td class="text-end">{{ formatCurrency(service.net_amount || (service.quantity * service.rate)) }}</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Compact Bill Items with Scrollable Table -->
                 <div class="card shadow-sm">
                     <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
@@ -313,6 +224,16 @@
                             <strong>Total:</strong>
                             <strong class="text-primary fs-5">{{ formatCurrency(total) }}</strong>
                         </div>
+                        <div v-if="form.bill_type === 'ipd' && runningBill" class="mt-2 pt-2 border-top">
+                            <div class="d-flex justify-content-between mb-2 small">
+                                <span>Advance Paid:</span>
+                                <strong class="text-success">{{ formatCurrency(advancePaid) }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <strong class="text-danger">Balance Due:</strong>
+                                <strong class="text-danger fs-5">{{ formatCurrency(balanceDue) }}</strong>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -415,9 +336,7 @@ const editMode = ref(false);
 const originalFormData = ref(null);
 const canEdit = ref(false);
 const expandedCostHeads = ref({});
-const showBillItems = ref(false);
 const showPatientInfo = ref(true);
-const showIpdBill = ref(true);
 
 const form = ref({
     patient_id: '',
@@ -441,6 +360,14 @@ const total = computed(() => {
 });
 
 const isViewMode = computed(() => !!route.params.id && !editMode.value);
+
+const advancePaid = computed(() => {
+    return Number(runningBill.value?.billing?.advance_paid) || 0;
+});
+
+const balanceDue = computed(() => {
+    return total.value - advancePaid.value;
+});
 
 const groupedItemsByCostHead = computed(() => {
     const grouped = {};
