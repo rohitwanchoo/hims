@@ -117,7 +117,7 @@ class BillController extends Controller
                     'cost_head_id' => $item['cost_head_id'] ?? null,
                     'item_name' => $item['item_name'],
                     'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'],
+                    'rate' => $item['unit_price'],
                     'amount' => $item['amount'],
                 ]);
             }
