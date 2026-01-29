@@ -544,6 +544,12 @@ onMounted(async () => {
                     unit_price: Number(detail.unit_price) > 0 ? Number(detail.unit_price) : (Number(detail.amount) / (Number(detail.quantity) || 1))
                 }))
             };
+
+            // If this is an IPD bill, load IPD admissions and set selected IPD
+            if (bill.bill_type === 'ipd' && bill.ipd_id) {
+                await fetchIpdAdmissions(true); // Include all statuses for existing bills
+                selectedIpdId.value = bill.ipd_id;
+            }
         } else {
             // Auto-select IPD patient if ipd_id query parameter is present
             if (route.query.ipd_id) {
@@ -575,15 +581,19 @@ const onBillTypeChange = async () => {
     }
 };
 
-const fetchIpdAdmissions = async () => {
+const fetchIpdAdmissions = async (includeAll = false) => {
     try {
         loading.value = true;
-        const response = await axios.get('/api/ipd-admissions', {
-            params: {
-                status: 'admitted',
-                per_page: 1000
-            }
-        });
+        const params = {
+            per_page: 1000
+        };
+
+        // Only filter by 'admitted' status when creating new bills
+        if (!includeAll) {
+            params.status = 'admitted';
+        }
+
+        const response = await axios.get('/api/ipd-admissions', { params });
         ipdAdmissions.value = response.data.data || response.data || [];
     } catch (error) {
         console.error('Error fetching IPD admissions:', error);
