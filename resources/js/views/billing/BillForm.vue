@@ -279,17 +279,19 @@ onMounted(async () => {
             form.value = {
                 patient_id: bill.patient_id,
                 ipd_id: bill.ipd_id,
-                bill_date: bill.bill_date,
+                bill_date: bill.bill_date ? bill.bill_date.split('T')[0] : '',
                 bill_type: bill.bill_type,
-                discount_amount: bill.discount_amount,
-                discount_percent: bill.discount_percent,
-                tax_amount: bill.tax_amount,
-                adjustment: bill.adjustment,
+                discount_amount: Number(bill.discount_amount) || 0,
+                discount_percent: Number(bill.discount_percent) || 0,
+                tax_amount: Number(bill.tax_amount) || 0,
+                adjustment: Number(bill.adjustment) || 0,
                 items: (bill.details || []).map(detail => ({
                     ...detail,
                     service_id: detail.item_id,
+                    quantity: Number(detail.quantity) || 1,
+                    amount: Number(detail.amount) || 0,
                     // If unit_price is 0 or missing but amount exists, calculate it
-                    unit_price: detail.unit_price > 0 ? detail.unit_price : (detail.amount / (detail.quantity || 1))
+                    unit_price: Number(detail.unit_price) > 0 ? Number(detail.unit_price) : (Number(detail.amount) / (Number(detail.quantity) || 1))
                 }))
             };
         }
