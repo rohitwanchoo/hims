@@ -1220,9 +1220,11 @@ class IpdAdmissionController extends Controller
         }
 
         // Calculate totals
+        $servicesAmount = IpdService::where('ipd_id', $id)->sum('amount');
+        $servicesDiscount = IpdService::where('ipd_id', $id)->sum('discount');
         $servicesTotal = IpdService::where('ipd_id', $id)->sum('net_amount');
-        $grossTotal = $bedCharges + $servicesTotal;
-        $discount = $admission->discount_amount ?? 0;
+        $grossTotal = $bedCharges + $servicesAmount;
+        $discount = ($admission->discount_amount ?? 0) + $servicesDiscount;
         $netTotal = $grossTotal - $discount;
         $advancePaid = $admission->advance_amount ?? 0;
         $balanceDue = $netTotal - $advancePaid;
