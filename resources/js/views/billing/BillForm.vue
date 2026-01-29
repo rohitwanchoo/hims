@@ -285,7 +285,12 @@ onMounted(async () => {
                 discount_percent: bill.discount_percent,
                 tax_amount: bill.tax_amount,
                 adjustment: bill.adjustment,
-                items: bill.details || []
+                items: (bill.details || []).map(detail => ({
+                    ...detail,
+                    service_id: detail.item_id,
+                    // If unit_price is 0 or missing but amount exists, calculate it
+                    unit_price: detail.unit_price > 0 ? detail.unit_price : (detail.amount / (detail.quantity || 1))
+                }))
             };
         }
     } catch (error) {
