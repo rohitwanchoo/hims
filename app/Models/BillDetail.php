@@ -15,6 +15,8 @@ class BillDetail extends Model
         'cost_head_id',
         'item_name',
         'description',
+        'service_date',
+        'doctor_id',
         'quantity',
         'rate',
         'discount_amount',
@@ -23,6 +25,7 @@ class BillDetail extends Model
     ];
 
     protected $casts = [
+        'service_date' => 'datetime',
         'quantity' => 'integer',
         'rate' => 'decimal:2',
         'discount_amount' => 'decimal:2',
@@ -30,7 +33,7 @@ class BillDetail extends Model
         'amount' => 'decimal:2',
     ];
 
-    protected $appends = ['unit_price'];
+    protected $appends = ['unit_price', 'bill_detail_id'];
 
     // Add accessor for backwards compatibility with frontend
     public function getUnitPriceAttribute()
@@ -41,6 +44,11 @@ class BillDetail extends Model
     public function setUnitPriceAttribute($value)
     {
         $this->attributes['rate'] = $value;
+    }
+
+    public function getBillDetailIdAttribute()
+    {
+        return $this->detail_id;
     }
 
     public function bill()
@@ -56,5 +64,10 @@ class BillDetail extends Model
     public function costHead()
     {
         return $this->belongsTo(CostHead::class, 'cost_head_id', 'cost_head_id');
+    }
+
+    public function doctor()
+    {
+        return $this->belongsTo(Doctor::class, 'doctor_id', 'doctor_id');
     }
 }

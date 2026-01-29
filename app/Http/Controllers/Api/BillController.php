@@ -116,6 +116,8 @@ class BillController extends Controller
                     'item_id' => $item['item_id'] ?? null,
                     'cost_head_id' => $item['cost_head_id'] ?? null,
                     'item_name' => $item['item_name'],
+                    'service_date' => $item['service_date'] ?? null,
+                    'doctor_id' => $item['doctor_id'] ?? null,
                     'quantity' => $item['quantity'],
                     'rate' => $item['unit_price'],
                     'amount' => $item['amount'],
@@ -128,7 +130,7 @@ class BillController extends Controller
 
     public function show(string $id)
     {
-        $bill = Bill::with(['patient', 'details.costHead', 'payments.receivedByUser', 'opdVisit', 'ipdAdmission'])
+        $bill = Bill::with(['patient', 'details.costHead', 'details.doctor', 'payments.receivedByUser', 'opdVisit', 'ipdAdmission'])
             ->findOrFail($id);
         return response()->json($bill);
     }
@@ -146,34 +148,67 @@ class BillController extends Controller
             'discount_percent' => 'nullable|numeric|min:0|max:100',
             'tax_amount' => 'nullable|numeric|min:0',
             'adjustment' => 'nullable|numeric',
+            'refund_amount' => 'nullable|numeric',
+            'items' => 'nullable|array',
+            'items.*.bill_detail_id' => 'nullable|exists:bill_details,detail_id',
+            'items.*.service_date' => 'nullable|date',
+            'items.*.doctor_id' => 'nullable|exists:doctors,doctor_id',
+            'items.*.quantity' => 'nullable|integer|min:1',
+            'items.*.rate' => 'nullable|numeric|min:0',
+            'items.*.amount' => 'nullable|numeric|min:0',
         ]);
 
-        $discountAmount = $validated['discount_amount'] ?? $bill->discount_amount;
-        $taxAmount = $validated['tax_amount'] ?? $bill->tax_amount;
-        $adjustment = $validated['adjustment'] ?? $bill->adjustment;
+        return DB::transaction(function () use ($validated, $bill) {
+            // Update bill items if provided
+            if (isset($validated['items'])) {
+                foreach ($validated['items'] as $item) {
+                    if (isset($item['bill_detail_id'])) {
+                        $detail = BillDetail::find($item['bill_detail_id']);
+                        if ($detail && $detail->bill_id == $bill->bill_id) {
+                            $detail->update([
+                                'service_date' => $item['service_date'] ?? $detail->service_date,
+                                'doctor_id' => $item['doctor_id'] ?? $detail->doctor_id,
+                                'quantity' => $item['quantity'] ?? $detail->quantity,
+                                'rate' => $item['rate'] ?? $detail->rate,
+                                'amount' => $item['amount'] ?? $detail->amount,
+                            ]);
+                        }
+                    }
+                }
 
-        $totalAmount = $bill->subtotal - $discountAmount + $taxAmount + $adjustment;
+                // Recalculate subtotal from updated items
+                $bill->refresh();
+                $subtotal = $bill->details()->sum('amount');
+                $bill->subtotal = $subtotal;
+            }
 
-        $bill->update([
-            'discount_amount' => $discountAmount,
-            'discount_percent' => $validated['discount_percent'] ?? $bill->discount_percent,
-            'tax_amount' => $taxAmount,
-            'adjustment' => $adjustment,
-            'total_amount' => $totalAmount,
-            'due_amount' => $totalAmount - $bill->paid_amount,
-        ]);
+            $discountAmount = $validated['discount_amount'] ?? $bill->discount_amount;
+            $taxAmount = $validated['tax_amount'] ?? $bill->tax_amount;
+            $adjustment = $validated['adjustment'] ?? $validated['refund_amount'] ?? $bill->adjustment;
 
-        // Update payment status
-        if ($bill->due_amount == 0 && $bill->paid_amount > 0) {
-            $bill->payment_status = 'paid';
-        } elseif ($bill->paid_amount > 0) {
-            $bill->payment_status = 'partial';
-        } else {
-            $bill->payment_status = 'pending';
-        }
-        $bill->save();
+            $totalAmount = $bill->subtotal - $discountAmount + $taxAmount + $adjustment;
 
-        return response()->json($bill);
+            $bill->update([
+                'discount_amount' => $discountAmount,
+                'discount_percent' => $validated['discount_percent'] ?? $bill->discount_percent,
+                'tax_amount' => $taxAmount,
+                'adjustment' => $adjustment,
+                'total_amount' => $totalAmount,
+                'due_amount' => $totalAmount - $bill->paid_amount,
+            ]);
+
+            // Update payment status
+            if ($bill->due_amount == 0 && $bill->paid_amount > 0) {
+                $bill->payment_status = 'paid';
+            } elseif ($bill->paid_amount > 0) {
+                $bill->payment_status = 'partial';
+            } else {
+                $bill->payment_status = 'pending';
+            }
+            $bill->save();
+
+            return response()->json($bill->load('details'));
+        });
     }
 
     public function destroy(string $id)
