@@ -181,7 +181,42 @@
                         </button>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                        <!-- View Mode: Grouped by Cost Head -->
+                        <div v-if="isViewMode" class="p-2">
+                            <div v-for="(group, costHeadName) in groupedItemsByCostHead" :key="costHeadName" class="mb-2">
+                                <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded cursor-pointer" @click="toggleCostHead(costHeadName)">
+                                    <div>
+                                        <i :class="expandedCostHeads[costHeadName] ? 'bi bi-chevron-down' : 'bi bi-chevron-right'" class="me-2"></i>
+                                        <strong>{{ costHeadName }}</strong>
+                                        <span class="badge bg-secondary ms-2">{{ group.items.length }}</span>
+                                    </div>
+                                    <strong>{{ formatCurrency(group.total) }}</strong>
+                                </div>
+                                <div v-show="expandedCostHeads[costHeadName]" class="mt-2">
+                                    <table class="table table-sm table-bordered mb-0">
+                                        <thead class="table-light">
+                                            <tr class="small">
+                                                <th>Service</th>
+                                                <th width="60" class="text-center">Qty</th>
+                                                <th width="90" class="text-end">Rate</th>
+                                                <th width="100" class="text-end">Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="item in group.items" :key="item.service_id" class="small">
+                                                <td>{{ getServiceName(item.service_id) }}</td>
+                                                <td class="text-center">{{ item.quantity }}</td>
+                                                <td class="text-end">{{ formatCurrency(item.unit_price) }}</td>
+                                                <td class="text-end">{{ formatCurrency(item.amount) }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Edit Mode: Regular Table -->
+                        <div v-else class="table-responsive" style="max-height: 350px; overflow-y: auto;">
                             <table class="table table-sm table-hover mb-0">
                                 <thead class="table-light sticky-top">
                                     <tr class="small">
@@ -190,13 +225,13 @@
                                         <th width="60">Qty</th>
                                         <th width="90">Rate</th>
                                         <th width="100">Amount</th>
-                                        <th width="40" v-if="!isViewMode"></th>
+                                        <th width="40"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr v-for="(item, index) in form.items" :key="index" class="small">
                                         <td class="p-1">
-                                            <select class="form-select form-select-sm" v-model="item.cost_head_id" :disabled="isViewMode" @change="onCostHeadChange(item, index)">
+                                            <select class="form-select form-select-sm" v-model="item.cost_head_id" @change="onCostHeadChange(item, index)">
                                                 <option value="">Select</option>
                                                 <option v-for="ch in costHeads" :key="ch.cost_head_id" :value="ch.cost_head_id">
                                                     {{ ch.cost_head_name }}
@@ -212,15 +247,15 @@
                                             </select>
                                         </td>
                                         <td class="p-1">
-                                            <input type="number" class="form-control form-control-sm" v-model.number="item.quantity" @input="calculateAmount(item)" min="1" :disabled="isViewMode">
+                                            <input type="number" class="form-control form-control-sm" v-model.number="item.quantity" @input="calculateAmount(item)" min="1">
                                         </td>
                                         <td class="p-1">
-                                            <input type="number" class="form-control form-control-sm" v-model.number="item.unit_price" @input="calculateAmount(item)" :disabled="isViewMode">
+                                            <input type="number" class="form-control form-control-sm" v-model.number="item.unit_price" @input="calculateAmount(item)">
                                         </td>
                                         <td class="p-1">
                                             <input type="number" class="form-control form-control-sm" v-model.number="item.amount" readonly>
                                         </td>
-                                        <td class="p-1 text-center" v-if="!isViewMode">
+                                        <td class="p-1 text-center">
                                             <button class="btn btn-sm btn-outline-danger" @click="removeItem(index)" style="padding: 0.15rem 0.3rem;">
                                                 <i class="bi bi-trash" style="font-size: 0.75rem;"></i>
                                             </button>
@@ -331,6 +366,15 @@
     top: 0;
     z-index: 10;
 }
+
+.cursor-pointer {
+    cursor: pointer;
+    user-select: none;
+}
+
+.cursor-pointer:hover {
+    background-color: #e9ecef !important;
+}
 </style>
 
 <script setup>
@@ -352,6 +396,7 @@ const costHeads = ref([]);
 const editMode = ref(false);
 const originalFormData = ref(null);
 const canEdit = ref(false);
+const expandedCostHeads = ref({});
 const showBillItems = ref(false);
 const showPatientInfo = ref(true);
 const showIpdBill = ref(true);
@@ -378,6 +423,40 @@ const total = computed(() => {
 });
 
 const isViewMode = computed(() => !!route.params.id && !editMode.value);
+
+const groupedItemsByCostHead = computed(() => {
+    const grouped = {};
+    form.value.items.forEach(item => {
+        const costHeadName = getCostHeadName(item.cost_head_id);
+        if (!grouped[costHeadName]) {
+            grouped[costHeadName] = {
+                items: [],
+                total: 0
+            };
+            // Initialize as expanded by default
+            if (!expandedCostHeads.value.hasOwnProperty(costHeadName)) {
+                expandedCostHeads.value[costHeadName] = true;
+            }
+        }
+        grouped[costHeadName].items.push(item);
+        grouped[costHeadName].total += (item.amount || 0);
+    });
+    return grouped;
+});
+
+const getCostHeadName = (costHeadId) => {
+    const costHead = costHeads.value.find(ch => ch.cost_head_id == costHeadId);
+    return costHead ? costHead.cost_head_name : 'Unknown';
+};
+
+const getServiceName = (serviceId) => {
+    const service = allServices.value.find(s => s.hospital_service_id == serviceId);
+    return service ? service.service_name : 'Unknown Service';
+};
+
+const toggleCostHead = (costHeadName) => {
+    expandedCostHeads.value[costHeadName] = !expandedCostHeads.value[costHeadName];
+};
 
 const getPageTitle = () => {
     if (!route.params.id) return 'New Bill';
