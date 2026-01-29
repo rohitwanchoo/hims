@@ -754,7 +754,22 @@ const loadPatientData = async () => {
     if (!form.value.ipd_id) return;
 
     try {
-        const admission = dischargedPatients.value.find(a => a.ipd_id == form.value.ipd_id);
+        // First try to find in the cached list
+        let admission = dischargedPatients.value.find(a => a.ipd_id == form.value.ipd_id);
+
+        // If not found or we need more details, fetch from API
+        if (!admission || route.query.ipd_id) {
+            try {
+                const response = await axios.get(`/api/ipd-admissions/${form.value.ipd_id}`);
+                admission = response.data;
+                selectedPatient.value = admission;
+            } catch (error) {
+                console.error('Error fetching IPD admission details:', error);
+                // Fall back to cached data if API fails
+                admission = dischargedPatients.value.find(a => a.ipd_id == form.value.ipd_id);
+            }
+        }
+
         if (admission) {
             selectedPatient.value = admission;
 
@@ -774,6 +789,7 @@ const loadPatientData = async () => {
             // Auto-fill from admission data if available
             if (admission.diagnosis) {
                 form.value.provisional_diagnosis = admission.diagnosis;
+                form.value.final_diagnosis = admission.diagnosis; // Also set as final diagnosis
             }
             if (admission.chief_complaints) {
                 form.value.chief_complaints = admission.chief_complaints;
@@ -781,10 +797,52 @@ const loadPatientData = async () => {
             if (admission.medical_history) {
                 form.value.past_medical_history = admission.medical_history;
             }
+            if (admission.symptoms) {
+                form.value.history_of_present_illness = admission.symptoms;
+            }
+            if (admission.vital_signs) {
+                form.value.vital_signs = admission.vital_signs;
+            }
+            if (admission.examination_findings) {
+                form.value.physical_examination = admission.examination_findings;
+            }
 
             // Auto-fill ABHA if available
             if (admission.patient?.abha_address) {
                 form.value.abha_address = admission.patient.abha_address;
+            }
+
+            // Try to get clinical notes and other data
+            if (admission.progress_notes && admission.progress_notes.length > 0) {
+                // Combine progress notes into course in hospital
+                const notesText = admission.progress_notes.map(note =>
+                    `${note.note_date}: ${note.progress_note}`
+                ).join('\n\n');
+                form.value.course_in_hospital = notesText;
+            }
+
+            // Get medications if available
+            if (admission.medications && admission.medications.length > 0) {
+                const medsOnAdmission = admission.medications
+                    .filter(m => m.medication_type === 'on_admission')
+                    .map(m => `${m.medication_name} - ${m.dosage} - ${m.frequency}`)
+                    .join('\n');
+                if (medsOnAdmission) {
+                    form.value.medications_on_admission = medsOnAdmission;
+                }
+            }
+
+            // Get investigations if available
+            if (admission.investigations && admission.investigations.length > 0) {
+                const investigationsText = admission.investigations.map(inv =>
+                    `${inv.test_name}: ${inv.result || 'Pending'}`
+                ).join('\n');
+                form.value.investigations = investigationsText;
+            }
+
+            // Set condition based on status
+            if (admission.status === 'discharged') {
+                form.value.condition_at_discharge = 'improved';
             }
         }
     } catch (error) {
