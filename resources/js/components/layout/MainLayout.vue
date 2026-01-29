@@ -252,7 +252,7 @@ const menuSections = [
             { path: '/departments', label: 'Departments' },
             { path: '/opd', label: 'OPD Visits' },
             { path: '/ipd', label: 'IPD Admissions' },
-            { path: '/discharge-summary', label: 'Discharge Summaries' },
+            { path: '/discharge-summary', label: 'Summaries' },
             { path: '/bed-transfers', label: 'Bed Transfer' },
             { path: '/consultation-forms', label: 'Consultation Forms' }
         ]
@@ -391,7 +391,7 @@ const pageTitle = computed(() => {
         '/appointments': 'Appointments',
         '/opd': 'OPD Visits',
         '/ipd': 'IPD Admissions',
-        '/discharge-summary': 'Discharge Summaries',
+        '/discharge-summary': 'Summaries',
         '/bed-transfers': 'Bed Transfer',
         '/laboratory/tests': 'Lab Tests',
         '/laboratory/orders': 'Lab Orders',

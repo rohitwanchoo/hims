@@ -24,8 +24,14 @@
                         </a></li>
                     </ul>
                 </div>
+                <router-link v-if="isViewMode" :to="`/billing/create?ipd_id=${admission.ipd_id}`" class="btn btn-info">
+                    <i class="bi bi-receipt"></i> Billing
+                </router-link>
+                <router-link v-if="isViewMode" :to="`/discharge-summary/create?ipd_id=${admission.ipd_id}`" class="btn btn-primary">
+                    <i class="bi bi-file-medical"></i> Discharge Summary
+                </router-link>
                 <button v-if="isViewMode && admission.status === 'admitted'" class="btn btn-success" @click="showDischargeModal = true">
-                    <i class="bi bi-box-arrow-right"></i> Discharge
+                    <i class="bi bi-box-arrow-right"></i> Final Discharge
                 </button>
             </div>
         </div>

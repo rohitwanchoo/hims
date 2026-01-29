@@ -735,6 +735,12 @@ onMounted(async () => {
             // Fetch discharged patients
             const patientsRes = await axios.get('/api/discharge-summaries/discharged-patients');
             dischargedPatients.value = patientsRes.data || [];
+
+            // Auto-select IPD patient if ipd_id query parameter is present
+            if (route.query.ipd_id) {
+                form.value.ipd_id = route.query.ipd_id;
+                await loadPatientData();
+            }
         }
     } catch (error) {
         console.error('Error loading form data:', error);
