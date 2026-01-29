@@ -757,8 +757,35 @@ const loadPatientData = async () => {
         const admission = dischargedPatients.value.find(a => a.ipd_id == form.value.ipd_id);
         if (admission) {
             selectedPatient.value = admission;
+
+            // Auto-fill basic information
             form.value.admission_date = admission.admission_date ? admission.admission_date.substring(0, 16) : '';
-            form.value.discharge_date = admission.discharge_date ? admission.discharge_date.substring(0, 16) : '';
+            form.value.discharge_date = admission.discharge_date ? admission.discharge_date.substring(0, 16) : new Date().toISOString().substring(0, 16);
+            form.value.admission_type = admission.admission_type || 'emergency';
+
+            // Auto-fill doctors if available
+            if (admission.treating_doctor_id) {
+                form.value.treating_doctor_id = admission.treating_doctor_id;
+            }
+            if (admission.consultant_doctor_id) {
+                form.value.consultant_doctor_id = admission.consultant_doctor_id;
+            }
+
+            // Auto-fill from admission data if available
+            if (admission.diagnosis) {
+                form.value.provisional_diagnosis = admission.diagnosis;
+            }
+            if (admission.chief_complaints) {
+                form.value.chief_complaints = admission.chief_complaints;
+            }
+            if (admission.medical_history) {
+                form.value.past_medical_history = admission.medical_history;
+            }
+
+            // Auto-fill ABHA if available
+            if (admission.patient?.abha_address) {
+                form.value.abha_address = admission.patient.abha_address;
+            }
         }
     } catch (error) {
         console.error('Error loading patient data:', error);
