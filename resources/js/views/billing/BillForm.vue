@@ -1,19 +1,6 @@
 <template>
     <div>
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="mb-0">{{ getPageTitle() }}</h4>
-            <div v-if="$route.params.id">
-                <button v-if="!editMode && canEdit" class="btn btn-warning me-2" @click="enableEditMode">
-                    <i class="bi bi-pencil"></i> Edit
-                </button>
-                <button v-if="editMode" class="btn btn-success me-2" @click="updateBill">
-                    <i class="bi bi-check-lg"></i> Save Changes
-                </button>
-                <button v-if="editMode" class="btn btn-secondary" @click="cancelEdit">
-                    <i class="bi bi-x-lg"></i> Cancel
-                </button>
-            </div>
-        </div>
+        <h4 class="mb-4">{{ getPageTitle() }}</h4>
 
         <div class="row">
             <div class="col-md-8">
@@ -216,12 +203,19 @@
                             <strong class="text-primary">{{ formatCurrency(total) }}</strong>
                         </div>
 
-                        <div class="d-grid gap-2" v-if="!isViewMode">
+                        <div class="d-grid gap-2" v-if="!$route.params.id">
                             <button class="btn btn-primary" @click="saveBill" :disabled="loading">
                                 <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span>
                                 Save Bill
                             </button>
                             <router-link to="/billing" class="btn btn-secondary">Cancel</router-link>
+                        </div>
+                        <div class="d-grid gap-2" v-else-if="editMode">
+                            <button class="btn btn-success" @click="updateBill" :disabled="loading">
+                                <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span>
+                                Save Changes
+                            </button>
+                            <button class="btn btn-secondary" @click="cancelEdit">Cancel</button>
                         </div>
                         <div class="d-grid" v-else>
                             <router-link to="/billing" class="btn btn-secondary">Back to List</router-link>
@@ -291,6 +285,10 @@ const cancelEdit = () => {
         form.value = JSON.parse(JSON.stringify(originalFormData.value));
     }
     editMode.value = false;
+    // Navigate back to view mode
+    if (route.params.id) {
+        router.push(`/billing/${route.params.id}`);
+    }
 };
 
 onMounted(async () => {
@@ -314,6 +312,11 @@ onMounted(async () => {
 
             // Check if bill can be edited (only pending bills)
             canEdit.value = bill.payment_status === 'pending';
+
+            // Auto-enable edit mode if mode=edit query parameter is present
+            if (route.query.mode === 'edit' && canEdit.value) {
+                editMode.value = true;
+            }
 
             form.value = {
                 patient_id: bill.patient_id,
@@ -531,7 +534,9 @@ const updateBill = async () => {
 
         await axios.put(`/api/bills/${route.params.id}`, updateData);
         alert('Bill updated successfully!');
-        editMode.value = false;
+
+        // Navigate back to view mode
+        router.push(`/billing/${route.params.id}`);
 
         // Reload the bill data
         const billRes = await axios.get(`/api/bills/${route.params.id}`);

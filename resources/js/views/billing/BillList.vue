@@ -63,7 +63,7 @@
                                     <router-link :to="`/billing/${bill.bill_id}`" class="btn btn-outline-primary" title="View">
                                         <i class="bi bi-eye"></i>
                                     </router-link>
-                                    <router-link :to="`/billing/${bill.bill_id}`" class="btn btn-outline-warning" title="Edit" v-if="bill.payment_status === 'pending'">
+                                    <router-link :to="`/billing/${bill.bill_id}?mode=edit`" class="btn btn-outline-warning" title="Edit" v-if="bill.payment_status === 'pending'">
                                         <i class="bi bi-pencil"></i>
                                     </router-link>
                                     <button class="btn btn-outline-success" @click="addPayment(bill)" v-if="bill.due_amount > 0" title="Add Payment">
