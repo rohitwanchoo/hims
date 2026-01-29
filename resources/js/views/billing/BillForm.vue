@@ -215,6 +215,10 @@
                             <span>GST:</span>
                             <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.tax_amount" :disabled="isViewMode" step="0.01">
                         </div>
+                        <div v-if="form.bill_type === 'ipd' && runningBill" class="d-flex justify-content-between mb-2 small">
+                            <span>Advance Paid:</span>
+                            <strong class="text-success">{{ formatCurrency(advancePaid) }}</strong>
+                        </div>
                         <div class="d-flex justify-content-between align-items-center mb-2 small">
                             <span>Refund:</span>
                             <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.refund_amount" :disabled="isViewMode" step="0.01">
@@ -224,15 +228,9 @@
                             <strong>Total:</strong>
                             <strong class="text-primary fs-5">{{ formatCurrency(total) }}</strong>
                         </div>
-                        <div v-if="form.bill_type === 'ipd' && runningBill" class="mt-2 pt-2 border-top">
-                            <div class="d-flex justify-content-between mb-2 small">
-                                <span>Advance Paid:</span>
-                                <strong class="text-success">{{ formatCurrency(advancePaid) }}</strong>
-                            </div>
-                            <div class="d-flex justify-content-between mb-2">
-                                <strong class="text-danger">Balance Due:</strong>
-                                <strong class="text-danger fs-5">{{ formatCurrency(balanceDue) }}</strong>
-                            </div>
+                        <div v-if="form.bill_type === 'ipd' && runningBill" class="d-flex justify-content-between mb-2 pt-2 border-top">
+                            <strong class="text-danger">Balance Due:</strong>
+                            <strong class="text-danger fs-5">{{ formatCurrency(balanceDue) }}</strong>
                         </div>
                     </div>
                 </div>
