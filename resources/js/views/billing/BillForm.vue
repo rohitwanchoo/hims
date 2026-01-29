@@ -353,11 +353,19 @@ const form = ref({
 });
 
 const subtotal = computed(() => form.value.items.reduce((sum, item) => sum + (item.amount || 0), 0));
+
 const total = computed(() => {
     const sub = subtotal.value;
     const discount = form.value.discount_amount || 0;
     const tax = form.value.tax_amount || 0;
-    const refund = refundAmount.value;
+
+    // For IPD bills, total is just the bill amount (not reduced by refund)
+    if (form.value.bill_type === 'ipd' && runningBill.value) {
+        return sub - discount + tax;
+    }
+
+    // For non-IPD bills, subtract manual refund
+    const refund = form.value.refund_amount || 0;
     return sub - discount + tax - refund;
 });
 
@@ -369,14 +377,9 @@ const advancePaid = computed(() => {
 
 const refundAmount = computed(() => {
     if (form.value.bill_type === 'ipd' && runningBill.value) {
-        const sub = subtotal.value;
-        const discount = form.value.discount_amount || 0;
-        const tax = form.value.tax_amount || 0;
-        const totalBeforeRefund = sub - discount + tax;
-
         // If advance is more than total, calculate refund
-        if (advancePaid.value > totalBeforeRefund) {
-            return advancePaid.value - totalBeforeRefund;
+        if (advancePaid.value > total.value) {
+            return advancePaid.value - total.value;
         }
         return 0;
     }
@@ -385,6 +388,15 @@ const refundAmount = computed(() => {
 });
 
 const balanceDue = computed(() => {
+    if (form.value.bill_type === 'ipd' && runningBill.value) {
+        // If advance is more than total, balance due is 0 (patient gets refund instead)
+        if (advancePaid.value >= total.value) {
+            return 0;
+        }
+        // Patient still owes this amount
+        return total.value - advancePaid.value;
+    }
+    // For non-IPD bills, balance is total minus any payments
     return total.value - advancePaid.value;
 });
 
