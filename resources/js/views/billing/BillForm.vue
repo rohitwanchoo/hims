@@ -345,6 +345,11 @@ const onIpdAdmissionChange = async () => {
         const billResponse = await axios.get(`/api/ipd-admissions/${selectedIpdId.value}/running-bill`);
         runningBill.value = billResponse.data;
 
+        // Populate discount from running bill
+        if (runningBill.value?.billing?.discount) {
+            form.value.discount_amount = Number(runningBill.value.billing.discount) || 0;
+        }
+
         // Fetch services
         const servicesResponse = await axios.get(`/api/ipd-admissions/${selectedIpdId.value}/services`, {
             params: {
