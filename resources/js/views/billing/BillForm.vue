@@ -535,29 +535,8 @@ const updateBill = async () => {
         await axios.put(`/api/bills/${route.params.id}`, updateData);
         alert('Bill updated successfully!');
 
-        // Navigate back to view mode
-        router.push(`/billing/${route.params.id}`);
-
-        // Reload the bill data
-        const billRes = await axios.get(`/api/bills/${route.params.id}`);
-        const bill = billRes.data;
-        form.value = {
-            patient_id: bill.patient_id,
-            ipd_id: bill.ipd_id,
-            bill_date: bill.bill_date ? bill.bill_date.split('T')[0] : '',
-            bill_type: bill.bill_type,
-            discount_amount: Number(bill.discount_amount) || 0,
-            discount_percent: Number(bill.discount_percent) || 0,
-            tax_amount: Number(bill.tax_amount) || 0,
-            adjustment: Number(bill.adjustment) || 0,
-            items: (bill.details || []).map(detail => ({
-                ...detail,
-                service_id: detail.item_id,
-                quantity: Number(detail.quantity) || 1,
-                amount: Number(detail.amount) || 0,
-                unit_price: Number(detail.unit_price) > 0 ? Number(detail.unit_price) : (Number(detail.amount) / (Number(detail.quantity) || 1))
-            }))
-        };
+        // Navigate back to billing list
+        router.push('/billing');
     } catch (error) {
         console.error('Error updating bill:', error);
         alert(error.response?.data?.message || 'Error updating bill');
