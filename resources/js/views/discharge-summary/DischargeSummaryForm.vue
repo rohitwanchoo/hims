@@ -68,7 +68,7 @@
                                     <label class="form-label">Treating Doctor</label>
                                     <select class="form-select" v-model="form.treating_doctor_id" :disabled="isViewMode">
                                         <option value="">Select doctor...</option>
-                                        <option v-for="doctor in doctors" :key="doctor.user_id" :value="doctor.user_id">
+                                        <option v-for="doctor in doctors" :key="doctor.doctor_id" :value="doctor.doctor_id">
                                             {{ doctor.full_name }}
                                         </option>
                                     </select>
@@ -77,7 +77,7 @@
                                     <label class="form-label">Consultant Doctor</label>
                                     <select class="form-select" v-model="form.consultant_doctor_id" :disabled="isViewMode">
                                         <option value="">Select doctor...</option>
-                                        <option v-for="doctor in doctors" :key="doctor.user_id" :value="doctor.user_id">
+                                        <option v-for="doctor in doctors" :key="doctor.doctor_id" :value="doctor.doctor_id">
                                             {{ doctor.full_name }}
                                         </option>
                                     </select>
@@ -310,9 +310,9 @@ onMounted(async () => {
     try {
         loading.value = true;
 
-        // Fetch doctors
-        const doctorsRes = await axios.get('/api/discharge-summaries/doctors');
-        doctors.value = doctorsRes.data || [];
+        // Fetch doctors from doctors master
+        const doctorsRes = await axios.get('/api/doctors');
+        doctors.value = doctorsRes.data.data || doctorsRes.data || [];
 
         if (route.params.id) {
             // Load existing summary

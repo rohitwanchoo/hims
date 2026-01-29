@@ -73,12 +73,12 @@ class DischargeSummary extends Model
 
     public function treatingDoctor()
     {
-        return $this->belongsTo(User::class, 'treating_doctor_id', 'user_id');
+        return $this->belongsTo(Doctor::class, 'treating_doctor_id', 'doctor_id');
     }
 
     public function consultantDoctor()
     {
-        return $this->belongsTo(User::class, 'consultant_doctor_id', 'user_id');
+        return $this->belongsTo(Doctor::class, 'consultant_doctor_id', 'doctor_id');
     }
 
     public function creator()
