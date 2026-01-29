@@ -1,6 +1,19 @@
 <template>
     <div>
-        <h4 class="mb-4">{{ $route.params.id ? 'View Bill' : 'New Bill' }}</h4>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="mb-0">{{ getPageTitle() }}</h4>
+            <div v-if="$route.params.id">
+                <button v-if="!editMode && canEdit" class="btn btn-warning me-2" @click="enableEditMode">
+                    <i class="bi bi-pencil"></i> Edit
+                </button>
+                <button v-if="editMode" class="btn btn-success me-2" @click="updateBill">
+                    <i class="bi bi-check-lg"></i> Save Changes
+                </button>
+                <button v-if="editMode" class="btn btn-secondary" @click="cancelEdit">
+                    <i class="bi bi-x-lg"></i> Cancel
+                </button>
+            </div>
+        </div>
 
         <div class="row">
             <div class="col-md-8">
@@ -12,7 +25,7 @@
                         <div class="row g-3">
                             <div class="col-md-3">
                                 <label class="form-label">Bill Type</label>
-                                <select class="form-select" v-model="form.bill_type" :disabled="!!$route.params.id" @change="onBillTypeChange">
+                                <select class="form-select" v-model="form.bill_type" :disabled="isViewMode" @change="onBillTypeChange">
                                     <option value="general">General</option>
                                     <option value="opd">OPD</option>
                                     <option value="ipd">IPD</option>
@@ -22,7 +35,7 @@
                             </div>
                             <div class="col-md-6" v-if="form.bill_type === 'ipd'">
                                 <label class="form-label">IPD Admission</label>
-                                <select class="form-select" v-model="selectedIpdId" :disabled="!!$route.params.id" @change="onIpdAdmissionChange">
+                                <select class="form-select" v-model="selectedIpdId" :disabled="isViewMode" @change="onIpdAdmissionChange">
                                     <option value="">Select IPD Patient</option>
                                     <option v-for="admission in ipdAdmissions" :key="admission.ipd_id" :value="admission.ipd_id">
                                         {{ admission.ipd_number }} - {{ admission.patient?.first_name }} {{ admission.patient?.last_name }}
@@ -31,7 +44,7 @@
                             </div>
                             <div class="col-md-6" v-else>
                                 <label class="form-label">Patient</label>
-                                <select class="form-select" v-model="form.patient_id" :disabled="!!$route.params.id">
+                                <select class="form-select" v-model="form.patient_id" :disabled="isViewMode">
                                     <option value="">Select Patient</option>
                                     <option v-for="p in patients" :key="p?.patient_id" :value="p?.patient_id" v-if="p && p.patient_id">
                                         {{ p.patient_code }} - {{ p.first_name }} {{ p.last_name }}
@@ -40,7 +53,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Bill Date</label>
-                                <input type="date" class="form-control" v-model="form.bill_date" :disabled="!!$route.params.id">
+                                <input type="date" class="form-control" v-model="form.bill_date" :disabled="isViewMode">
                             </div>
                         </div>
                     </div>
@@ -114,7 +127,7 @@
                 <div class="card mb-3">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h6 class="mb-0">Bill Items</h6>
-                        <button class="btn btn-sm btn-primary" @click="addItem" v-if="!$route.params.id">
+                        <button class="btn btn-sm btn-primary" @click="addItem" v-if="!isViewMode">
                             <i class="bi bi-plus"></i> Add Services
                         </button>
                     </div>
@@ -127,13 +140,13 @@
                                     <th width="80">Qty</th>
                                     <th width="100">Rate</th>
                                     <th width="100">Amount</th>
-                                    <th width="50" v-if="!$route.params.id"></th>
+                                    <th width="50" v-if="!isViewMode"></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="(item, index) in form.items" :key="index">
                                     <td>
-                                        <select class="form-select form-select-sm" v-model="item.cost_head_id" :disabled="!!$route.params.id" @change="onCostHeadChange(item, index)">
+                                        <select class="form-select form-select-sm" v-model="item.cost_head_id" :disabled="isViewMode" @change="onCostHeadChange(item, index)">
                                             <option value="">Select Cost Head</option>
                                             <option v-for="ch in costHeads" :key="ch.cost_head_id" :value="ch.cost_head_id">
                                                 {{ ch.cost_head_name }}
@@ -149,15 +162,15 @@
                                         </select>
                                     </td>
                                     <td>
-                                        <input type="number" class="form-control form-control-sm" v-model.number="item.quantity" @input="calculateAmount(item)" min="1" :disabled="!!$route.params.id">
+                                        <input type="number" class="form-control form-control-sm" v-model.number="item.quantity" @input="calculateAmount(item)" min="1" :disabled="isViewMode">
                                     </td>
                                     <td>
-                                        <input type="number" class="form-control form-control-sm" v-model.number="item.unit_price" @input="calculateAmount(item)" :disabled="!!$route.params.id">
+                                        <input type="number" class="form-control form-control-sm" v-model.number="item.unit_price" @input="calculateAmount(item)" :disabled="isViewMode">
                                     </td>
                                     <td>
                                         <input type="number" class="form-control form-control-sm" v-model.number="item.amount" readonly>
                                     </td>
-                                    <td v-if="!$route.params.id">
+                                    <td v-if="!isViewMode">
                                         <button class="btn btn-sm btn-outline-danger" @click="removeItem(index)">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -182,19 +195,19 @@
                         <div class="d-flex justify-content-between mb-2">
                             <span>Discount:</span>
                             <div class="input-group input-group-sm" style="width: 120px;">
-                                <input type="number" class="form-control" v-model.number="form.discount_amount" :disabled="!!$route.params.id" step="0.01">
+                                <input type="number" class="form-control" v-model.number="form.discount_amount" :disabled="isViewMode" step="0.01">
                             </div>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
                             <span>Tax:</span>
                             <div class="input-group input-group-sm" style="width: 120px;">
-                                <input type="number" class="form-control" v-model.number="form.tax_amount" :disabled="!!$route.params.id" step="0.01">
+                                <input type="number" class="form-control" v-model.number="form.tax_amount" :disabled="isViewMode" step="0.01">
                             </div>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
                             <span>Adjustment:</span>
                             <div class="input-group input-group-sm" style="width: 120px;">
-                                <input type="number" class="form-control" v-model.number="form.adjustment" :disabled="!!$route.params.id" step="0.01">
+                                <input type="number" class="form-control" v-model.number="form.adjustment" :disabled="isViewMode" step="0.01">
                             </div>
                         </div>
                         <hr>
@@ -203,7 +216,7 @@
                             <strong class="text-primary">{{ formatCurrency(total) }}</strong>
                         </div>
 
-                        <div class="d-grid gap-2" v-if="!$route.params.id">
+                        <div class="d-grid gap-2" v-if="!isViewMode">
                             <button class="btn btn-primary" @click="saveBill" :disabled="loading">
                                 <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span>
                                 Save Bill
@@ -236,6 +249,9 @@ const selectedIpdId = ref('');
 const runningBill = ref(null);
 const ipdServices = ref([]);
 const costHeads = ref([]);
+const editMode = ref(false);
+const originalFormData = ref(null);
+const canEdit = ref(false);
 
 const form = ref({
     patient_id: '',
@@ -258,6 +274,25 @@ const total = computed(() => {
     return sub - discount + tax + adj;
 });
 
+const isViewMode = computed(() => !!route.params.id && !editMode.value);
+
+const getPageTitle = () => {
+    if (!route.params.id) return 'New Bill';
+    return editMode.value ? 'Edit Bill' : 'View Bill';
+};
+
+const enableEditMode = () => {
+    originalFormData.value = JSON.parse(JSON.stringify(form.value));
+    editMode.value = true;
+};
+
+const cancelEdit = () => {
+    if (originalFormData.value) {
+        form.value = JSON.parse(JSON.stringify(originalFormData.value));
+    }
+    editMode.value = false;
+};
+
 onMounted(async () => {
     try {
         const [patientsRes, servicesRes, costHeadsRes] = await Promise.all([
@@ -276,6 +311,10 @@ onMounted(async () => {
         if (route.params.id) {
             const billRes = await axios.get(`/api/bills/${route.params.id}`);
             const bill = billRes.data;
+
+            // Check if bill can be edited (only pending bills)
+            canEdit.value = bill.payment_status === 'pending';
+
             form.value = {
                 patient_id: bill.patient_id,
                 ipd_id: bill.ipd_id,
@@ -464,6 +503,59 @@ const saveBill = async () => {
     } catch (error) {
         console.error('Error saving bill:', error);
         alert(error.response?.data?.message || 'Error saving bill');
+    } finally {
+        loading.value = false;
+    }
+};
+
+const updateBill = async () => {
+    if (!form.value.patient_id) {
+        alert('Please select a patient');
+        return;
+    }
+
+    if (form.value.items.length === 0 || !form.value.items[0].item_name) {
+        alert('Please add at least one service');
+        return;
+    }
+
+    loading.value = true;
+    try {
+        // Only send updatable fields
+        const updateData = {
+            discount_amount: form.value.discount_amount,
+            discount_percent: form.value.discount_percent,
+            tax_amount: form.value.tax_amount,
+            adjustment: form.value.adjustment
+        };
+
+        await axios.put(`/api/bills/${route.params.id}`, updateData);
+        alert('Bill updated successfully!');
+        editMode.value = false;
+
+        // Reload the bill data
+        const billRes = await axios.get(`/api/bills/${route.params.id}`);
+        const bill = billRes.data;
+        form.value = {
+            patient_id: bill.patient_id,
+            ipd_id: bill.ipd_id,
+            bill_date: bill.bill_date ? bill.bill_date.split('T')[0] : '',
+            bill_type: bill.bill_type,
+            discount_amount: Number(bill.discount_amount) || 0,
+            discount_percent: Number(bill.discount_percent) || 0,
+            tax_amount: Number(bill.tax_amount) || 0,
+            adjustment: Number(bill.adjustment) || 0,
+            items: (bill.details || []).map(detail => ({
+                ...detail,
+                service_id: detail.item_id,
+                quantity: Number(detail.quantity) || 1,
+                amount: Number(detail.amount) || 0,
+                unit_price: Number(detail.unit_price) > 0 ? Number(detail.unit_price) : (Number(detail.amount) / (Number(detail.quantity) || 1))
+            }))
+        };
+    } catch (error) {
+        console.error('Error updating bill:', error);
+        alert(error.response?.data?.message || 'Error updating bill');
     } finally {
         loading.value = false;
     }
