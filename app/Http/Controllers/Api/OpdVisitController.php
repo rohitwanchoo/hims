@@ -170,7 +170,7 @@ class OpdVisitController extends Controller
             // Check for free followup
             $isFreeFollowup = false;
             $previousVisitId = null;
-            if ($validated['visit_type'] ?? 'new' !== 'new' && !empty($validated['doctor_id'])) {
+            if (($validated['visit_type'] ?? 'new') !== 'new' && !empty($validated['doctor_id'])) {
                 $doctor = Doctor::find($validated['doctor_id']);
                 if ($doctor && $doctor->skill_set_id) {
                     $validity = SkillSetVisitValidity::where('skill_set_id', $doctor->skill_set_id)->first();
