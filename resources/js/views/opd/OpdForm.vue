@@ -566,6 +566,26 @@ const selectPatient = async (patient) => {
     try {
         const response = await axios.get(`/api/opd-visits/patient/${patient.patient_id}/history`);
         patientHistory.value = response.data;
+
+        // Check if patient already registered today
+        const today = new Date().toISOString().split('T')[0];
+        const todayVisit = response.data.find(visit => {
+            const visitDate = new Date(visit.visit_date).toISOString().split('T')[0];
+            return visitDate === today && ['waiting', 'in_consultation'].includes(visit.status);
+        });
+
+        if (todayVisit) {
+            const confirmed = confirm(
+                `This patient is already registered today (Token #${todayVisit.token_number}).\n\n` +
+                `Status: ${todayVisit.status}\n` +
+                `Doctor: ${todayVisit.doctor?.doctor_name || 'N/A'}\n\n` +
+                `Do you want to continue with a new registration anyway?`
+            );
+            if (!confirmed) {
+                clearPatient();
+                return;
+            }
+        }
     } catch (error) {
         console.error('Error fetching history:', error);
     }
@@ -668,7 +688,7 @@ const saveVisit = async (printAfter = false) => {
         }
     } catch (error) {
         console.error('Error saving OPD visit:', error);
-        const errorMessage = error.response?.data?.message || error.message || 'Error saving visit';
+        const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Error saving visit';
         alert(errorMessage);
     } finally {
         saving.value = false;

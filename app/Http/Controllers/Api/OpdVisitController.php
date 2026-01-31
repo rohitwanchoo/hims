@@ -155,6 +155,21 @@ class OpdVisitController extends Controller
                 $patient = Patient::find($patientId);
             }
 
+            // Check if patient already registered today
+            $visitDate = $validated['visit_date'] ?? now()->toDateString();
+            $existingVisit = OpdVisit::where('patient_id', $patientId)
+                ->whereDate('visit_date', $visitDate)
+                ->whereIn('status', ['waiting', 'in_consultation'])
+                ->first();
+
+            if ($existingVisit) {
+                return response()->json([
+                    'message' => 'Patient already registered today',
+                    'error' => 'This patient already has an active OPD visit for today (Token #' . $existingVisit->token_number . '). Please check the OPD list.',
+                    'existing_visit' => $existingVisit
+                ], 422);
+            }
+
             // Generate OPD number
             $todayCount = OpdVisit::whereDate('visit_date', now()->toDateString())->count();
             $opdNumber = 'OPD' . now()->format('Ymd') . str_pad($todayCount + 1, 4, '0', STR_PAD_LEFT);
