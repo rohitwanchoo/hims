@@ -1189,23 +1189,24 @@ const fetchTodayOpdPatients = async () => {
         const today = new Date().toISOString().split('T')[0];
         const response = await axios.get('/api/opd-visits', {
             params: {
-                date: today,
-                per_page: 1000
+                date: today
             }
         });
 
+        console.log('OPD API response:', response.data);
+
         // Extract unique patients from OPD visits
-        const visits = response.data.visits || response.data.data || response.data || [];
+        const visits = response.data.visits || [];
         const uniquePatients = [];
         const patientIds = new Set();
 
         visits.forEach(visit => {
-            if (visit.patient && !patientIds.has(visit.patient.patient_id)) {
+            if (visit.patient && visit.patient.patient_id && !patientIds.has(visit.patient.patient_id)) {
                 patientIds.add(visit.patient.patient_id);
                 uniquePatients.push({
                     patient_id: visit.patient.patient_id,
                     pcd: visit.patient.pcd || visit.patient.patient_code,
-                    patient_name: visit.patient.patient_name,
+                    patient_name: visit.patient.patient_name || `${visit.patient.first_name || ''} ${visit.patient.last_name || ''}`.trim(),
                     first_name: visit.patient.first_name,
                     last_name: visit.patient.last_name
                 });
@@ -1213,7 +1214,7 @@ const fetchTodayOpdPatients = async () => {
         });
 
         opdPatients.value = uniquePatients;
-        console.log('Loaded today\'s OPD patients:', uniquePatients.length);
+        console.log('Loaded today\'s OPD patients:', uniquePatients.length, uniquePatients);
     } catch (error) {
         console.error('Error fetching OPD patients:', error);
         // Fall back to all patients if OPD fetch fails
