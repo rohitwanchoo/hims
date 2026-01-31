@@ -749,8 +749,76 @@ onMounted(async () => {
                 }
             }
         } else {
+            // Auto-populate OPD bill if opd_id and patient_id query parameters are present
+            if (route.query.opd_id && route.query.patient_id) {
+                try {
+                    // Load OPD visit data
+                    const opdRes = await axios.get(`/api/opd-visits/${route.query.opd_id}`);
+                    const opdVisit = opdRes.data;
+
+                    // Set form defaults for OPD bill
+                    form.value.bill_type = 'opd';
+                    form.value.patient_id = parseInt(route.query.patient_id);
+                    form.value.payment_mode = 'cash';
+                    form.value.bill_date = new Date().toISOString().split('T')[0];
+
+                    // Find OPD cost head
+                    const opdCostHead = costHeads.value.find(ch =>
+                        ch.cost_head_name.toLowerCase().includes('opd') ||
+                        ch.cost_head_name.toLowerCase() === 'consultation'
+                    );
+
+                    // Add consultation fee as first item if it exists
+                    if (opdVisit.consultation_fee > 0) {
+                        const consultationService = allServices.value.find(s =>
+                            s.service_name.toLowerCase().includes('consultation') ||
+                            s.service_name.toLowerCase().includes('opd')
+                        );
+
+                        form.value.items = [{
+                            service_id: consultationService?.hospital_service_id || '',
+                            cost_head_id: opdCostHead?.cost_head_id || '',
+                            item_name: 'OPD Consultation',
+                            item_type: 'service',
+                            quantity: 1,
+                            unit_price: opdVisit.consultation_fee,
+                            amount: opdVisit.consultation_fee,
+                            service_date: null,
+                            doctor_id: opdVisit.doctor_id || null
+                        }];
+                    }
+
+                    // Add OPD services if any
+                    if (opdVisit.services && opdVisit.services.length > 0) {
+                        const serviceItems = opdVisit.services.map(svc => ({
+                            service_id: svc.service_id || '',
+                            cost_head_id: opdCostHead?.cost_head_id || '',
+                            item_name: svc.service?.service_name || 'Service',
+                            item_type: 'service',
+                            quantity: svc.quantity || 1,
+                            unit_price: svc.rate || 0,
+                            amount: svc.amount || 0,
+                            service_date: null,
+                            doctor_id: opdVisit.doctor_id || null
+                        }));
+
+                        if (form.value.items.length > 0) {
+                            form.value.items.push(...serviceItems);
+                        } else {
+                            form.value.items = serviceItems;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading OPD visit data:', error);
+                    // Still set basic defaults even if OPD data fails to load
+                    form.value.bill_type = 'opd';
+                    form.value.patient_id = parseInt(route.query.patient_id);
+                    form.value.payment_mode = 'cash';
+                    form.value.bill_date = new Date().toISOString().split('T')[0];
+                }
+            }
             // Auto-select IPD patient if ipd_id query parameter is present
-            if (route.query.ipd_id) {
+            else if (route.query.ipd_id) {
                 form.value.bill_type = 'ipd';
                 await fetchIpdAdmissions();
                 selectedIpdId.value = route.query.ipd_id;
