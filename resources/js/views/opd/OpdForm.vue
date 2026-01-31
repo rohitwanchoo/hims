@@ -614,6 +614,11 @@ const checkFreeFollowup = async () => {
 };
 
 const saveVisit = async (printAfter = false) => {
+    if (!canSubmit.value) {
+        alert('Please select a patient or fill in required patient details');
+        return;
+    }
+
     saving.value = true;
     try {
         const payload = { ...form };
@@ -638,16 +643,33 @@ const saveVisit = async (printAfter = false) => {
             response = await axios.post('/api/opd-visits', payload);
         }
 
-        if (printAfter) {
-            // Open print window
-            window.open(`/opd/${response.data.opd_id}/print`, '_blank');
-        }
+        const opdId = response.data.opd_id;
+        console.log('OPD Visit saved successfully:', opdId);
 
-        router.push('/opd');
+        if (printAfter && opdId) {
+            // Open print window
+            const printUrl = `/api/opd-visits/${opdId}/print`;
+            console.log('Opening print window:', printUrl);
+            const printWindow = window.open(printUrl, '_blank');
+
+            if (!printWindow) {
+                alert('Print window blocked! Please allow popups for this site and try again.');
+            }
+
+            // Wait a bit before redirecting to ensure print window opens
+            setTimeout(() => {
+                router.push('/opd');
+            }, 500);
+        } else {
+            router.push('/opd');
+        }
     } catch (error) {
-        alert(error.response?.data?.message || 'Error saving visit');
+        console.error('Error saving OPD visit:', error);
+        const errorMessage = error.response?.data?.message || error.message || 'Error saving visit';
+        alert(errorMessage);
+    } finally {
+        saving.value = false;
     }
-    saving.value = false;
 };
 
 const saveAndPrint = () => {

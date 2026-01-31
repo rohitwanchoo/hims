@@ -15,7 +15,7 @@ class BillController extends Controller
         $hospitalId = auth()->user()->hospital_id;
 
         $query = Bill::where('hospital_id', $hospitalId)
-            ->with(['patient', 'details', 'payments']);
+            ->with(['patient.insuranceCompanyRelation', 'details', 'payments']);
 
         if ($request->search) {
             $search = $request->search;
@@ -75,6 +75,8 @@ class BillController extends Controller
             'items.*.item_id' => 'nullable|integer',
             'items.*.cost_head_id' => 'nullable|exists:cost_heads,cost_head_id',
             'items.*.item_name' => 'required|string',
+            'items.*.ward_name' => 'nullable|string|max:100',
+            'items.*.bed_name' => 'nullable|string|max:50',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.amount' => 'required|numeric|min:0',
@@ -128,6 +130,8 @@ class BillController extends Controller
                     'item_id' => $item['item_id'] ?? null,
                     'cost_head_id' => $item['cost_head_id'] ?? null,
                     'item_name' => $item['item_name'],
+                    'ward_name' => $item['ward_name'] ?? null,
+                    'bed_name' => $item['bed_name'] ?? null,
                     'service_date' => $item['service_date'] ?? null,
                     'doctor_id' => $item['doctor_id'] ?? null,
                     'quantity' => $item['quantity'],
@@ -142,7 +146,7 @@ class BillController extends Controller
 
     public function show(string $id)
     {
-        $bill = Bill::with(['patient', 'details.costHead', 'details.doctor', 'payments.receivedByUser', 'opdVisit', 'ipdAdmission'])
+        $bill = Bill::with(['patient.insuranceCompanyRelation', 'details.costHead', 'details.doctor', 'payments.receivedByUser', 'opdVisit', 'ipdAdmission'])
             ->findOrFail($id);
         return response()->json($bill);
     }

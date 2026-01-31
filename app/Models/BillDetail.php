@@ -14,6 +14,8 @@ class BillDetail extends Model
         'item_id',
         'cost_head_id',
         'item_name',
+        'ward_name',
+        'bed_name',
         'description',
         'service_date',
         'doctor_id',
