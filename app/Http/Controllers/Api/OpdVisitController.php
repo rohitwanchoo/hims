@@ -27,7 +27,8 @@ class OpdVisitController extends Controller
             'department',
             'patientClass',
             'referenceDoctor',
-            'services.service'
+            'services.service',
+            'bill'
         ]);
 
         // Filter by date (default: today)

@@ -171,7 +171,8 @@ class OpdVisit extends Model
 
     public function bill()
     {
-        return $this->belongsTo(Bill::class, 'bill_id', 'bill_id');
+        return $this->hasOne(Bill::class, 'opd_id', 'opd_id')
+            ->orderBy('created_at', 'desc');
     }
 
     public function appointment()

@@ -236,6 +236,9 @@
                                     <div class="small" :class="visit.payment_status === 'paid' ? 'text-success' : 'text-danger'">
                                         {{ visit.payment_status }}
                                     </div>
+                                    <div v-if="visit.bill" class="small text-muted">
+                                        Bill: {{ visit.bill.bill_number }}
+                                    </div>
                                 </div>
                                 <span v-else class="text-muted">-</span>
                             </td>
