@@ -8,6 +8,7 @@ Route::prefix('print')->group(function () {
     Route::get('/discharge-summary/{id}', [PrintController::class, 'dischargeSummary'])->name('print.discharge-summary');
     Route::get('/ipd-case-sheet/{id}', [PrintController::class, 'ipdCaseSheet'])->name('print.ipd-case-sheet');
     Route::get('/advance-receipt/{id}', [PrintController::class, 'advanceReceipt'])->name('print.advance-receipt');
+    Route::get('/opd-visit/{id}', [PrintController::class, 'opdVisit'])->name('print.opd-visit');
 });
 
 // Serve Vue SPA for all frontend routes

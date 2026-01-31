@@ -648,7 +648,7 @@ const saveVisit = async (printAfter = false) => {
 
         if (printAfter && opdId) {
             // Open print window
-            const printUrl = `/api/opd-visits/${opdId}/print`;
+            const printUrl = `/print/opd-visit/${opdId}`;
             console.log('Opening print window:', printUrl);
             const printWindow = window.open(printUrl, '_blank');
 

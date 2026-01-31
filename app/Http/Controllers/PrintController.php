@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\IpdAdmission;
+use App\Models\OpdVisit;
 use App\Models\Hospital;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -139,5 +140,37 @@ class PrintController extends Controller
         $hospital = Hospital::find($hospitalId);
 
         return view('prints.advance-receipt', compact('payment', 'hospital'));
+    }
+
+    /**
+     * Print OPD Visit
+     */
+    public function opdVisit(Request $request, $id)
+    {
+        $hospitalId = $request->query('hospital_id') ?? (Auth::check() ? Auth::user()->hospital_id : null);
+
+        if (!$hospitalId) {
+            abort(403, 'Hospital ID is required');
+        }
+
+        $opdVisit = OpdVisit::where('opd_id', $id)
+            ->with([
+                'patient',
+                'doctor',
+                'department',
+                'patientClass',
+                'referenceDoctor',
+                'services.service',
+                'healthPackage',
+            ])
+            ->first();
+
+        if (!$opdVisit) {
+            abort(404, 'OPD visit not found');
+        }
+
+        $hospital = Hospital::find($hospitalId);
+
+        return view('prints.opd-visit', compact('opdVisit', 'hospital'));
     }
 }
