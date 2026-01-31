@@ -75,10 +75,13 @@
                                 </select>
                             </div>
                             <div class="col-md-3" v-else>
-                                <label class="form-label small mb-1">Patient</label>
+                                <label class="form-label small mb-1">
+                                    Patient
+                                    <span v-if="form.bill_type === 'opd'" class="text-muted small">(Today's OPD)</span>
+                                </label>
                                 <select class="form-select form-select-sm" v-model="form.patient_id" :disabled="isViewMode">
                                     <option value="">Select Patient</option>
-                                    <option v-for="p in patients" :key="p?.patient_id" :value="p?.patient_id" v-if="p && p.patient_id">
+                                    <option v-for="p in filteredPatients" :key="p?.patient_id" :value="p?.patient_id" v-if="p && p.patient_id">
                                         {{ p.pcd }} - {{ p.patient_name || (p.first_name + ' ' + p.last_name) }}
                                     </option>
                                 </select>
@@ -396,6 +399,7 @@ const router = useRouter();
 
 const loading = ref(false);
 const patients = ref([]);
+const opdPatients = ref([]);
 const allServices = ref([]);
 const ipdAdmissions = ref([]);
 const selectedIpdId = ref('');
@@ -484,6 +488,14 @@ const balanceDue = computed(() => {
     }
     // For non-IPD bills, balance is total minus any payments
     return total.value - advancePaid.value;
+});
+
+// Show today's OPD patients when bill type is OPD, otherwise show all patients
+const filteredPatients = computed(() => {
+    if (form.value.bill_type === 'opd' && opdPatients.value.length > 0) {
+        return opdPatients.value;
+    }
+    return patients.value;
 });
 
 // Function to auto-populate insurance data from patient
@@ -1132,6 +1144,14 @@ const onBillTypeChange = async () => {
         form.value.patient_id = '';
         selectedIpdId.value = '';
         runningBill.value = null;
+    } else if (form.value.bill_type === 'opd') {
+        // Fetch today's OPD patients
+        await fetchTodayOpdPatients();
+        // Clear IPD data
+        ipdAdmissions.value = [];
+        selectedIpdId.value = '';
+        runningBill.value = null;
+        form.value.ipd_id = '';
     } else {
         // Clear IPD data
         ipdAdmissions.value = [];
@@ -1158,6 +1178,46 @@ const fetchIpdAdmissions = async (includeAll = false) => {
     } catch (error) {
         console.error('Error fetching IPD admissions:', error);
         alert('Error loading IPD admissions');
+    } finally {
+        loading.value = false;
+    }
+};
+
+const fetchTodayOpdPatients = async () => {
+    try {
+        loading.value = true;
+        const today = new Date().toISOString().split('T')[0];
+        const response = await axios.get('/api/opd-visits', {
+            params: {
+                date: today,
+                per_page: 1000
+            }
+        });
+
+        // Extract unique patients from OPD visits
+        const visits = response.data.visits || response.data.data || response.data || [];
+        const uniquePatients = [];
+        const patientIds = new Set();
+
+        visits.forEach(visit => {
+            if (visit.patient && !patientIds.has(visit.patient.patient_id)) {
+                patientIds.add(visit.patient.patient_id);
+                uniquePatients.push({
+                    patient_id: visit.patient.patient_id,
+                    pcd: visit.patient.pcd || visit.patient.patient_code,
+                    patient_name: visit.patient.patient_name,
+                    first_name: visit.patient.first_name,
+                    last_name: visit.patient.last_name
+                });
+            }
+        });
+
+        opdPatients.value = uniquePatients;
+        console.log('Loaded today\'s OPD patients:', uniquePatients.length);
+    } catch (error) {
+        console.error('Error fetching OPD patients:', error);
+        // Fall back to all patients if OPD fetch fails
+        opdPatients.value = [];
     } finally {
         loading.value = false;
     }
