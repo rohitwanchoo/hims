@@ -82,9 +82,11 @@
                                 </label>
                                 <select class="form-select form-select-sm" v-model="form.patient_id" :disabled="isViewMode">
                                     <option value="">Select Patient</option>
-                                    <option v-for="p in filteredPatients" :key="p?.patient_id" :value="p?.patient_id" v-if="p && p.patient_id">
-                                        {{ p.pcd }} - {{ p.patient_name || (p.first_name + ' ' + p.last_name) }}
-                                    </option>
+                                    <template v-for="p in filteredPatients" :key="p?.patient_id">
+                                        <option v-if="p && p.patient_id" :value="p.patient_id">
+                                            {{ p.pcd }} - {{ p.patient_name || (p.first_name + ' ' + p.last_name) }}
+                                        </option>
+                                    </template>
                                 </select>
                             </div>
                             <div class="col-md-3">
