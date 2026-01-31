@@ -758,9 +758,15 @@ onMounted(async () => {
 
                     // Set form defaults for OPD bill
                     form.value.bill_type = 'opd';
-                    form.value.patient_id = parseInt(route.query.patient_id);
+                    form.value.patient_id = Number(route.query.patient_id);
                     form.value.payment_mode = 'cash';
                     form.value.bill_date = new Date().toISOString().split('T')[0];
+
+                    // Set selectedPatient for any UI components that might use it
+                    const patient = patients.value.find(p => p && p.patient_id == route.query.patient_id);
+                    if (patient) {
+                        selectedPatient.value = patient;
+                    }
 
                     // Find OPD cost head
                     const opdCostHead = costHeads.value.find(ch =>
