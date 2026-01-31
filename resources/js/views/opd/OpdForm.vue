@@ -348,9 +348,11 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
+import { useAuthStore } from '../../stores/auth';
 
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore();
 const isEdit = computed(() => !!route.params.id);
 
 // Data
@@ -647,8 +649,9 @@ const saveVisit = async (printAfter = false) => {
         console.log('OPD Visit saved successfully:', opdId);
 
         if (printAfter && opdId) {
-            // Open print window
-            const printUrl = `/print/opd-visit/${opdId}`;
+            // Open print window with hospital_id
+            const hospitalId = authStore.currentHospitalId || authStore.hospital?.hospital_id;
+            const printUrl = `/print/opd-visit/${opdId}?hospital_id=${hospitalId}`;
             console.log('Opening print window:', printUrl);
             const printWindow = window.open(printUrl, '_blank');
 
