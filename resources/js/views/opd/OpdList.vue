@@ -249,6 +249,11 @@
                                             @click="startConsultation(visit)" title="Start Consultation">
                                         <i class="bi bi-play-fill"></i>
                                     </button>
+                                    <button v-if="visit.payment_status !== 'paid' && visit.net_amount > 0"
+                                            class="btn btn-outline-info"
+                                            @click="collectPayment(visit)" title="Collect Payment">
+                                        <i class="bi bi-cash-coin"></i>
+                                    </button>
                                     <!-- Continue Consultation button temporarily hidden -->
                                     <!-- <button v-if="visit.status === 'in_consultation' && opdConfig.show_continue_consultation_button" class="btn btn-success"
                                             @click="openConsultation(visit)" title="Continue Consultation">
@@ -493,6 +498,11 @@ const startConsultation = async (visit) => {
 
 const openConsultation = (visit) => {
     router.push(`/opd/${visit.opd_id}/consultation`);
+};
+
+const collectPayment = (visit) => {
+    // Redirect to billing page with OPD visit details
+    router.push(`/billing/create?opd_id=${visit.opd_id}&patient_id=${visit.patient_id}`);
 };
 
 const canCancel = (visit) => {
