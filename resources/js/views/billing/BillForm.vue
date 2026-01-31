@@ -780,6 +780,7 @@ onMounted(async () => {
 
                     // Set form defaults for OPD bill
                     form.value.bill_type = 'opd';
+                    form.value.opd_id = Number(route.query.opd_id);
                     form.value.patient_id = Number(route.query.patient_id);
                     form.value.payment_mode = 'cash';
                     form.value.bill_date = new Date().toISOString().split('T')[0];
@@ -1519,16 +1520,21 @@ const saveBill = async () => {
         // If bill was created from OPD, update OPD payment status and redirect to OPD list
         if (route.query.opd_id) {
             try {
-                await axios.post(`/api/opd-visits/${route.query.opd_id}/record-payment`, {
+                console.log('Updating OPD payment status for:', route.query.opd_id);
+                const paymentResponse = await axios.post(`/api/opd-visits/${route.query.opd_id}/record-payment`, {
                     amount: total.value,
                     payment_mode: form.value.payment_mode,
                     reference_number: response.data.bill_number
                 });
+                console.log('OPD payment updated:', paymentResponse.data);
+                alert('Bill created and payment recorded successfully!');
+                // Add timestamp to force refresh
+                router.push(`/opd?refresh=${Date.now()}`);
             } catch (error) {
                 console.error('Error updating OPD payment status:', error);
+                alert('Bill created but failed to update OPD payment status: ' + (error.response?.data?.message || error.message));
+                router.push('/opd');
             }
-            alert('Bill created successfully!');
-            router.push('/opd');
         } else {
             alert('Bill created successfully!');
             router.push('/billing');
