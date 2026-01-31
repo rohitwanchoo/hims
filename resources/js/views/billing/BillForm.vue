@@ -1521,7 +1521,7 @@ const saveBill = async () => {
         if (route.query.opd_id) {
             try {
                 console.log('Updating OPD payment status for:', route.query.opd_id);
-                const paymentResponse = await axios.post(`/api/opd-visits/${route.query.opd_id}/record-payment`, {
+                const paymentResponse = await axios.post(`/api/opd-visits/${route.query.opd_id}/payment`, {
                     amount: total.value,
                     payment_mode: form.value.payment_mode,
                     reference_number: response.data.bill_number
