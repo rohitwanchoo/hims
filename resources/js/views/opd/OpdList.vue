@@ -485,7 +485,7 @@ const clearFilters = () => {
 const startConsultation = async (visit) => {
     try {
         await axios.post(`/api/opd-visits/${visit.opd_id}/start-consultation`);
-        router.push(`/opd/${visit.opd_id}/consultation`);
+        router.push(`/doctor-workbench?visit_id=${visit.opd_id}`);
     } catch (error) {
         alert(error.response?.data?.message || 'Error starting consultation');
     }
