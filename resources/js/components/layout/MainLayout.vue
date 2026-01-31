@@ -202,38 +202,6 @@ const expandedMenus = ref([]);
 // Menu structure
 const menuSections = [
     {
-        id: 'masters',
-        title: 'Masters',
-        icon: 'bi bi-database',
-        items: [
-            { path: '/masters/reception/prefix', label: 'Prefix' },
-            { path: '/masters/reception/gender', label: 'Gender' },
-            { path: '/masters/reception/blood-group', label: 'Blood Group' },
-            { path: '/masters/reception/patient-type', label: 'Patient Type' },
-            { path: '/masters/reception/marital-status', label: 'Marital Status' },
-            { path: '/masters/reception/reference-doctor', label: 'Reference Master' },
-            { path: '/masters/reception/insurance-company', label: 'Insurance Company' },
-            { path: '/masters/reception/qualification', label: 'Qualification' },
-            { path: '/masters/reception/consult-master', label: 'Consult Master' },
-            { path: '/masters/prescription', label: 'Prescription Master' },
-            { path: '/masters/bed-allocation', label: 'Bed Allocation' },
-            { path: '/masters/hospital-services', label: 'Hospital Services' },
-            { path: '/masters/gst-plan', label: 'GST Plan Master' }
-        ]
-    },
-    {
-        id: 'address',
-        title: 'Address Masters',
-        icon: 'bi bi-geo-alt',
-        items: [
-            { path: '/masters/address/country', label: 'Country' },
-            { path: '/masters/address/state', label: 'State' },
-            { path: '/masters/address/district', label: 'District' },
-            { path: '/masters/address/city', label: 'City/Taluka' },
-            { path: '/masters/address/area', label: 'Area/Village' }
-        ]
-    },
-    {
         id: 'patients',
         title: 'Patient Management',
         icon: 'bi bi-people',
@@ -255,6 +223,15 @@ const menuSections = [
             { path: '/discharge-summary', label: 'Summaries' },
             { path: '/bed-transfers', label: 'Bed Transfer' },
             { path: '/consultation-forms', label: 'Consultation Forms' }
+        ]
+    },
+    {
+        id: 'billing',
+        title: 'Billing',
+        icon: 'bi bi-receipt',
+        items: [
+            { path: '/billing', label: 'Bills' },
+            { path: '/payments', label: 'Payments' }
         ]
     },
     {
@@ -302,15 +279,6 @@ const menuSections = [
         ]
     },
     {
-        id: 'billing',
-        title: 'Billing',
-        icon: 'bi bi-receipt',
-        items: [
-            { path: '/billing', label: 'Bills' },
-            { path: '/payments', label: 'Payments' }
-        ]
-    },
-    {
         id: 'reports',
         title: 'Reports',
         icon: 'bi bi-bar-chart-line',
@@ -345,6 +313,38 @@ const menuSections = [
             { path: '/settings/opd-time-slots', label: 'OPD Time Slots' },
             { path: '/settings/rate-requests', label: 'Rate Requests' },
             { path: '/discharge-summary-custom-fields', label: 'Discharge Summary Fields' }
+        ]
+    },
+    {
+        id: 'masters',
+        title: 'Masters',
+        icon: 'bi bi-database',
+        items: [
+            { path: '/masters/reception/prefix', label: 'Prefix' },
+            { path: '/masters/reception/gender', label: 'Gender' },
+            { path: '/masters/reception/blood-group', label: 'Blood Group' },
+            { path: '/masters/reception/patient-type', label: 'Patient Type' },
+            { path: '/masters/reception/marital-status', label: 'Marital Status' },
+            { path: '/masters/reception/reference-doctor', label: 'Reference Master' },
+            { path: '/masters/reception/insurance-company', label: 'Insurance Company' },
+            { path: '/masters/reception/qualification', label: 'Qualification' },
+            { path: '/masters/reception/consult-master', label: 'Consult Master' },
+            { path: '/masters/prescription', label: 'Prescription Master' },
+            { path: '/masters/bed-allocation', label: 'Bed Allocation' },
+            { path: '/masters/hospital-services', label: 'Hospital Services' },
+            { path: '/masters/gst-plan', label: 'GST Plan Master' }
+        ]
+    },
+    {
+        id: 'address',
+        title: 'Address Masters',
+        icon: 'bi bi-geo-alt',
+        items: [
+            { path: '/masters/address/country', label: 'Country' },
+            { path: '/masters/address/state', label: 'State' },
+            { path: '/masters/address/district', label: 'District' },
+            { path: '/masters/address/city', label: 'City/Taluka' },
+            { path: '/masters/address/area', label: 'Area/Village' }
         ]
     },
     {
