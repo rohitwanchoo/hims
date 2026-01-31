@@ -77,7 +77,8 @@
                             <div class="col-md-3" v-else>
                                 <label class="form-label small mb-1">
                                     Patient
-                                    <span v-if="form.bill_type === 'opd'" class="text-muted small">(Today's OPD)</span>
+                                    <span v-if="form.bill_type === 'opd' && opdPatients.length > 0" class="text-success small">({{ opdPatients.length }} Today's OPD)</span>
+                                    <span v-else-if="form.bill_type === 'opd'" class="text-muted small">(All Patients)</span>
                                 </label>
                                 <select class="form-select form-select-sm" v-model="form.patient_id" :disabled="isViewMode">
                                     <option value="">Select Patient</option>
@@ -492,8 +493,15 @@ const balanceDue = computed(() => {
 
 // Show today's OPD patients when bill type is OPD, otherwise show all patients
 const filteredPatients = computed(() => {
-    if (form.value.bill_type === 'opd' && opdPatients.value.length > 0) {
-        return opdPatients.value;
+    // For OPD bills, show OPD patients if available, otherwise fall back to all patients
+    if (form.value.bill_type === 'opd') {
+        if (opdPatients.value.length > 0) {
+            console.log('Showing OPD patients:', opdPatients.value.length);
+            return opdPatients.value;
+        } else {
+            console.log('No OPD patients, showing all patients');
+            return patients.value;
+        }
     }
     return patients.value;
 });
