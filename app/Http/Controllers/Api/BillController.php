@@ -45,6 +45,14 @@ class BillController extends Controller
             $query->whereDate('bill_date', '<=', $request->to_date);
         }
 
+        if ($request->opd_id) {
+            $query->where('opd_id', $request->opd_id);
+        }
+
+        if ($request->patient_id) {
+            $query->where('patient_id', $request->patient_id);
+        }
+
         return response()->json(
             $query->orderBy('bill_date', 'desc')->paginate($request->per_page ?? 15)
         );

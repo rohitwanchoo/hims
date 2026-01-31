@@ -254,6 +254,11 @@
                                             @click="collectPayment(visit)" title="Collect Payment">
                                         <i class="bi bi-cash-coin"></i>
                                     </button>
+                                    <button v-if="visit.payment_status === 'paid' || visit.payment_status === 'partial'"
+                                            class="btn btn-outline-success"
+                                            @click="editPayment(visit)" title="Edit Payment">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
                                     <!-- Continue Consultation button temporarily hidden -->
                                     <!-- <button v-if="visit.status === 'in_consultation' && opdConfig.show_continue_consultation_button" class="btn btn-success"
                                             @click="openConsultation(visit)" title="Continue Consultation">
@@ -503,6 +508,31 @@ const openConsultation = (visit) => {
 const collectPayment = (visit) => {
     // Redirect to billing page with OPD visit details
     router.push(`/billing/create?opd_id=${visit.opd_id}&patient_id=${visit.patient_id}`);
+};
+
+const editPayment = async (visit) => {
+    try {
+        // Find the bill for this OPD visit
+        const response = await axios.get(`/api/bills`, {
+            params: {
+                opd_id: visit.opd_id,
+                patient_id: visit.patient_id,
+                per_page: 1
+            }
+        });
+
+        const bills = response.data.data || [];
+        if (bills.length > 0) {
+            // Redirect to edit the most recent bill
+            router.push(`/billing/${bills[0].bill_id}?mode=edit`);
+        } else {
+            // No bill found, create new one
+            router.push(`/billing/create?opd_id=${visit.opd_id}&patient_id=${visit.patient_id}`);
+        }
+    } catch (error) {
+        console.error('Error finding bill:', error);
+        alert('Error loading payment details');
+    }
 };
 
 const canCancel = (visit) => {

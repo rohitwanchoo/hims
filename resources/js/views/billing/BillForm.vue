@@ -1514,9 +1514,25 @@ const saveBill = async () => {
             }))
         };
 
-        await axios.post('/api/bills', billData);
-        alert('Bill created successfully!');
-        router.push('/billing');
+        const response = await axios.post('/api/bills', billData);
+
+        // If bill was created from OPD, update OPD payment status and redirect to OPD list
+        if (route.query.opd_id) {
+            try {
+                await axios.post(`/api/opd-visits/${route.query.opd_id}/record-payment`, {
+                    amount: total.value,
+                    payment_mode: form.value.payment_mode,
+                    reference_number: response.data.bill_number
+                });
+            } catch (error) {
+                console.error('Error updating OPD payment status:', error);
+            }
+            alert('Bill created successfully!');
+            router.push('/opd');
+        } else {
+            alert('Bill created successfully!');
+            router.push('/billing');
+        }
     } catch (error) {
         console.error('Error saving bill:', error);
         alert(error.response?.data?.message || 'Error saving bill');
