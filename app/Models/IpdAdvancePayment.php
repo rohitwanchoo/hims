@@ -80,12 +80,18 @@ class IpdAdvancePayment extends Model
 
         $lastReceipt = self::where('hospital_id', $hospitalId)
             ->whereYear('created_at', $year)
+            ->whereMonth('created_at', $month)
             ->orderBy('advance_id', 'desc')
             ->first();
 
         $sequence = 1;
-        if ($lastReceipt && preg_match('/(\d+)$/', $lastReceipt->receipt_number, $matches)) {
-            $sequence = (int)$matches[1] + 1;
+        if ($lastReceipt) {
+            // Extract only the last 5 digits as the sequence number
+            // Pattern: ADV{YEAR}{MONTH}{5-digit-sequence}
+            $pattern = '/^' . preg_quote($prefix) . $year . $month . '(\d{1,5})$/';
+            if (preg_match($pattern, $lastReceipt->receipt_number, $matches)) {
+                $sequence = (int)$matches[1] + 1;
+            }
         }
 
         return $prefix . $year . $month . str_pad($sequence, 5, '0', STR_PAD_LEFT);
