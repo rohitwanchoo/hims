@@ -370,6 +370,29 @@ const menuSections = [
                     { path: '/masters/address/city', label: 'City/Taluka' },
                     { path: '/masters/address/area', label: 'Area/Village' }
                 ]
+            },
+            {
+                id: 'pathology-masters',
+                label: 'Pathology Masters',
+                items: [
+                    { path: '/masters/pathology/analyzer', label: 'Analyzer Master' },
+                    { path: '/masters/pathology/external-lab', label: 'External Lab Center' },
+                    { path: '/masters/pathology/test-method', label: 'Test Method Master' },
+                    { path: '/masters/pathology/test-unit', label: 'Test Unit Master' },
+                    { path: '/masters/pathology/container', label: 'Container Master' },
+                    { path: '/masters/pathology/faculty', label: 'Faculty Master' },
+                    { path: '/masters/pathology/sample-type', label: 'Sample Type' },
+                    { path: '/masters/pathology/race', label: 'Race Master' },
+                    { path: '/masters/pathology/sensitivity', label: 'Sensitivity Master' },
+                    { path: '/masters/pathology/pathologist-map', label: 'Pathologist Doctor Map' },
+                    { path: '/masters/pathology/test', label: 'Test Master' },
+                    { path: '/masters/pathology/test-note', label: 'Test Note Master' },
+                    { path: '/masters/pathology/test-category', label: 'Test Category' },
+                    { path: '/masters/pathology/test-group', label: 'Test Group' },
+                    { path: '/masters/pathology/skill-test-map', label: 'Skill Test Map' },
+                    { path: '/masters/pathology/test-report', label: 'Test Report Master' },
+                    { path: '/masters/pathology/instruction', label: 'Instruction Master' }
+                ]
             }
         ]
     },
@@ -411,6 +434,23 @@ const pageTitle = computed(() => {
         '/masters/address/district': 'District Master',
         '/masters/address/city': 'City/Taluka Master',
         '/masters/address/area': 'Area/Village Master',
+        '/masters/pathology/analyzer': 'Analyzer Master',
+        '/masters/pathology/external-lab': 'External Lab Center',
+        '/masters/pathology/test-method': 'Test Method Master',
+        '/masters/pathology/test-unit': 'Test Unit Master',
+        '/masters/pathology/container': 'Container Master',
+        '/masters/pathology/faculty': 'Faculty Master',
+        '/masters/pathology/sample-type': 'Sample Type Master',
+        '/masters/pathology/race': 'Race Master',
+        '/masters/pathology/sensitivity': 'Sensitivity Master',
+        '/masters/pathology/pathologist-map': 'Pathologist Doctor Map',
+        '/masters/pathology/test': 'Test Master',
+        '/masters/pathology/test-note': 'Test Note Master',
+        '/masters/pathology/test-category': 'Test Category Master',
+        '/masters/pathology/test-group': 'Test Group Master',
+        '/masters/pathology/skill-test-map': 'Skill Test Map',
+        '/masters/pathology/test-report': 'Test Report Master',
+        '/masters/pathology/instruction': 'Instruction Master',
         '/patients': 'Patients',
         '/doctors': 'Doctors',
         '/departments': 'Departments',

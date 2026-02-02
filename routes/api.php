@@ -343,6 +343,49 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('lab-orders', \App\Http\Controllers\Api\LabOrderController::class);
     Route::post('lab-orders/{order}/results', [\App\Http\Controllers\Api\LabOrderController::class, 'storeResults']);
 
+    // Pathology Masters
+    Route::prefix('pathology')->group(function () {
+        // Simple Masters
+        Route::apiResource('containers', \App\Http\Controllers\Api\Pathology\PathoContainerController::class);
+        Route::apiResource('faculties', \App\Http\Controllers\Api\Pathology\PathoFacultyController::class);
+        Route::apiResource('sample-types', \App\Http\Controllers\Api\Pathology\PathoSampleTypeController::class);
+        Route::apiResource('races', \App\Http\Controllers\Api\Pathology\RaceController::class);
+        Route::apiResource('sensitivities', \App\Http\Controllers\Api\Pathology\PathoSensitivityController::class);
+        Route::apiResource('test-methods', \App\Http\Controllers\Api\Pathology\PathoTestMethodController::class);
+        Route::apiResource('test-units', \App\Http\Controllers\Api\Pathology\PathoTestUnitController::class);
+        Route::apiResource('instructions', \App\Http\Controllers\Api\Pathology\PathoInstructionController::class);
+
+        // Complex Masters
+        Route::apiResource('analyzers', \App\Http\Controllers\Api\Pathology\AnalyzerController::class);
+        Route::post('analyzers/{id}/map-tests', [\App\Http\Controllers\Api\Pathology\AnalyzerController::class, 'mapTests']);
+
+        Route::apiResource('external-labs', \App\Http\Controllers\Api\Pathology\ExternalLabCenterController::class);
+
+        Route::apiResource('test-categories', \App\Http\Controllers\Api\Pathology\PathoTestCategoryController::class);
+
+        Route::apiResource('test-groups', \App\Http\Controllers\Api\Pathology\PathoTestGroupController::class);
+        Route::post('test-groups/{id}/map-tests', [\App\Http\Controllers\Api\Pathology\PathoTestGroupController::class, 'mapTests']);
+
+        Route::apiResource('pathologist-maps', \App\Http\Controllers\Api\Pathology\PathologistDoctorMapController::class);
+        Route::get('pathologist-maps/default/{facultyId}', [\App\Http\Controllers\Api\Pathology\PathologistDoctorMapController::class, 'getDefaultPathologist']);
+        Route::post('pathologist-maps/{id}/set-default', [\App\Http\Controllers\Api\Pathology\PathologistDoctorMapController::class, 'setDefault']);
+
+        Route::apiResource('tests', \App\Http\Controllers\Api\Pathology\PathoTestController::class);
+        Route::get('tests/by-category/{categoryId}', [\App\Http\Controllers\Api\Pathology\PathoTestController::class, 'getByCategory']);
+
+        Route::apiResource('test-notes', \App\Http\Controllers\Api\Pathology\PathoTestNoteController::class);
+        Route::get('test-notes/by-test/{testId}', [\App\Http\Controllers\Api\Pathology\PathoTestNoteController::class, 'getByTest']);
+
+        Route::apiResource('skill-test-maps', \App\Http\Controllers\Api\Pathology\SkillPathoTestMapController::class);
+        Route::get('skill-test-maps/by-user/{userId}', [\App\Http\Controllers\Api\Pathology\SkillPathoTestMapController::class, 'getTestsByUser']);
+        Route::get('skill-test-maps/by-test/{testId}', [\App\Http\Controllers\Api\Pathology\SkillPathoTestMapController::class, 'getUsersByTest']);
+        Route::post('skill-test-maps/bulk-map', [\App\Http\Controllers\Api\Pathology\SkillPathoTestMapController::class, 'bulkMapTests']);
+
+        Route::apiResource('test-reports', \App\Http\Controllers\Api\Pathology\PathoTestReportController::class);
+        Route::get('test-reports/by-test/{testId}', [\App\Http\Controllers\Api\Pathology\PathoTestReportController::class, 'getByTest']);
+        Route::get('test-reports/by-type/{type}', [\App\Http\Controllers\Api\Pathology\PathoTestReportController::class, 'getByType']);
+    });
+
     // Pharmacy
     Route::apiResource('drug-categories', \App\Http\Controllers\Api\DrugCategoryController::class);
     Route::apiResource('drugs', \App\Http\Controllers\Api\DrugController::class);

@@ -150,6 +150,25 @@ import HospitalServicesMaster from '../views/masters/HospitalServicesMaster.vue'
 // Masters - GST Plan
 import GstPlanMaster from '../views/masters/GstPlanMaster.vue';
 
+// Masters - Pathology
+import ContainerMaster from '../views/masters/pathology/ContainerMaster.vue';
+import FacultyMaster from '../views/masters/pathology/FacultyMaster.vue';
+import SampleTypeMaster from '../views/masters/pathology/SampleTypeMaster.vue';
+import RaceMaster from '../views/masters/pathology/RaceMaster.vue';
+import SensitivityMaster from '../views/masters/pathology/SensitivityMaster.vue';
+import TestMethodMaster from '../views/masters/pathology/TestMethodMaster.vue';
+import TestUnitMaster from '../views/masters/pathology/TestUnitMaster.vue';
+import InstructionMaster from '../views/masters/pathology/InstructionMaster.vue';
+import AnalyzerMaster from '../views/masters/pathology/AnalyzerMaster.vue';
+import ExternalLabMaster from '../views/masters/pathology/ExternalLabMaster.vue';
+import TestCategoryMaster from '../views/masters/pathology/TestCategoryMaster.vue';
+import TestGroupMaster from '../views/masters/pathology/TestGroupMaster.vue';
+import PathologistMapMaster from '../views/masters/pathology/PathologistMapMaster.vue';
+import TestMaster from '../views/masters/pathology/TestMaster.vue';
+import TestNoteMaster from '../views/masters/pathology/TestNoteMaster.vue';
+import SkillTestMapMaster from '../views/masters/pathology/SkillTestMapMaster.vue';
+import TestReportMaster from '../views/masters/pathology/TestReportMaster.vue';
+
 // Masters - Address
 import CountryList from '../views/masters/address/CountryList.vue';
 import StateList from '../views/masters/address/StateList.vue';
@@ -274,6 +293,92 @@ const routes = [
                 path: 'masters/address/area',
                 name: 'masters.address.area',
                 component: AreaList
+            },
+            // Masters - Pathology
+            {
+                path: 'masters/pathology/analyzer',
+                name: 'masters.pathology.analyzer',
+                component: AnalyzerMaster
+            },
+            {
+                path: 'masters/pathology/external-lab',
+                name: 'masters.pathology.external-lab',
+                component: ExternalLabMaster
+            },
+            {
+                path: 'masters/pathology/test-method',
+                name: 'masters.pathology.test-method',
+                component: TestMethodMaster
+            },
+            {
+                path: 'masters/pathology/test-unit',
+                name: 'masters.pathology.test-unit',
+                component: TestUnitMaster
+            },
+            {
+                path: 'masters/pathology/container',
+                name: 'masters.pathology.container',
+                component: ContainerMaster
+            },
+            {
+                path: 'masters/pathology/faculty',
+                name: 'masters.pathology.faculty',
+                component: FacultyMaster
+            },
+            {
+                path: 'masters/pathology/sample-type',
+                name: 'masters.pathology.sample-type',
+                component: SampleTypeMaster
+            },
+            {
+                path: 'masters/pathology/race',
+                name: 'masters.pathology.race',
+                component: RaceMaster
+            },
+            {
+                path: 'masters/pathology/sensitivity',
+                name: 'masters.pathology.sensitivity',
+                component: SensitivityMaster
+            },
+            {
+                path: 'masters/pathology/pathologist-map',
+                name: 'masters.pathology.pathologist-map',
+                component: PathologistMapMaster
+            },
+            {
+                path: 'masters/pathology/test',
+                name: 'masters.pathology.test',
+                component: TestMaster
+            },
+            {
+                path: 'masters/pathology/test-note',
+                name: 'masters.pathology.test-note',
+                component: TestNoteMaster
+            },
+            {
+                path: 'masters/pathology/test-category',
+                name: 'masters.pathology.test-category',
+                component: TestCategoryMaster
+            },
+            {
+                path: 'masters/pathology/test-group',
+                name: 'masters.pathology.test-group',
+                component: TestGroupMaster
+            },
+            {
+                path: 'masters/pathology/skill-test-map',
+                name: 'masters.pathology.skill-test-map',
+                component: SkillTestMapMaster
+            },
+            {
+                path: 'masters/pathology/test-report',
+                name: 'masters.pathology.test-report',
+                component: TestReportMaster
+            },
+            {
+                path: 'masters/pathology/instruction',
+                name: 'masters.pathology.instruction',
+                component: InstructionMaster
             },
             // Patients
             {
