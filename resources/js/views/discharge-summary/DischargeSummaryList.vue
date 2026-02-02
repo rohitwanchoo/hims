@@ -1,68 +1,124 @@
 <template>
-    <div>
+    <div class="discharge-summary-list">
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h4 class="mb-1">Discharge Summaries</h4>
+                <h2 class="mb-1 fw-bold">Discharge Summary Dashboard</h2>
                 <p class="text-muted mb-0 small">ABDM compliant discharge documentation</p>
             </div>
-            <router-link to="/discharge-summary/create" class="btn btn-primary">
-                <i class="bi bi-plus-lg"></i> New Discharge Summary
-            </router-link>
+            <div class="d-flex gap-2">
+                <button class="modern-btn modern-btn-outline" @click="fetchSummaries(pagination.current_page)">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    <span>Refresh</span>
+                </button>
+                <router-link to="/discharge-summary/create" class="modern-btn modern-btn-primary">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>New Discharge Summary</span>
+                </router-link>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-xl-3 col-lg-6 col-md-6">
+                <div class="stat-card stat-card-gradient-primary">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Total Summaries</div>
+                        <div class="stat-value-large">{{ summary.total }}</div>
+                        <div class="stat-description">All discharge records</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6">
+                <div class="stat-card stat-card-gradient-secondary">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Draft</div>
+                        <div class="stat-value-large">{{ summary.draft }}</div>
+                        <div class="stat-description">Pending completion</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6">
+                <div class="stat-card stat-card-gradient-warning">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Completed</div>
+                        <div class="stat-value-large">{{ summary.completed }}</div>
+                        <div class="stat-description">Awaiting signature</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6">
+                <div class="stat-card stat-card-gradient-success">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Signed</div>
+                        <div class="stat-value-large">{{ summary.signed }}</div>
+                        <div class="stat-description">Finalized documents</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Filters -->
-        <div class="card shadow-sm mb-3">
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label small text-muted mb-1">Search</label>
-                        <input
-                            type="text"
-                            class="form-control"
-                            placeholder="Summary #, patient name..."
-                            v-model="search"
-                            @input="debouncedSearch"
-                        >
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small text-muted mb-1">Status</label>
-                        <select class="form-select" v-model="statusFilter" @change="fetchSummaries">
-                            <option value="">All Status</option>
-                            <option value="draft">Draft</option>
-                            <option value="completed">Completed</option>
-                            <option value="signed">Signed</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small text-muted mb-1">From Date</label>
-                        <input type="date" class="form-control" v-model="fromDate" @change="fetchSummaries">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small text-muted mb-1">To Date</label>
-                        <input type="date" class="form-control" v-model="toDate" @change="fetchSummaries">
-                    </div>
-                    <div class="col-md-1">
-                        <label class="form-label small text-muted mb-1">&nbsp;</label>
-                        <button class="btn btn-outline-secondary w-100" @click="clearFilters" title="Clear Filters">
-                            <i class="bi bi-x-circle"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Summaries Table -->
-        <div class="card shadow-sm">
-            <div class="card-header bg-white border-bottom">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0">Discharge Summaries List</h6>
-                    <button class="btn btn-sm btn-outline-secondary" @click="fetchSummaries" :disabled="loading">
-                        <i class="bi bi-arrow-clockwise" :class="{ 'spin': loading }"></i> Refresh
+        <div class="modern-card mb-4">
+            <div class="modern-card-header clickable" @click="showFilters = !showFilters">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <h6 class="mb-0">
+                        <i class="bi bi-funnel me-2"></i>Filters
+                        <span v-if="hasActiveFilters" class="badge bg-primary ms-2" style="font-size: 0.7rem;">Active</span>
+                    </h6>
+                    <button class="btn btn-sm btn-link text-decoration-none p-0">
+                        <i class="bi" :class="showFilters ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
                     </button>
                 </div>
             </div>
-            <div class="table-responsive">
+            <transition name="filter-collapse">
+                <div v-show="showFilters" class="modern-card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="modern-label">Search</label>
+                            <input
+                                type="text"
+                                class="modern-input"
+                                placeholder="Summary #, patient name..."
+                                v-model="search"
+                                @input="debouncedSearch"
+                            >
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">Status</label>
+                            <select class="modern-select" v-model="statusFilter" @change="fetchSummaries">
+                                <option value="">All Status</option>
+                                <option value="draft">Draft</option>
+                                <option value="completed">Completed</option>
+                                <option value="signed">Signed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">From Date</label>
+                            <input type="date" class="modern-input" v-model="fromDate" @change="fetchSummaries">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">To Date</label>
+                            <input type="date" class="modern-input" v-model="toDate" @change="fetchSummaries">
+                        </div>
+                        <div class="col-md-1">
+                            <label class="modern-label">&nbsp;</label>
+                            <button class="modern-btn-reset w-100" @click="clearFilters">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+        </div>
+
+        <!-- Summaries Table -->
+        <div class="modern-card">
+            <div class="modern-card-header">
+                <h6 class="mb-0"><i class="bi bi-file-earmark-medical me-2"></i>Discharge Summaries</h6>
+            </div>
+            <div class="modern-card-body p-0">
+                <div class="table-responsive">
                 <!-- Loading State -->
                 <div v-if="loading" class="text-center py-5">
                     <div class="spinner-border text-primary" role="status">
@@ -84,8 +140,8 @@
                 </div>
 
                 <!-- Table Content -->
-                <table class="table table-hover mb-0 align-middle" v-else>
-                    <thead class="table-light">
+                <table class="table table-hover mb-0 modern-table" v-else>
+                    <thead>
                         <tr>
                             <th>Summary #</th>
                             <th>Patient</th>
@@ -167,10 +223,12 @@
                         </tr>
                     </tbody>
                 </table>
+                </div>
             </div>
 
             <!-- Pagination -->
-            <div class="card-footer bg-white border-top" v-if="pagination.total > 0">
+            <div class="modern-card mt-3" v-if="pagination.total > 0">
+                <div class="modern-card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="text-muted small">
                         Showing {{ pagination.from || 0 }} to {{ pagination.to || 0 }} of {{ pagination.total || 0 }} summaries
@@ -199,12 +257,20 @@
                         </ul>
                     </nav>
                 </div>
+                </div>
             </div>
         </div>
     </div>
 </template>
 
 <style scoped>
+/* Modern Dashboard Styles */
+.discharge-summary-list {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 1.5rem;
+}
+
 .spin {
     animation: spin 1s linear infinite;
 }
@@ -213,10 +279,255 @@
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
+
+/* Modern Buttons */
+.modern-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: none;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.modern-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+}
+
+.modern-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
+    color: white;
+}
+
+.modern-btn-outline {
+    background: white;
+    color: #6c757d;
+    border: 1px solid #e0e0e0;
+}
+
+.modern-btn-outline:hover {
+    background: #f8f9fa;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+/* Modern Stat Cards with Gradients */
+.stat-card {
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    min-height: 130px;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* Gradient Backgrounds */
+.stat-card-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.stat-card-gradient-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.stat-card-gradient-success {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+}
+
+.stat-card-gradient-secondary {
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    color: #2c3e50;
+}
+
+.stat-content-full {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.stat-label-top {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+}
+
+.stat-value-large {
+    font-size: 2.25rem;
+    font-weight: 700;
+    line-height: 1;
+    margin: 0.25rem 0;
+}
+
+.stat-description {
+    font-size: 0.75rem;
+    opacity: 0.85;
+    line-height: 1.4;
+}
+
+/* Modern Cards */
+.modern-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.modern-card-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fafafa;
+}
+
+.modern-card-header h6 {
+    font-weight: 600;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+}
+
+.modern-card-body {
+    padding: 1.5rem;
+}
+
+/* Modern Table */
+.modern-table {
+    font-size: 0.875rem;
+}
+
+.modern-table thead th {
+    background: #fafafa;
+    color: #6c757d;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 1rem 1.25rem;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.modern-table tbody td {
+    padding: 1rem 1.25rem;
+    vertical-align: middle;
+    color: #2c3e50;
+}
+
+.modern-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.modern-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+/* Modern Filter Styles */
+.modern-card-header.clickable {
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+}
+
+.modern-card-header.clickable:hover {
+    background: #f5f5f5;
+}
+
+.modern-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modern-select,
+.modern-input {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: white;
+    color: #2c3e50;
+}
+
+.modern-select:focus,
+.modern-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.modern-select:hover,
+.modern-input:hover {
+    border-color: #b0b0b0;
+}
+
+.modern-btn-reset {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    color: #6c757d;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+}
+
+.modern-btn-reset:hover {
+    background: #f8f9fa;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+/* Filter Collapse Animation */
+.filter-collapse-enter-active,
+.filter-collapse-leave-active {
+    transition: all 0.3s ease;
+    max-height: 500px;
+    overflow: hidden;
+}
+
+.filter-collapse-enter-from,
+.filter-collapse-leave-to {
+    max-height: 0;
+    opacity: 0;
+}
 </style>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import axios from 'axios';
 
 const summaries = ref([]);
@@ -225,6 +536,7 @@ const statusFilter = ref('');
 const fromDate = ref('');
 const toDate = ref('');
 const loading = ref(false);
+const showFilters = ref(false);
 const pagination = ref({
     current_page: 1,
     last_page: 1,
@@ -234,7 +546,22 @@ const pagination = ref({
     to: 0
 });
 
+const summary = reactive({
+    total: 0,
+    draft: 0,
+    completed: 0,
+    signed: 0
+});
+
 let searchTimeout = null;
+
+// Computed
+const hasActiveFilters = computed(() => {
+    return search.value !== '' ||
+           statusFilter.value !== '' ||
+           fromDate.value !== '' ||
+           toDate.value !== '';
+});
 
 const fetchSummaries = async (page = 1) => {
     try {
@@ -263,6 +590,12 @@ const fetchSummaries = async (page = 1) => {
         } else {
             summaries.value = response.data;
         }
+
+        // Calculate summary statistics
+        summary.total = pagination.value.total;
+        summary.draft = summaries.value.filter(s => s.status === 'draft').length;
+        summary.completed = summaries.value.filter(s => s.status === 'completed').length;
+        summary.signed = summaries.value.filter(s => s.status === 'signed').length;
     } catch (error) {
         console.error('Error fetching discharge summaries:', error);
         alert('Error loading discharge summaries');
@@ -361,7 +694,12 @@ const getStatusIcon = (status) => {
 };
 
 const printSummary = (summary) => {
-    window.open(`/api/discharge-summaries/${summary.discharge_summary_id}/print`, '_blank');
+    const ipdId = summary.ipd_id;
+    if (ipdId) {
+        window.open(`/print/discharge-summary/${ipdId}`, '_blank');
+    } else {
+        alert('IPD ID not found for this discharge summary');
+    }
 };
 
 const deleteSummary = async (summary) => {

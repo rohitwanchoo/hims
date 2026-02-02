@@ -330,6 +330,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('hospital-services', \App\Http\Controllers\Api\HospitalServiceController::class);
     Route::put('hospital-services/{id}/prices/{priceId}', [\App\Http\Controllers\Api\HospitalServiceController::class, 'updatePrice']);
     Route::get('hospital-services-rooms-beds', [\App\Http\Controllers\Api\HospitalServiceController::class, 'getRoomsAndBeds']);
+    Route::post('hospital-services/bulk-update-cashless', [\App\Http\Controllers\Api\HospitalServiceController::class, 'bulkUpdateCashless']);
+    Route::get('cashless-price-history', [\App\Http\Controllers\Api\HospitalServiceController::class, 'getCashlessPriceHistory']);
 
     // GST Plans
     Route::get('gst-plans/active', [\App\Http\Controllers\Api\GstPlanController::class, 'active']);
@@ -356,6 +358,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('services-followup', [\App\Http\Controllers\Api\ServiceController::class, 'followupServices']);
     Route::get('services-health-checkup', [\App\Http\Controllers\Api\ServiceController::class, 'healthCheckupServices']);
     Route::apiResource('bills', \App\Http\Controllers\Api\BillController::class);
+    Route::get('bills/{bill}/history', [\App\Http\Controllers\Api\BillController::class, 'history']);
     Route::apiResource('payments', \App\Http\Controllers\Api\PaymentController::class);
 
     // OPD Masters

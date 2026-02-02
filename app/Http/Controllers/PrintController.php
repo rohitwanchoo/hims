@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\IpdAdmission;
 use App\Models\OpdVisit;
+use App\Models\Payment;
 use App\Models\Hospital;
+use App\Models\DischargeSummary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,15 +17,8 @@ class PrintController extends Controller
      */
     public function dischargeSummary(Request $request, $id)
     {
-        // Get hospital_id from query param or authenticated user
-        $hospitalId = $request->query('hospital_id') ?? (Auth::check() ? Auth::user()->hospital_id : null);
-
-        if (!$hospitalId) {
-            abort(403, 'Hospital ID is required');
-        }
-
-        $admission = IpdAdmission::where('hospital_id', $hospitalId)
-            ->where('ipd_id', $id)
+        // Find admission first to get hospital_id from the record
+        $admission = IpdAdmission::where('ipd_id', $id)
             ->with([
                 'patient',
                 'treatingDoctor',
@@ -38,8 +33,18 @@ class PrintController extends Controller
             abort(404, 'IPD admission not found');
         }
 
-        // Get hospital details
-        $hospital = Hospital::find($hospitalId);
+        // Get hospital from admission record
+        $hospital = Hospital::find($admission->hospital_id);
+
+        if (!$hospital) {
+            abort(404, 'Hospital not found');
+        }
+
+        // Get discharge summary if exists
+        $dischargeSummary = DischargeSummary::where('hospital_id', $admission->hospital_id)
+            ->where('ipd_id', $id)
+            ->with(['treatingDoctor', 'consultantDoctor'])
+            ->first();
 
         // Get medications at discharge (active medications)
         $medications = $admission->medications()
@@ -74,6 +79,7 @@ class PrintController extends Controller
         return view('prints.discharge-summary', compact(
             'admission',
             'hospital',
+            'dischargeSummary',
             'medications',
             'investigations',
             'billing'
@@ -147,12 +153,7 @@ class PrintController extends Controller
      */
     public function opdVisit(Request $request, $id)
     {
-        $hospitalId = $request->query('hospital_id') ?? (Auth::check() ? Auth::user()->hospital_id : null);
-
-        if (!$hospitalId) {
-            abort(403, 'Hospital ID is required');
-        }
-
+        // Find OPD visit first to get hospital_id from the record
         $opdVisit = OpdVisit::where('opd_id', $id)
             ->with([
                 'patient',
@@ -169,8 +170,72 @@ class PrintController extends Controller
             abort(404, 'OPD visit not found');
         }
 
-        $hospital = Hospital::find($hospitalId);
+        // Get hospital from OPD visit record
+        $hospital = Hospital::find($opdVisit->hospital_id);
+
+        if (!$hospital) {
+            abort(404, 'Hospital not found');
+        }
 
         return view('prints.opd-visit', compact('opdVisit', 'hospital'));
+    }
+
+    /**
+     * Print Payment Receipt
+     */
+    public function paymentReceipt(Request $request, $id)
+    {
+        // Find payment first to get hospital_id from the record
+        $payment = Payment::where('payment_id', $id)
+            ->with([
+                'bill.patient',
+                'bill.details',
+                'patient',
+                'receivedByUser'
+            ])
+            ->first();
+
+        if (!$payment) {
+            abort(404, 'Payment not found');
+        }
+
+        // Get hospital from payment record
+        $hospital = Hospital::find($payment->hospital_id);
+
+        if (!$hospital) {
+            abort(404, 'Hospital not found');
+        }
+
+        return view('prints.payment-receipt', compact('payment', 'hospital'));
+    }
+
+    /**
+     * Print Bill
+     */
+    public function bill(Request $request, $id)
+    {
+        // Find bill first to get hospital_id from the record
+        $bill = \App\Models\Bill::where('bill_id', $id)
+            ->with([
+                'patient',
+                'details.doctor',
+                'details.costHead',
+                'opdVisit',
+                'ipdAdmission'
+            ])
+            ->first();
+
+        if (!$bill) {
+            abort(404, 'Bill not found');
+        }
+
+        // Get hospital from bill record
+        $hospital = Hospital::find($bill->hospital_id);
+
+        if (!$hospital) {
+            abort(404, 'Hospital not found');
+        }
+
+        return view('prints.bill', compact('bill', 'hospital'));
     }
 }

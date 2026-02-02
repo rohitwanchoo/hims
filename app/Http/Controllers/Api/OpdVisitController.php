@@ -70,7 +70,7 @@ class OpdVisitController extends Controller
             });
         }
 
-        $visits = $query->orderBy('token_number')->orderBy('created_at')->get();
+        $visits = $query->orderBy('opd_id', 'desc')->get();
 
         // Summary counts
         $summary = [
@@ -349,6 +349,8 @@ class OpdVisitController extends Controller
         $opdVisit = OpdVisit::findOrFail($id);
 
         $validated = $request->validate([
+            'department_id' => 'nullable|exists:departments,department_id',
+            'doctor_id' => 'nullable|exists:doctors,doctor_id',
             'chief_complaints' => 'nullable|string',
             'history_of_illness' => 'nullable|string',
             'examination_notes' => 'nullable|string',
@@ -366,6 +368,26 @@ class OpdVisitController extends Controller
             'status' => 'nullable|in:waiting,in_consultation,completed,cancelled',
             'cancel_reason_id' => 'nullable|exists:cancel_reasons,cancel_reason_id',
         ]);
+
+        // Recalculate consultation fee if doctor is changed and not a free followup
+        if (isset($validated['doctor_id']) && !$opdVisit->is_free_followup) {
+            $doctor = \App\Models\Doctor::find($validated['doctor_id']);
+            if ($doctor) {
+                $validated['consultation_fee'] = $doctor->consultation_fee ?? 0;
+
+                // Recalculate totals
+                $servicesTotal = $opdVisit->services()->sum('amount') ?? 0;
+                $totalAmount = $validated['consultation_fee'] + $servicesTotal;
+                $discount = $opdVisit->discount_amount ?? 0;
+                $netAmount = $totalAmount - $discount;
+                $paidAmount = $opdVisit->paid_amount ?? 0;
+                $dueAmount = $netAmount - $paidAmount;
+
+                $validated['total_amount'] = $totalAmount;
+                $validated['net_amount'] = $netAmount;
+                $validated['due_amount'] = $dueAmount;
+            }
+        }
 
         $opdVisit->update($validated);
 

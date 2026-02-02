@@ -3,133 +3,124 @@
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h4 class="mb-1">Bills Management</h4>
+                <h2 class="mb-1 fw-bold">Billing Dashboard</h2>
                 <p class="text-muted mb-0 small">Manage and track all billing transactions</p>
             </div>
-            <router-link to="/billing/create" class="btn btn-primary">
-                <i class="bi bi-plus-lg"></i> New Bill
-            </router-link>
+            <div class="d-flex gap-2">
+                <button class="modern-btn modern-btn-outline" @click="fetchBills(pagination.current_page)">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    <span>Refresh</span>
+                </button>
+                <router-link to="/billing/create" class="modern-btn modern-btn-primary">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>New Bill</span>
+                </router-link>
+            </div>
         </div>
 
         <!-- Summary Cards -->
-        <div class="row g-3 mb-4" v-if="!loading && summary">
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <p class="text-muted mb-1 small">Total Bills</p>
-                                <h5 class="mb-0">{{ summary.total_count || 0 }}</h5>
-                            </div>
-                            <div class="bg-primary bg-opacity-10 rounded p-3">
-                                <i class="bi bi-receipt text-primary fs-4"></i>
-                            </div>
-                        </div>
+        <div class="row g-3 mb-4">
+            <div class="col-xl-3 col-lg-6 col-md-6">
+                <div class="stat-card stat-card-gradient-primary">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Total Bills</div>
+                        <div class="stat-value-large">{{ summary.total_count || 0 }}</div>
+                        <div class="stat-description">All billing records</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <p class="text-muted mb-1 small">Total Amount</p>
-                                <h5 class="mb-0">{{ formatCurrency(summary.total_amount || 0) }}</h5>
-                            </div>
-                            <div class="bg-success bg-opacity-10 rounded p-3">
-                                <i class="bi bi-currency-rupee text-success fs-4"></i>
-                            </div>
-                        </div>
+            <div class="col-xl-3 col-lg-6 col-md-6">
+                <div class="stat-card stat-card-gradient-info">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Total Amount</div>
+                        <div class="stat-value-large">{{ formatCurrency(summary.total_amount || 0) }}</div>
+                        <div class="stat-description">Total billing value</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <p class="text-muted mb-1 small">Paid Amount</p>
-                                <h5 class="mb-0 text-success">{{ formatCurrency(summary.paid_amount || 0) }}</h5>
-                            </div>
-                            <div class="bg-success bg-opacity-10 rounded p-3">
-                                <i class="bi bi-check-circle text-success fs-4"></i>
-                            </div>
-                        </div>
+            <div class="col-xl-3 col-lg-6 col-md-6">
+                <div class="stat-card stat-card-gradient-success">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Paid Amount</div>
+                        <div class="stat-value-large">{{ formatCurrency(summary.paid_amount || 0) }}</div>
+                        <div class="stat-description">Total payments received</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <p class="text-muted mb-1 small">Pending Amount</p>
-                                <h5 class="mb-0 text-danger">{{ formatCurrency(summary.pending_amount || 0) }}</h5>
-                            </div>
-                            <div class="bg-danger bg-opacity-10 rounded p-3">
-                                <i class="bi bi-exclamation-circle text-danger fs-4"></i>
-                            </div>
-                        </div>
+            <div class="col-xl-3 col-lg-6 col-md-6">
+                <div class="stat-card stat-card-gradient-danger">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Pending Amount</div>
+                        <div class="stat-value-large">{{ formatCurrency(summary.pending_amount || 0) }}</div>
+                        <div class="stat-description">Outstanding balance</div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Filters -->
-        <div class="card shadow-sm mb-3">
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label small text-muted mb-1">Search</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0">
-                                <i class="bi bi-search text-muted"></i>
-                            </span>
+        <div class="modern-card mb-4">
+            <div class="modern-card-header clickable" @click="showFilters = !showFilters">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <h6 class="mb-0">
+                        <i class="bi bi-funnel me-2"></i>Filters
+                        <span v-if="hasActiveFilters" class="badge bg-primary ms-2" style="font-size: 0.7rem;">Active</span>
+                    </h6>
+                    <button class="btn btn-sm btn-link text-decoration-none p-0">
+                        <i class="bi" :class="showFilters ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    </button>
+                </div>
+            </div>
+            <transition name="filter-collapse">
+                <div v-show="showFilters" class="modern-card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="modern-label">Search</label>
                             <input
                                 type="text"
-                                class="form-control border-start-0"
+                                class="modern-input"
                                 placeholder="Bill number, patient name..."
                                 v-model="search"
                                 @input="debouncedSearch"
                             >
                         </div>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small text-muted mb-1">Payment Status</label>
-                        <select class="form-select" v-model="statusFilter" @change="fetchBills">
-                            <option value="">All Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="partial">Partial</option>
-                            <option value="paid">Paid</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small text-muted mb-1">Bill Type</label>
-                        <select class="form-select" v-model="billTypeFilter" @change="fetchBills">
-                            <option value="">All Types</option>
-                            <option value="general">General</option>
-                            <option value="opd">OPD</option>
-                            <option value="ipd">IPD</option>
-                            <option value="pharmacy">Pharmacy</option>
-                            <option value="lab">Laboratory</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small text-muted mb-1">From Date</label>
-                        <input type="date" class="form-control" v-model="fromDate" @change="fetchBills">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small text-muted mb-1">To Date</label>
-                        <input type="date" class="form-control" v-model="toDate" @change="fetchBills">
-                    </div>
-                    <div class="col-md-1">
-                        <label class="form-label small text-muted mb-1">&nbsp;</label>
-                        <button class="btn btn-outline-secondary w-100" @click="clearFilters" title="Clear Filters">
-                            <i class="bi bi-x-circle"></i>
-                        </button>
+                        <div class="col-md-2">
+                            <label class="modern-label">Payment Status</label>
+                            <select class="modern-select" v-model="statusFilter" @change="fetchBills">
+                                <option value="">All Status</option>
+                                <option value="pending">Pending</option>
+                                <option value="partial">Partial</option>
+                                <option value="paid">Paid</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">Bill Type</label>
+                            <select class="modern-select" v-model="billTypeFilter" @change="fetchBills">
+                                <option value="">All Types</option>
+                                <option value="general">General</option>
+                                <option value="opd">OPD</option>
+                                <option value="ipd">IPD</option>
+                                <option value="pharmacy">Pharmacy</option>
+                                <option value="lab">Laboratory</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">From Date</label>
+                            <input type="date" class="modern-input" v-model="fromDate" @change="fetchBills">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">To Date</label>
+                            <input type="date" class="modern-input" v-model="toDate" @change="fetchBills">
+                        </div>
+                        <div class="col-md-1">
+                            <label class="modern-label">&nbsp;</label>
+                            <button class="modern-btn-reset w-100" @click="clearFilters">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </transition>
         </div>
 
         <!-- Bills Table -->
@@ -197,7 +188,7 @@
                                 </div>
                             </td>
                             <td>
-                                <span class="badge bg-secondary bg-opacity-10 text-secondary">
+                                <span class="badge bg-success text-white">
                                     {{ formatBillType(bill.bill_type) }}
                                 </span>
                             </td>
@@ -297,6 +288,7 @@
 </template>
 
 <style scoped>
+/* Modern Dashboard Styles */
 .spin {
     animation: spin 1s linear infinite;
 }
@@ -305,10 +297,235 @@
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
+
+/* Modern Buttons */
+.modern-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: none;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.modern-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+}
+
+.modern-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
+    color: white;
+}
+
+.modern-btn-outline {
+    background: white;
+    color: #6c757d;
+    border: 1px solid #e0e0e0;
+}
+
+.modern-btn-outline:hover {
+    background: #f8f9fa;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+/* Modern Stat Cards with Gradients */
+.stat-card {
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    min-height: 130px;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* Gradient Backgrounds */
+.stat-card-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.stat-card-gradient-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.stat-card-gradient-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
+
+.stat-card-gradient-success {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+}
+
+.stat-card-gradient-danger {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    color: white;
+}
+
+.stat-card-gradient-secondary {
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    color: #2c3e50;
+}
+
+.stat-content-full {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.stat-label-top {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+}
+
+.stat-value-large {
+    font-size: 2.25rem;
+    font-weight: 700;
+    line-height: 1;
+    margin: 0.25rem 0;
+}
+
+.stat-description {
+    font-size: 0.75rem;
+    opacity: 0.85;
+    line-height: 1.4;
+}
+
+/* Modern Cards */
+.modern-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.modern-card-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fafafa;
+}
+
+.modern-card-header h6 {
+    font-weight: 600;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+}
+
+.modern-card-body {
+    padding: 1.5rem;
+}
+
+/* Modern Filter Styles */
+.modern-card-header.clickable {
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+}
+
+.modern-card-header.clickable:hover {
+    background: #f5f5f5;
+}
+
+.modern-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modern-select,
+.modern-input {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: white;
+    color: #2c3e50;
+}
+
+.modern-select:focus,
+.modern-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.modern-select:hover,
+.modern-input:hover {
+    border-color: #b0b0b0;
+}
+
+.modern-btn-reset {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    color: #6c757d;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+}
+
+.modern-btn-reset:hover {
+    background: #f8f9fa;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+/* Filter Collapse Animation */
+.filter-collapse-enter-active,
+.filter-collapse-leave-active {
+    transition: all 0.3s ease;
+    max-height: 500px;
+    overflow: hidden;
+}
+
+.filter-collapse-enter-from,
+.filter-collapse-leave-to {
+    max-height: 0;
+    opacity: 0;
+}
 </style>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 
 const bills = ref([]);
@@ -318,6 +535,7 @@ const billTypeFilter = ref('');
 const fromDate = ref('');
 const toDate = ref('');
 const loading = ref(false);
+const showFilters = ref(false);
 const summary = ref({
     total_count: 0,
     total_amount: 0,
@@ -334,6 +552,15 @@ const pagination = ref({
 });
 
 let searchTimeout = null;
+
+// Computed
+const hasActiveFilters = computed(() => {
+    return search.value !== '' ||
+           statusFilter.value !== '' ||
+           billTypeFilter.value !== '' ||
+           fromDate.value !== '' ||
+           toDate.value !== '';
+});
 
 const fetchBills = async (page = 1) => {
     try {
@@ -514,13 +741,13 @@ const formatStatus = (status) => {
 
 const getStatusClass = (status) => {
     const classes = {
-        'pending': 'bg-danger',
+        'pending': 'bg-danger text-white',
         'partial': 'bg-warning text-dark',
-        'paid': 'bg-success',
-        'cancelled': 'bg-secondary',
-        'refunded': 'bg-info'
+        'paid': 'bg-success text-white',
+        'cancelled': 'bg-secondary text-white',
+        'refunded': 'bg-info text-white'
     };
-    return classes[status] || 'bg-secondary';
+    return classes[status] || 'bg-secondary text-white';
 };
 
 const getStatusIcon = (status) => {
@@ -539,7 +766,7 @@ const addPayment = (bill) => {
 };
 
 const printBill = (bill) => {
-    window.open(`/api/bills/${bill.bill_id}/print`, '_blank');
+    window.open(`/print/bill/${bill.bill_id}`, '_blank');
 };
 
 const deleteBill = async (bill) => {

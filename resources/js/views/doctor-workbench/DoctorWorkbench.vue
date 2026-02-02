@@ -3,24 +3,25 @@
     <div class="container-fluid py-4">
       <!-- Header -->
       <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">
-          <i class="bi bi-clipboard2-pulse me-2"></i>
-          Doctor Workbench
-        </h2>
+        <div>
+          <h2 class="mb-1 fw-bold">Doctor Workbench Dashboard</h2>
+          <p class="text-muted mb-0 small">Manage patient consultations and appointments</p>
+        </div>
         <div class="d-flex gap-2">
           <!-- Date Filter -->
           <input
             type="date"
             v-model="selectedDate"
-            class="form-control"
+            class="modern-input"
             @change="fetchData"
+            style="width: auto;"
           />
           <!-- Doctor Filter (Admin only) -->
           <select
             v-if="isAdmin"
             v-model="selectedDoctorId"
             @change="fetchData"
-            class="form-select"
+            class="modern-select"
             style="min-width: 250px"
           >
             <option value="">🏥 All Doctors (Admin View)</option>
@@ -32,85 +33,62 @@
               {{ doctor.full_name }} - {{ doctor.department?.department_name || 'N/A' }}
             </option>
           </select>
-          <!-- Current Filter Badge -->
-          <div v-if="isAdmin" class="badge bg-primary fs-6 px-3 py-2">
-            {{ selectedDoctorId ? 'Filtered by Doctor' : 'Viewing All Visits' }}
-          </div>
+          <!-- Refresh Button -->
+          <button class="modern-btn modern-btn-outline" @click="fetchData">
+            <i class="bi bi-arrow-clockwise"></i>
+            <span>Refresh</span>
+          </button>
         </div>
       </div>
 
       <!-- Statistics Cards -->
       <div class="row g-3 mb-4">
-        <div class="col-md-3">
-          <div class="card border-primary">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-center">
-                <div>
-                  <p class="text-muted mb-1 small">Total Visits</p>
-                  <h3 class="mb-0">{{ stats.total_visits }}</h3>
-                </div>
-                <div class="bg-primary bg-opacity-10 p-3 rounded">
-                  <i class="bi bi-people-fill text-primary fs-4"></i>
-                </div>
-              </div>
+        <div class="col-xl-3 col-lg-6 col-md-6">
+          <div class="stat-card stat-card-gradient-primary">
+            <div class="stat-content-full">
+              <div class="stat-label-top">Total Visits</div>
+              <div class="stat-value-large">{{ stats.total_visits }}</div>
+              <div class="stat-description">Today's appointments</div>
             </div>
           </div>
         </div>
 
-        <div class="col-md-3">
-          <div class="card border-warning">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-center">
-                <div>
-                  <p class="text-muted mb-1 small">Waiting</p>
-                  <h3 class="mb-0">{{ stats.waiting }}</h3>
-                </div>
-                <div class="bg-warning bg-opacity-10 p-3 rounded">
-                  <i class="bi bi-hourglass-split text-warning fs-4"></i>
-                </div>
-              </div>
+        <div class="col-xl-3 col-lg-6 col-md-6">
+          <div class="stat-card stat-card-gradient-warning">
+            <div class="stat-content-full">
+              <div class="stat-label-top">Waiting</div>
+              <div class="stat-value-large">{{ stats.waiting }}</div>
+              <div class="stat-description">In queue for consultation</div>
             </div>
           </div>
         </div>
 
-        <div class="col-md-3">
-          <div class="card border-info">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-center">
-                <div>
-                  <p class="text-muted mb-1 small">In Consultation</p>
-                  <h3 class="mb-0">{{ stats.in_consultation }}</h3>
-                </div>
-                <div class="bg-info bg-opacity-10 p-3 rounded">
-                  <i class="bi bi-clipboard2-pulse text-info fs-4"></i>
-                </div>
-              </div>
+        <div class="col-xl-3 col-lg-6 col-md-6">
+          <div class="stat-card stat-card-gradient-info">
+            <div class="stat-content-full">
+              <div class="stat-label-top">In Consultation</div>
+              <div class="stat-value-large">{{ stats.in_consultation }}</div>
+              <div class="stat-description">Currently consulting</div>
             </div>
           </div>
         </div>
 
-        <div class="col-md-3">
-          <div class="card border-success">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-center">
-                <div>
-                  <p class="text-muted mb-1 small">Completed</p>
-                  <h3 class="mb-0">{{ stats.completed }}</h3>
-                </div>
-                <div class="bg-success bg-opacity-10 p-3 rounded">
-                  <i class="bi bi-check-circle-fill text-success fs-4"></i>
-                </div>
-              </div>
+        <div class="col-xl-3 col-lg-6 col-md-6">
+          <div class="stat-card stat-card-gradient-success">
+            <div class="stat-content-full">
+              <div class="stat-label-top">Completed</div>
+              <div class="stat-value-large">{{ stats.completed }}</div>
+              <div class="stat-description">Finished consultations</div>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Main Content Tabs -->
-      <ul class="nav nav-tabs mb-3" role="tablist">
-        <li class="nav-item">
+      <ul class="modern-tabs mb-3" role="tablist">
+        <li class="modern-tab-item">
           <a
-            class="nav-link"
+            class="modern-tab-link"
             :class="{ active: activeTab === 'queue' }"
             @click="activeTab = 'queue'"
             href="#"
@@ -120,9 +98,9 @@
             Today's Queue
           </a>
         </li>
-        <li class="nav-item">
+        <li class="modern-tab-item">
           <a
-            class="nav-link"
+            class="modern-tab-link"
             :class="{ active: activeTab === 'patients' }"
             @click="activeTab = 'patients'"
             href="#"
@@ -138,13 +116,13 @@
       <div class="tab-content">
         <!-- Queue Tab -->
         <div v-show="activeTab === 'queue'">
-          <div class="card">
-            <div class="card-header bg-white">
+          <div class="modern-card">
+            <div class="modern-card-header">
               <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
+                <h6 class="mb-0">
                   <i class="bi bi-calendar-check me-2"></i>
                   OPD Visits - {{ formatDate(selectedDate) }}
-                </h5>
+                </h6>
                 <div v-if="isAdmin && !selectedDoctorId" class="badge bg-info">
                   <i class="bi bi-info-circle me-1"></i>
                   Showing all doctors' patients
@@ -155,7 +133,7 @@
                 </div>
               </div>
             </div>
-            <div class="card-body p-0">
+            <div class="modern-card-body p-0">
               <div v-if="loading" class="text-center py-5">
                 <div class="spinner-border text-primary" role="status">
                   <span class="visually-hidden">Loading...</span>
@@ -166,8 +144,8 @@
                 <p class="mt-2">No OPD visits for selected date</p>
               </div>
               <div v-else class="table-responsive">
-                <table class="table table-hover mb-0">
-                  <thead class="table-light">
+                <table class="table table-hover mb-0 modern-table">
+                  <thead>
                     <tr>
                       <th>Token</th>
                       <th>Patient</th>
@@ -241,13 +219,13 @@
 
         <!-- Patients Tab -->
         <div v-show="activeTab === 'patients'">
-          <div class="card">
-            <div class="card-header bg-white">
+          <div class="modern-card">
+            <div class="modern-card-header">
               <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
+                <h6 class="mb-0">
                   <i class="bi bi-person-lines-fill me-2"></i>
                   {{ isDoctor ? 'My Assigned Patients' : 'All Patients' }}
-                </h5>
+                </h6>
                 <div class="d-flex align-items-center gap-3">
                   <div v-if="isAdmin" class="badge bg-info">
                     <i class="bi bi-eye me-1"></i>
@@ -259,7 +237,7 @@
                 </div>
               </div>
             </div>
-            <div class="card-body p-0">
+            <div class="modern-card-body p-0">
               <div v-if="loading" class="text-center py-5">
                 <div class="spinner-border text-primary" role="status">
                   <span class="visually-hidden">Loading...</span>
@@ -270,8 +248,8 @@
                 <p class="mt-2">No patients found</p>
               </div>
               <div v-else class="table-responsive">
-                <table class="table table-hover mb-0">
-                  <thead class="table-light">
+                <table class="table table-hover mb-0 modern-table">
+                  <thead>
                     <tr>
                       <th>Patient ID</th>
                       <th>Patient Name</th>
@@ -622,35 +600,236 @@ onMounted(() => {
 .doctor-workbench {
   min-height: 100vh;
   background-color: #f8f9fa;
+  padding: 1.5rem;
 }
 
-.nav-tabs .nav-link {
-  color: #6c757d;
+/* Modern Buttons */
+.modern-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
   border: none;
-  border-bottom: 2px solid transparent;
+  transition: all 0.3s ease;
   cursor: pointer;
+  text-decoration: none;
 }
 
-.nav-tabs .nav-link:hover {
-  border-color: #dee2e6;
-  color: #495057;
+.modern-btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
 }
 
-.nav-tabs .nav-link.active {
-  color: #0d6efd;
-  border-bottom-color: #0d6efd;
-  background: none;
+.modern-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
+  color: white;
 }
 
-.card {
+.modern-btn-outline {
+  background: white;
+  color: #6c757d;
+  border: 1px solid #e0e0e0;
+}
+
+.modern-btn-outline:hover {
+  background: #f8f9fa;
+  border-color: #667eea;
+  color: #667eea;
+}
+
+/* Modern Stat Cards with Gradients */
+.stat-card {
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
   border: none;
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  min-height: 130px;
+  position: relative;
+  overflow: hidden;
 }
 
-.table > :not(caption) > * > * {
-  padding: 0.75rem;
+.stat-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
 }
 
+/* Gradient Backgrounds */
+.stat-card-gradient-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.stat-card-gradient-warning {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+}
+
+.stat-card-gradient-info {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+}
+
+.stat-card-gradient-success {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  color: white;
+}
+
+.stat-content-full {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.stat-label-top {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.9;
+}
+
+.stat-value-large {
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1;
+  margin: 0.25rem 0;
+}
+
+.stat-description {
+  font-size: 0.75rem;
+  opacity: 0.85;
+  line-height: 1.4;
+}
+
+/* Modern Cards */
+.modern-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.modern-card-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.modern-card-header h6 {
+  font-weight: 600;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+}
+
+.modern-card-body {
+  padding: 1.5rem;
+}
+
+/* Modern Tabs */
+.modern-tabs {
+  display: flex;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-bottom: 2px solid #f0f0f0;
+  gap: 1rem;
+}
+
+.modern-tab-item {
+  list-style: none;
+}
+
+.modern-tab-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  color: #6c757d;
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  font-weight: 500;
+  margin-bottom: -2px;
+}
+
+.modern-tab-link:hover {
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 8px 8px 0 0;
+}
+
+.modern-tab-link.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+}
+
+/* Modern Table */
+.modern-table {
+  font-size: 0.875rem;
+}
+
+.modern-table thead th {
+  background: #fafafa;
+  color: #6c757d;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1rem 1.25rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.modern-table tbody td {
+  padding: 1rem 1.25rem;
+  vertical-align: middle;
+  color: #2c3e50;
+}
+
+.modern-table tbody tr {
+  transition: all 0.2s ease;
+}
+
+.modern-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+/* Modern Inputs */
+.modern-select,
+.modern-input {
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  background: white;
+  color: #2c3e50;
+}
+
+.modern-select:focus,
+.modern-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.modern-select:hover,
+.modern-input:hover {
+  border-color: #b0b0b0;
+}
+
+/* Legacy Styles */
 .badge {
   font-weight: 500;
   padding: 0.35em 0.65em;

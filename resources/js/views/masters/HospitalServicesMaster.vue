@@ -3,24 +3,19 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Hospital Services</h5>
-                <button class="btn btn-primary btn-sm" @click="openAddModal">
-                    <i class="bi bi-plus-circle"></i> Add Service
-                </button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-info btn-sm" @click="openCashlessPriceListModal">
+                        <i class="bi bi-cash-coin"></i> Cashless PriceList
+                    </button>
+                    <button class="btn btn-primary btn-sm" @click="openAddModal">
+                        <i class="bi bi-plus-circle"></i> Add Service
+                    </button>
+                </div>
             </div>
 
             <div class="card-body">
                 <!-- Filters -->
                 <div class="row mb-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Class Name</label>
-                        <select class="form-select form-select-sm" v-model="filters.insurance_id" @change="loadServices">
-                            <option value="">All</option>
-                            <option value="private">PRIVATE</option>
-                            <option v-for="ins in insuranceCompanies" :key="ins.insurance_id" :value="ins.insurance_id">
-                                {{ ins.company_name }}
-                            </option>
-                        </select>
-                    </div>
                     <div class="col-md-3">
                         <label class="form-label">Cost Head</label>
                         <select class="form-select form-select-sm" v-model="filters.cost_head_id" @change="loadServices">
@@ -30,11 +25,19 @@
                             </option>
                         </select>
                     </div>
+                    <div class="col-md-2">
+                        <label class="form-label">From Date</label>
+                        <input type="date" class="form-control form-control-sm" v-model="filters.from_date" @change="loadServices">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">To Date</label>
+                        <input type="date" class="form-control form-control-sm" v-model="filters.to_date" @change="loadServices">
+                    </div>
                     <div class="col-md-3">
                         <label class="form-label">Search Services</label>
                         <input type="text" class="form-control form-control-sm" v-model="filters.search" @input="loadServices" placeholder="Search by service name...">
                     </div>
-                    <div class="col-md-3 d-flex align-items-end">
+                    <div class="col-md-2 d-flex align-items-end">
                         <button class="btn btn-secondary btn-sm me-2" @click="clearFilters">Clear</button>
                         <button class="btn btn-info btn-sm" @click="openCostHeadModal">
                             <i class="bi bi-list-task"></i> Manage Cost Heads
@@ -50,7 +53,6 @@
                                 <th style="width: 60px;">#</th>
                                 <th style="min-width: 200px;">Service Name</th>
                                 <th style="min-width: 120px;">Cost Head</th>
-                                <th style="min-width: 150px;">Class Name</th>
                                 <th style="min-width: 120px;" class="text-end">Base Price</th>
                                 <th style="min-width: 150px;" class="text-center">Room/Bed Prices</th>
                                 <th style="min-width: 150px;" class="text-center">Actions</th>
@@ -58,13 +60,13 @@
                         </thead>
                         <tbody>
                             <tr v-if="loading">
-                                <td colspan="7" class="text-center py-4">
+                                <td colspan="6" class="text-center py-4">
                                     <div class="spinner-border spinner-border-sm" role="status"></div>
                                     Loading...
                                 </td>
                             </tr>
                             <tr v-else-if="services.length === 0">
-                                <td colspan="7" class="text-center py-4 text-muted">
+                                <td colspan="6" class="text-center py-4 text-muted">
                                     No services found. Click "Add Service" to create one.
                                 </td>
                             </tr>
@@ -74,7 +76,6 @@
                                 <td>
                                     <span class="badge bg-info">{{ service.cost_head_name }}</span>
                                 </td>
-                                <td>{{ service.insurance_company_name || 'PRIVATE' }}</td>
                                 <td class="text-end">₹{{ parseFloat(service.base_price).toFixed(2) }}</td>
                                 <td class="text-center">
                                     <span v-if="service.cost_head_type === 'ipd_services'">
@@ -127,17 +128,7 @@
                     <div class="modal-body">
                         <form @submit.prevent="saveService">
                             <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Class Name *</label>
-                                    <select class="form-select" v-model="form.insurance_id" required>
-                                        <option value="">PRIVATE</option>
-                                        <option v-for="ins in insuranceCompanies" :key="ins.insurance_id" :value="ins.insurance_id">
-                                            {{ ins.company_name }}
-                                        </option>
-                                    </select>
-                                    <small class="text-muted">Select class or leave as PRIVATE</small>
-                                </div>
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-12 mb-3">
                                     <label class="form-label">Cost Head *</label>
                                     <select class="form-select" v-model="form.cost_head_id" @change="onCostHeadChange" required>
                                         <option value="">Select Cost Head</option>
@@ -166,6 +157,10 @@
                                     <label class="form-label">Night Emergency Rate</label>
                                     <input type="number" class="form-control" v-model="form.night_emergency_rate" step="0.01" min="0" placeholder="0.00">
                                 </div>
+                            </div>
+                            <div class="alert alert-info mb-3">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Note:</strong> To set cashless prices for insurance companies, use the "Cashless PriceList" button after creating the service.
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
@@ -623,6 +618,319 @@
                 </form>
             </div>
         </div>
+
+        <!-- Cashless PriceList Bulk Update Modal -->
+        <div class="modal fade" ref="cashlessPriceListModalRef" tabindex="-1">
+            <div class="modal-dialog modal-fullscreen-lg-down" style="max-width: 95vw; margin-top: 100px; margin-bottom: 20px;">
+                <div class="modal-content" style="max-height: calc(100vh - 120px); display: flex; flex-direction: column;">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-cash-coin"></i> Cashless PriceList - Bulk Update
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" style="overflow-y: auto; flex: 1;">
+                        <!-- Filters -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Class Name *</label>
+                                <select class="form-select" v-model="cashlessFilters.insurance_id" @change="onCashlessFilterChange">
+                                    <option value="">-- Select Class Name --</option>
+                                    <option value="private">General</option>
+                                    <option v-for="ins in insuranceCompanies" :key="ins.insurance_id" :value="ins.insurance_id">
+                                        {{ ins.company_name }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Cost Head</label>
+                                <select class="form-select" v-model="cashlessFilters.cost_head_id" @change="onCashlessFilterChange">
+                                    <option value="">All Cost Heads</option>
+                                    <option v-for="ch in costHeads" :key="ch.cost_head_id" :value="ch.cost_head_id">
+                                        {{ ch.cost_head_name }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Date Range Filters -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">From Date</label>
+                                <input type="date" class="form-control" v-model="cashlessFilters.from_date" @change="loadCashlessServices">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">To Date</label>
+                                <input type="date" class="form-control" v-model="cashlessFilters.to_date" @change="loadCashlessServices">
+                            </div>
+                        </div>
+
+                        <!-- Services Table -->
+                        <div v-if="cashlessFilters.insurance_id">
+                            <div v-if="loadingCashlessServices" class="text-center py-4">
+                                <div class="spinner-border" role="status"></div>
+                                <div>Loading services...</div>
+                            </div>
+                            <div v-else-if="cashlessServices.length === 0" class="alert alert-info">
+                                No services found for the selected filters.
+                            </div>
+                            <div v-else class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
+                                <div class="mb-2 d-flex justify-content-end">
+                                    <button
+                                        class="btn btn-sm btn-outline-primary"
+                                        @click="copyAllBasePricesToCashless"
+                                        type="button"
+                                        title="Copy all base prices to cashless prices"
+                                    >
+                                        <i class="bi bi-files"></i> Copy All Base Prices to Cashless
+                                    </button>
+                                </div>
+                                <table class="table table-sm table-bordered table-hover">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th style="width: 40px;">#</th>
+                                            <th style="min-width: 200px;">Service Name</th>
+                                            <th style="min-width: 120px;">Cost Head</th>
+                                            <th style="min-width: 100px;" class="text-end">Base Price</th>
+                                            <th style="min-width: 100px;" class="text-end">Day Emg.</th>
+                                            <th style="min-width: 100px;" class="text-end">Night Emg.</th>
+                                            <th style="width: 60px;" class="text-center">Copy</th>
+                                            <th style="min-width: 120px;" class="text-end bg-info-subtle">CL Rate</th>
+                                            <th style="min-width: 120px;" class="text-end bg-info-subtle">CL Day Emg.</th>
+                                            <th style="min-width: 120px;" class="text-end bg-info-subtle">CL Night Emg.</th>
+                                            <th style="min-width: 120px;" class="text-center bg-success-subtle" v-if="selectedCashlessCostHeadType === 'ipd_services'">Ward Prices</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template v-for="(service, index) in cashlessServices" :key="service.hospital_service_id">
+                                            <tr>
+                                                <td>{{ index + 1 }}</td>
+                                                <td>{{ service.service_name }}</td>
+                                                <td>
+                                                    <span class="badge bg-info">{{ service.cost_head_name }}</span>
+                                                </td>
+                                                <td class="text-end text-muted">₹{{ parseFloat(service.base_price).toFixed(2) }}</td>
+                                                <td class="text-end text-muted">₹{{ parseFloat(service.day_emergency_rate || 0).toFixed(2) }}</td>
+                                                <td class="text-end text-muted">₹{{ parseFloat(service.night_emergency_rate || 0).toFixed(2) }}</td>
+                                                <td class="text-center">
+                                                    <button
+                                                        class="btn btn-sm btn-outline-secondary"
+                                                        @click="copyBasePriceToCashless(service)"
+                                                        type="button"
+                                                        title="Copy base prices to cashless"
+                                                    >
+                                                        <i class="bi bi-arrow-right"></i>
+                                                    </button>
+                                                </td>
+                                                <td class="bg-info-subtle">
+                                                    <input
+                                                        type="number"
+                                                        class="form-control form-control-sm text-end"
+                                                        v-model="cashlessUpdates[service.hospital_service_id].cl_rate"
+                                                        step="0.01"
+                                                        min="0"
+                                                        placeholder="0.00"
+                                                    >
+                                                </td>
+                                                <td class="bg-info-subtle">
+                                                    <input
+                                                        type="number"
+                                                        class="form-control form-control-sm text-end"
+                                                        v-model="cashlessUpdates[service.hospital_service_id].cl_day_emergency_rate"
+                                                        step="0.01"
+                                                        min="0"
+                                                        placeholder="0.00"
+                                                    >
+                                                </td>
+                                                <td class="bg-info-subtle">
+                                                    <input
+                                                        type="number"
+                                                        class="form-control form-control-sm text-end"
+                                                        v-model="cashlessUpdates[service.hospital_service_id].cl_night_emergency_rate"
+                                                        step="0.01"
+                                                        min="0"
+                                                        placeholder="0.00"
+                                                    >
+                                                </td>
+                                                <td class="text-center bg-success-subtle" v-if="selectedCashlessCostHeadType === 'ipd_services'">
+                                                    <button
+                                                        class="btn btn-sm btn-outline-success"
+                                                        @click="toggleWardPrices(service.hospital_service_id)"
+                                                        type="button"
+                                                    >
+                                                        <i class="bi" :class="expandedServiceId === service.hospital_service_id ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                                                        Ward Prices
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <!-- Expanded Ward Prices Row -->
+                                            <tr v-if="expandedServiceId === service.hospital_service_id && selectedCashlessCostHeadType === 'ipd_services'">
+                                                <td colspan="11" class="p-3 bg-light">
+                                                    <div class="card border-0 shadow-sm">
+                                                        <div class="card-header bg-success text-white">
+                                                            <h6 class="mb-0">
+                                                                <i class="bi bi-hospital"></i> Ward Prices for {{ service.service_name }}
+                                                            </h6>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="row">
+                                                                <div class="col-md-4 mb-2" v-for="ward in wards" :key="ward.ward_id">
+                                                                    <label class="form-label small mb-1">
+                                                                        <strong>{{ ward.ward_name }}</strong>
+                                                                    </label>
+                                                                    <div class="input-group input-group-sm">
+                                                                        <span class="input-group-text">₹</span>
+                                                                        <input
+                                                                            type="number"
+                                                                            class="form-control"
+                                                                            v-model="cashlessUpdates[service.hospital_service_id].ward_prices[ward.ward_id]"
+                                                                            step="0.01"
+                                                                            min="0"
+                                                                            placeholder="0.00"
+                                                                        >
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="alert alert-info mt-3 mb-0">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Note:</strong> Only modified services will be updated. Leave fields blank to keep existing values.
+                            </div>
+                        </div>
+                        <div v-else class="alert alert-warning">
+                            Please select an Insurance Company to view services.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-info" @click="openPriceHistoryModal">
+                            <i class="bi bi-clock-history"></i> Price History
+                        </button>
+                        <div class="flex-grow-1"></div>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button
+                            type="button"
+                            class="btn btn-primary"
+                            @click="saveCashlessUpdates"
+                            :disabled="savingCashless || !cashlessFilters.insurance_id || cashlessServices.length === 0"
+                        >
+                            <span v-if="savingCashless" class="spinner-border spinner-border-sm me-1"></span>
+                            {{ savingCashless ? 'Updating...' : 'Update Cashless Prices' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Price History Modal -->
+        <div class="modal fade" ref="priceHistoryModalRef" tabindex="-1">
+            <div class="modal-dialog modal-fullscreen-lg-down" style="max-width: 95vw; margin-top: 100px; margin-bottom: 20px;">
+                <div class="modal-content" style="max-height: calc(100vh - 120px); display: flex; flex-direction: column;">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-clock-history"></i> Cashless Price Change History
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" style="overflow-y: auto; flex: 1;">
+                        <!-- Filters -->
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Service Name</label>
+                                <input type="text" class="form-control form-control-sm" v-model="historyFilters.service_name" @input="loadPriceHistory" placeholder="Search service...">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Class Name</label>
+                                <input type="text" class="form-control form-control-sm" v-model="historyFilters.insurance_company_name" @input="loadPriceHistory" placeholder="Search class...">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">From Date</label>
+                                <input type="date" class="form-control form-control-sm" v-model="historyFilters.from_date" @change="loadPriceHistory">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">To Date</label>
+                                <input type="date" class="form-control form-control-sm" v-model="historyFilters.to_date" @change="loadPriceHistory">
+                            </div>
+                        </div>
+
+                        <!-- History Table -->
+                        <div v-if="loadingHistory" class="text-center py-4">
+                            <div class="spinner-border" role="status"></div>
+                            <div>Loading history...</div>
+                        </div>
+                        <div v-else-if="priceHistory.length === 0" class="alert alert-info">
+                            No price change history found.
+                        </div>
+                        <div v-else class="table-responsive">
+                            <table class="table table-sm table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 40px;">#</th>
+                                        <th style="min-width: 200px;">Service Name</th>
+                                        <th style="min-width: 120px;">Class Name</th>
+                                        <th style="min-width: 100px;" class="text-end">Old CL Rate</th>
+                                        <th style="min-width: 100px;" class="text-end">Old Day Emg</th>
+                                        <th style="min-width: 100px;" class="text-end">Old Night Emg</th>
+                                        <th style="width: 50px;" class="text-center"><i class="bi bi-arrow-right"></i></th>
+                                        <th style="min-width: 100px;" class="text-end bg-success-subtle">New CL Rate</th>
+                                        <th style="min-width: 100px;" class="text-end bg-success-subtle">New Day Emg</th>
+                                        <th style="min-width: 100px;" class="text-end bg-success-subtle">New Night Emg</th>
+                                        <th style="min-width: 120px;">Updated By</th>
+                                        <th style="min-width: 150px;">Updated At</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(history, index) in priceHistory" :key="history.history_id">
+                                        <td>{{ index + 1 }}</td>
+                                        <td>{{ history.service_name }}</td>
+                                        <td>{{ history.insurance_company_name || 'N/A' }}</td>
+                                        <td class="text-end">₹{{ parseFloat(history.old_cl_rate).toFixed(2) }}</td>
+                                        <td class="text-end">₹{{ parseFloat(history.old_cl_day_emergency_rate).toFixed(2) }}</td>
+                                        <td class="text-end">₹{{ parseFloat(history.old_cl_night_emergency_rate).toFixed(2) }}</td>
+                                        <td class="text-center"><i class="bi bi-arrow-right text-primary"></i></td>
+                                        <td class="text-end bg-success-subtle"><strong>₹{{ parseFloat(history.new_cl_rate).toFixed(2) }}</strong></td>
+                                        <td class="text-end bg-success-subtle"><strong>₹{{ parseFloat(history.new_cl_day_emergency_rate).toFixed(2) }}</strong></td>
+                                        <td class="text-end bg-success-subtle"><strong>₹{{ parseFloat(history.new_cl_night_emergency_rate).toFixed(2) }}</strong></td>
+                                        <td>{{ history.updated_by_name || 'Unknown' }}</td>
+                                        <td>{{ formatDateTime(history.updated_at) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <!-- Pagination -->
+                            <div class="d-flex justify-content-between align-items-center mt-3" v-if="historyPagination.last_page > 1">
+                                <div>
+                                    Showing {{ historyPagination.from }} to {{ historyPagination.to }} of {{ historyPagination.total }} records
+                                </div>
+                                <nav>
+                                    <ul class="pagination pagination-sm mb-0">
+                                        <li class="page-item" :class="{ disabled: historyPagination.current_page === 1 }">
+                                            <button class="page-link" @click="changePage(historyPagination.current_page - 1)">Previous</button>
+                                        </li>
+                                        <li class="page-item" v-for="page in visiblePages" :key="page" :class="{ active: page === historyPagination.current_page }">
+                                            <button class="page-link" @click="changePage(page)">{{ page }}</button>
+                                        </li>
+                                        <li class="page-item" :class="{ disabled: historyPagination.current_page === historyPagination.last_page }">
+                                            <button class="page-link" @click="changePage(historyPagination.current_page + 1)">Next</button>
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -645,14 +953,14 @@ export default {
         const allBeds = ref([]);
 
         const filters = ref({
-            insurance_id: '',
             cost_head_id: '',
             search: '',
+            from_date: '',
+            to_date: '',
         });
 
         const editMode = ref(false);
         const form = ref({
-            insurance_id: '',
             cost_head_id: '',
             service_name: '',
             description: '',
@@ -703,10 +1011,45 @@ export default {
         let costHeadModal = null;
         let setPricesModal = null;
         let priceDetailsModal = null;
+        let cashlessPriceListModal = null;
+        let priceHistoryModalInstance = null;
         const serviceModalRef = ref(null);
         const costHeadModalRef = ref(null);
         const setPricesModalRef = ref(null);
         const priceDetailsModalRef = ref(null);
+        const cashlessPriceListModalRef = ref(null);
+        const priceHistoryModalRef = ref(null);
+
+        // Cashless PriceList Bulk Update
+        const cashlessFilters = ref({
+            insurance_id: '',
+            cost_head_id: '',
+            from_date: '',
+            to_date: '',
+        });
+        const cashlessServices = ref([]);
+        const loadingCashlessServices = ref(false);
+        const cashlessUpdates = ref({});
+        const savingCashless = ref(false);
+        const selectedCashlessCostHeadType = ref('');
+        const expandedServiceId = ref(null);
+
+        // Price History
+        const historyFilters = ref({
+            service_name: '',
+            insurance_company_name: '',
+            from_date: '',
+            to_date: '',
+        });
+        const priceHistory = ref([]);
+        const loadingHistory = ref(false);
+        const historyPagination = ref({
+            current_page: 1,
+            last_page: 1,
+            from: 0,
+            to: 0,
+            total: 0,
+        });
 
         onMounted(async () => {
             await nextTick();
@@ -722,6 +1065,12 @@ export default {
             }
             if (priceDetailsModalRef.value) {
                 priceDetailsModal = new Modal(priceDetailsModalRef.value);
+            }
+            if (cashlessPriceListModalRef.value) {
+                cashlessPriceListModal = new Modal(cashlessPriceListModalRef.value);
+            }
+            if (priceHistoryModalRef.value) {
+                priceHistoryModalInstance = new Modal(priceHistoryModalRef.value);
             }
 
             await loadMasterData();
@@ -786,9 +1135,10 @@ export default {
             loading.value = true;
             try {
                 const params = new URLSearchParams();
-                if (filters.value.insurance_id) params.append('insurance_id', filters.value.insurance_id);
                 if (filters.value.cost_head_id) params.append('cost_head_id', filters.value.cost_head_id);
                 if (filters.value.search) params.append('search', filters.value.search);
+                if (filters.value.from_date) params.append('from_date', filters.value.from_date);
+                if (filters.value.to_date) params.append('to_date', filters.value.to_date);
 
                 const response = await axios.get('/api/hospital-services?' + params.toString());
                 services.value = response.data || [];
@@ -801,9 +1151,10 @@ export default {
 
         const clearFilters = () => {
             filters.value = {
-                insurance_id: '',
                 cost_head_id: '',
                 search: '',
+                from_date: '',
+                to_date: '',
             };
             loadServices();
         };
@@ -811,7 +1162,6 @@ export default {
         const openAddModal = () => {
             editMode.value = false;
             form.value = {
-                insurance_id: '',
                 cost_head_id: '',
                 service_name: '',
                 description: '',
@@ -841,7 +1191,6 @@ export default {
             editMode.value = true;
             form.value = {
                 hospital_service_id: service.hospital_service_id,
-                insurance_id: service.insurance_id || '',
                 cost_head_id: service.cost_head_id,
                 service_name: service.service_name,
                 description: service.description,
@@ -1244,6 +1593,287 @@ export default {
             }
         };
 
+        // Cashless PriceList Functions
+        const openCashlessPriceListModal = () => {
+            cashlessFilters.value = {
+                insurance_id: '',
+                cost_head_id: '',
+                from_date: '',
+                to_date: '',
+            };
+            cashlessServices.value = [];
+            cashlessUpdates.value = {};
+            selectedCashlessCostHeadType.value = '';
+            expandedServiceId.value = null;
+
+            if (cashlessPriceListModal) {
+                cashlessPriceListModal.show();
+            } else {
+                console.error('Cashless price list modal not initialized');
+            }
+        };
+
+        const toggleWardPrices = (serviceId) => {
+            if (expandedServiceId.value === serviceId) {
+                expandedServiceId.value = null;
+            } else {
+                expandedServiceId.value = serviceId;
+            }
+        };
+
+        const copyBasePriceToCashless = (service) => {
+            if (cashlessUpdates.value[service.hospital_service_id]) {
+                cashlessUpdates.value[service.hospital_service_id].cl_rate = parseFloat(service.base_price) || 0;
+                cashlessUpdates.value[service.hospital_service_id].cl_day_emergency_rate = parseFloat(service.day_emergency_rate) || 0;
+                cashlessUpdates.value[service.hospital_service_id].cl_night_emergency_rate = parseFloat(service.night_emergency_rate) || 0;
+            }
+        };
+
+        const copyAllBasePricesToCashless = () => {
+            cashlessServices.value.forEach(service => {
+                copyBasePriceToCashless(service);
+            });
+        };
+
+        const onCashlessFilterChange = () => {
+            // Detect cost head type
+            if (cashlessFilters.value.cost_head_id) {
+                const selectedCostHead = costHeads.value.find(ch => ch.cost_head_id == cashlessFilters.value.cost_head_id);
+                selectedCashlessCostHeadType.value = selectedCostHead ? selectedCostHead.cost_head_type : '';
+            } else {
+                selectedCashlessCostHeadType.value = '';
+            }
+
+            // Load services
+            loadCashlessServices();
+        };
+
+        const loadCashlessServices = async () => {
+            if (!cashlessFilters.value.insurance_id) {
+                cashlessServices.value = [];
+                cashlessUpdates.value = {};
+                return;
+            }
+
+            loadingCashlessServices.value = true;
+            try {
+                const params = new URLSearchParams();
+                params.append('insurance_id', cashlessFilters.value.insurance_id);
+
+                if (cashlessFilters.value.cost_head_id) {
+                    params.append('cost_head_id', cashlessFilters.value.cost_head_id);
+                }
+
+                if (cashlessFilters.value.from_date) {
+                    params.append('from_date', cashlessFilters.value.from_date);
+                }
+
+                if (cashlessFilters.value.to_date) {
+                    params.append('to_date', cashlessFilters.value.to_date);
+                }
+
+                const response = await axios.get('/api/hospital-services?' + params.toString());
+                cashlessServices.value = response.data || [];
+
+                // Initialize cashlessUpdates with existing values
+                cashlessUpdates.value = {};
+                cashlessServices.value.forEach(service => {
+                    // Initialize ward_prices object for each ward
+                    const wardPrices = {};
+                    wards.value.forEach(ward => {
+                        wardPrices[ward.ward_id] = 0;
+                    });
+
+                    cashlessUpdates.value[service.hospital_service_id] = {
+                        cl_rate: service.cl_rate || 0,
+                        cl_day_emergency_rate: service.cl_day_emergency_rate || 0,
+                        cl_night_emergency_rate: service.cl_night_emergency_rate || 0,
+                        ward_prices: wardPrices,
+                        // Store original values for comparison
+                        _original: {
+                            cl_rate: service.cl_rate || 0,
+                            cl_day_emergency_rate: service.cl_day_emergency_rate || 0,
+                            cl_night_emergency_rate: service.cl_night_emergency_rate || 0,
+                        }
+                    };
+                });
+            } catch (error) {
+                console.error('Error loading cashless services:', error);
+                alert('Failed to load services: ' + (error.response?.data?.message || error.message));
+            } finally {
+                loadingCashlessServices.value = false;
+            }
+        };
+
+        const saveCashlessUpdates = async () => {
+            if (!cashlessFilters.value.insurance_id) {
+                alert('Please select an insurance company');
+                return;
+            }
+
+            savingCashless.value = true;
+            try {
+                // Prepare bulk update payload with global from_date and to_date
+                const updates = [];
+                Object.keys(cashlessUpdates.value).forEach(serviceId => {
+                    const update = cashlessUpdates.value[serviceId];
+                    const original = update._original || {};
+
+                    // Check if values have changed from original
+                    const clRateChanged = parseFloat(update.cl_rate) !== parseFloat(original.cl_rate);
+                    const clDayChanged = parseFloat(update.cl_day_emergency_rate) !== parseFloat(original.cl_day_emergency_rate);
+                    const clNightChanged = parseFloat(update.cl_night_emergency_rate) !== parseFloat(original.cl_night_emergency_rate);
+
+                    // Check if any ward prices were set
+                    let hasWardPrices = false;
+                    if (update.ward_prices && selectedCashlessCostHeadType.value === 'ipd_services') {
+                        hasWardPrices = Object.values(update.ward_prices).some(price => parseFloat(price) > 0);
+                    }
+
+                    // Only include this service if something changed or ward prices were set
+                    if (clRateChanged || clDayChanged || clNightChanged || hasWardPrices) {
+                        // Prepare ward prices array
+                        const wardPrices = [];
+                        if (update.ward_prices && selectedCashlessCostHeadType.value === 'ipd_services') {
+                            Object.keys(update.ward_prices).forEach(wardId => {
+                                const price = parseFloat(update.ward_prices[wardId]);
+                                if (price > 0) {
+                                    wardPrices.push({
+                                        ward_id: wardId,
+                                        price: price
+                                    });
+                                }
+                            });
+                        }
+
+                        updates.push({
+                            hospital_service_id: serviceId,
+                            cashless_pricelist: cashlessFilters.value.insurance_id,
+                            cl_rate: parseFloat(update.cl_rate) || 0,
+                            cl_day_emergency_rate: parseFloat(update.cl_day_emergency_rate) || 0,
+                            cl_night_emergency_rate: parseFloat(update.cl_night_emergency_rate) || 0,
+                            from_date: cashlessFilters.value.from_date || null,
+                            to_date: cashlessFilters.value.to_date || null,
+                            ward_prices: wardPrices,
+                        });
+                    }
+                });
+
+                // Check if any services were modified
+                if (updates.length === 0) {
+                    alert('No changes detected. Please modify at least one service before updating.');
+                    savingCashless.value = false;
+                    return;
+                }
+
+                // Send bulk update request
+                await axios.post('/api/hospital-services/bulk-update-cashless', {
+                    updates: updates
+                });
+
+                alert(`Successfully updated ${updates.length} service(s)!`);
+
+                if (cashlessPriceListModal) {
+                    cashlessPriceListModal.hide();
+                }
+
+                await loadServices();
+            } catch (error) {
+                console.error('Error saving cashless updates:', error);
+                alert('Failed to update cashless prices: ' + (error.response?.data?.message || error.message));
+            } finally {
+                savingCashless.value = false;
+            }
+        };
+
+        // Price History Functions
+        const openPriceHistoryModal = async () => {
+            historyFilters.value = {
+                service_name: '',
+                insurance_company_name: '',
+                from_date: '',
+                to_date: '',
+            };
+            await loadPriceHistory();
+            if (priceHistoryModalInstance) {
+                priceHistoryModalInstance.show();
+            } else {
+                console.error('Price history modal not initialized');
+            }
+        };
+
+        const loadPriceHistory = async (page = 1) => {
+            loadingHistory.value = true;
+            try {
+                const params = new URLSearchParams();
+                if (historyFilters.value.service_name) {
+                    params.append('service_name', historyFilters.value.service_name);
+                }
+                if (historyFilters.value.insurance_company_name) {
+                    params.append('insurance_company_name', historyFilters.value.insurance_company_name);
+                }
+                if (historyFilters.value.from_date) {
+                    params.append('from_date', historyFilters.value.from_date);
+                }
+                if (historyFilters.value.to_date) {
+                    params.append('to_date', historyFilters.value.to_date);
+                }
+                params.append('page', page);
+                params.append('per_page', 50);
+
+                const response = await axios.get('/api/cashless-price-history?' + params.toString());
+                priceHistory.value = response.data.data || [];
+                historyPagination.value = {
+                    current_page: response.data.current_page,
+                    last_page: response.data.last_page,
+                    from: response.data.from || 0,
+                    to: response.data.to || 0,
+                    total: response.data.total || 0,
+                };
+            } catch (error) {
+                console.error('Error loading price history:', error);
+                alert('Failed to load price history: ' + (error.response?.data?.message || error.message));
+            } finally {
+                loadingHistory.value = false;
+            }
+        };
+
+        const changePage = (page) => {
+            if (page >= 1 && page <= historyPagination.value.last_page) {
+                loadPriceHistory(page);
+            }
+        };
+
+        const visiblePages = computed(() => {
+            const current = historyPagination.value.current_page;
+            const last = historyPagination.value.last_page;
+            const pages = [];
+
+            // Show max 5 pages
+            let start = Math.max(1, current - 2);
+            let end = Math.min(last, start + 4);
+            start = Math.max(1, end - 4);
+
+            for (let i = start; i <= end; i++) {
+                pages.push(i);
+            }
+
+            return pages;
+        });
+
+        const formatDateTime = (dateTime) => {
+            if (!dateTime) return 'N/A';
+            const date = new Date(dateTime);
+            return date.toLocaleString('en-IN', {
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        };
+
         return {
             loading,
             saving,
@@ -1264,6 +1894,8 @@ export default {
             costHeadModalRef,
             setPricesModalRef,
             priceDetailsModalRef,
+            cashlessPriceListModalRef,
+            priceHistoryModalRef,
             showCostHeadForm,
             costHeadEditMode,
             costHeadForm,
@@ -1278,6 +1910,13 @@ export default {
             priceDetailsService,
             roomPricesList,
             bedPricesList,
+            cashlessFilters,
+            cashlessServices,
+            loadingCashlessServices,
+            cashlessUpdates,
+            savingCashless,
+            selectedCashlessCostHeadType,
+            expandedServiceId,
             loadServices,
             clearFilters,
             openAddModal,
@@ -1296,6 +1935,22 @@ export default {
             editCostHead,
             saveCostHead,
             deleteCostHead,
+            openCashlessPriceListModal,
+            onCashlessFilterChange,
+            loadCashlessServices,
+            saveCashlessUpdates,
+            toggleWardPrices,
+            copyBasePriceToCashless,
+            copyAllBasePricesToCashless,
+            historyFilters,
+            priceHistory,
+            loadingHistory,
+            historyPagination,
+            openPriceHistoryModal,
+            loadPriceHistory,
+            changePage,
+            visiblePages,
+            formatDateTime,
         };
     },
 };

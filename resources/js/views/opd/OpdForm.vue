@@ -11,7 +11,7 @@
             </router-link>
         </div>
 
-        <form @submit.prevent="saveVisit">
+        <form @submit.prevent="saveVisit(false)">
             <div class="row">
                 <div class="col-lg-8">
                     <!-- Patient Selection / Registration -->
@@ -142,8 +142,8 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Department</label>
-                                    <select class="form-select" v-model="form.department_id" @change="onDepartmentChange">
+                                    <label class="form-label">Department <span class="text-danger">*</span></label>
+                                    <select class="form-select" v-model="form.department_id" @change="onDepartmentChange" required>
                                         <option value="">Select Department</option>
                                         <option v-for="d in departments" :key="d.department_id" :value="d.department_id">
                                             {{ d.department_name }}
@@ -151,8 +151,8 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Doctor</label>
-                                    <select class="form-select" v-model="form.doctor_id" @change="checkFreeFollowup">
+                                    <label class="form-label">Doctor <span class="text-danger">*</span></label>
+                                    <select class="form-select" v-model="form.doctor_id" @change="checkFreeFollowup" required>
                                         <option value="">Select Doctor</option>
                                         <option v-for="d in filteredDoctors" :key="d.doctor_id" :value="d.doctor_id">
                                             {{ d.full_name }}
@@ -250,9 +250,6 @@
                             <span v-if="saving" class="spinner-border spinner-border-sm me-1"></span>
                             <i v-else class="bi bi-check-lg me-1"></i>
                             {{ isEdit ? 'Update Visit' : 'Register & Generate Token' }}
-                        </button>
-                        <button type="button" class="btn btn-success" @click="saveAndPrint" :disabled="saving || !canSubmit">
-                            <i class="bi bi-printer me-1"></i> Register & Print
                         </button>
                         <router-link to="/opd" class="btn btn-light">Cancel</router-link>
                     </div>

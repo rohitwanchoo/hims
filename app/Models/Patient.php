@@ -148,7 +148,7 @@ class Patient extends Model
 
     public function insuranceCompanyRelation()
     {
-        return $this->belongsTo(InsuranceCompany::class, 'insurance_company_id', 'insurance_company_id');
+        return $this->belongsTo(InsuranceCompany::class, 'insurance_company_id', 'insurance_id');
     }
 
     // Permanent Address Relationships

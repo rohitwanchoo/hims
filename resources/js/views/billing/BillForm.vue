@@ -393,7 +393,7 @@
 </style>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 
@@ -542,6 +542,59 @@ watch(() => form.value.patient_id, async (newPatientId) => {
 
 // Watch for payment mode changes to auto-populate insurance data and recalculate
 watch(() => form.value.payment_mode, async (newMode, oldMode) => {
+    console.log('=== PAYMENT MODE CHANGED ===');
+    console.log('From:', oldMode, 'To:', newMode);
+    console.log('Insurance Company:', form.value.insurance_company);
+
+    // Update prices for all items when payment mode changes
+    if (!isViewMode.value && form.value.items && form.value.items.length > 0) {
+        await nextTick(); // Wait for Vue to update
+
+        form.value.items.forEach((item, index) => {
+            if (item.service_id) {
+                const selectedService = allServices.value.find(s => s.hospital_service_id == item.service_id);
+                console.log(`\n--- Item ${index}: ${selectedService?.service_name} ---`);
+                console.log('Service ID:', item.service_id);
+                console.log('Service found:', !!selectedService);
+
+                if (selectedService) {
+                    console.log('Service base_price:', selectedService.base_price);
+                    console.log('Service cashless_pricelist:', selectedService.cashless_pricelist);
+                    console.log('Service cl_rate:', selectedService.cl_rate);
+
+                    let newPrice = 0;
+
+                    // Check if switching to cashless/insurance with company selected
+                    if ((newMode === 'cashless' || newMode === 'insurance') && form.value.insurance_company) {
+                        const selectedInsurance = insuranceCompanies.value.find(ins => ins.company_name === form.value.insurance_company);
+                        console.log('Insurance Company Name:', form.value.insurance_company);
+                        console.log('Insurance found:', !!selectedInsurance);
+                        console.log('Insurance ID:', selectedInsurance?.insurance_id);
+                        console.log('Comparison:', selectedService.cashless_pricelist, '==', selectedInsurance?.insurance_id);
+                        console.log('Match:', selectedService.cashless_pricelist == selectedInsurance?.insurance_id);
+
+                        if (selectedInsurance && selectedService.cashless_pricelist == selectedInsurance.insurance_id) {
+                            newPrice = Number(selectedService.cl_rate) || Number(selectedService.base_price) || 0;
+                            console.log(`\u2705 Using cashless rate: ${newPrice}`);
+                        } else {
+                            newPrice = Number(selectedService.base_price) || 0;
+                            console.log(`\u274c Using base price (no cashless match): ${newPrice}`);
+                        }
+                    } else {
+                        // Use base price for cash
+                        newPrice = Number(selectedService.base_price) || 0;
+                        console.log(`Using base price for cash: ${newPrice}`);
+                    }
+
+                    console.log('Setting unit_price from', item.unit_price, 'to', newPrice);
+                    item.unit_price = newPrice;
+                    calculateAmount(item);
+                    console.log('New amount:', item.amount);
+                }
+            }
+        });
+    }
+
     if ((newMode === 'insurance' || newMode === 'cashless') && form.value.patient_id) {
         try {
             // Fetch full patient data with insurance relationship
@@ -575,6 +628,54 @@ watch(() => form.value.payment_mode, async (newMode, oldMode) => {
 watch(() => form.value.approved_amount, (newApprovedAmount) => {
     if ((form.value.payment_mode === 'insurance' || form.value.payment_mode === 'cashless') && newApprovedAmount) {
         form.value.insurance_amount = newApprovedAmount;
+    }
+});
+
+// Watch for insurance company changes to update item prices
+watch(() => form.value.insurance_company, async (newInsuranceCompany) => {
+    console.log('=== INSURANCE COMPANY CHANGED ===');
+    console.log('New Insurance Company:', newInsuranceCompany);
+    console.log('Payment Mode:', form.value.payment_mode);
+
+    if ((form.value.payment_mode === 'cashless' || form.value.payment_mode === 'insurance') && newInsuranceCompany && !isViewMode.value) {
+        await nextTick(); // Wait for Vue to update
+
+        const selectedInsurance = insuranceCompanies.value.find(ins => ins.company_name === newInsuranceCompany);
+        console.log('Insurance found:', !!selectedInsurance);
+        console.log('Insurance ID:', selectedInsurance?.insurance_id);
+
+        // Update prices for all items with service_id
+        form.value.items.forEach((item, index) => {
+            if (item.service_id) {
+                const selectedService = allServices.value.find(s => s.hospital_service_id == item.service_id);
+                console.log(`\n--- Item ${index}: ${selectedService?.service_name} ---`);
+
+                if (selectedService) {
+                    console.log('Service cashless_pricelist:', selectedService.cashless_pricelist);
+                    console.log('Service cl_rate:', selectedService.cl_rate);
+                    console.log('Service base_price:', selectedService.base_price);
+                    console.log('Comparison:', selectedService.cashless_pricelist, '==', selectedInsurance?.insurance_id);
+
+                    let newPrice = 0;
+
+                    // Check if this service has cashless prices for this insurance company
+                    if (selectedInsurance && selectedService.cashless_pricelist == selectedInsurance.insurance_id) {
+                        // Use cashless rate
+                        newPrice = Number(selectedService.cl_rate) || Number(selectedService.base_price) || 0;
+                        console.log(`\u2705 Using cashless rate: ${newPrice}`);
+                    } else {
+                        // Use base price as fallback
+                        newPrice = Number(selectedService.base_price) || 0;
+                        console.log(`\u274c No cashless match, using base price: ${newPrice}`);
+                    }
+
+                    console.log('Setting unit_price from', item.unit_price, 'to', newPrice);
+                    item.unit_price = newPrice;
+                    calculateAmount(item);
+                    console.log('New amount:', item.amount);
+                }
+            }
+        });
     }
 });
 
@@ -697,7 +798,25 @@ onMounted(async () => {
         insuranceCompanies.value = insuranceRes.data || [];
         gstPlans.value = gstPlansRes.data || [];
 
-        console.log('Loaded GST plans:', gstPlans.value.length);
+        console.log('=== DATA LOADED ===');
+        console.log('Services loaded:', allServices.value.length);
+        console.log('Insurance companies loaded:', insuranceCompanies.value.length);
+        console.log('GST plans loaded:', gstPlans.value.length);
+
+        // Debug: Log first service to see available fields
+        if (allServices.value.length > 0) {
+            console.log('Sample service (first):', allServices.value[0]);
+            console.log('Service has cashless_pricelist?', 'cashless_pricelist' in allServices.value[0]);
+            console.log('Service has cl_rate?', 'cl_rate' in allServices.value[0]);
+        }
+
+        // Debug: Log insurance companies
+        if (insuranceCompanies.value.length > 0) {
+            console.log('Insurance companies:', insuranceCompanies.value.map(ins => ({
+                id: ins.insurance_id,
+                name: ins.company_name
+            })));
+        }
 
         if (route.params.id) {
             const billRes = await axios.get(`/api/bills/${route.params.id}`);
@@ -726,18 +845,47 @@ onMounted(async () => {
                 discount_percent: Number(bill.discount_percent) || 0,
                 tax_amount: Number(bill.tax_amount) || 0,
                 refund_amount: Number(bill.refund_amount || bill.adjustment) || 0,
-                items: (bill.details || []).map(detail => ({
-                    ...detail,
-                    service_id: detail.item_id,
-                    ward_name: detail.ward_name || '',
-                    bed_name: detail.bed_name || '',
-                    service_date: detail.service_date ? detail.service_date.slice(0, 16) : null,
-                    quantity: Number(detail.quantity) || 1,
-                    amount: Number(detail.amount) || 0,
-                    // If unit_price is 0 or missing but amount exists, calculate it
-                    unit_price: Number(detail.unit_price) > 0 ? Number(detail.unit_price) : (Number(detail.amount) / (Number(detail.quantity) || 1))
-                }))
+                items: (bill.details || []).map(detail => {
+                    // Format service_date for datetime-local input
+                    let formattedServiceDate = null;
+                    if (detail.service_date) {
+                        // Handle both ISO string and already formatted dates
+                        const dateStr = detail.service_date.toString();
+                        formattedServiceDate = dateStr.slice(0, 16);
+                    }
+
+                    return {
+                        ...detail,
+                        service_id: detail.item_id,
+                        ward_name: detail.ward_name || '',
+                        bed_name: detail.bed_name || '',
+                        service_date: formattedServiceDate,
+                        doctor_id: detail.doctor_id || null,
+                        quantity: Number(detail.quantity) || 1,
+                        amount: Number(detail.amount) || 0,
+                        // If unit_price is 0 or missing but amount exists, calculate it
+                        unit_price: Number(detail.unit_price) > 0 ? Number(detail.unit_price) : (Number(detail.amount) / (Number(detail.quantity) || 1))
+                    };
+                })
             };
+
+            // Auto-populate missing doctor and service_date from OPD visit if available
+            if (bill.opd_visit) {
+                const defaultDateTime = new Date().toISOString().slice(0, 16);
+                const opdDoctor = bill.opd_visit.doctor_id;
+
+                form.value.items = form.value.items.map(item => {
+                    // Set default service_date if missing
+                    if (!item.service_date) {
+                        item.service_date = defaultDateTime;
+                    }
+                    // Set default doctor from OPD if missing
+                    if (!item.doctor_id && opdDoctor) {
+                        item.doctor_id = opdDoctor;
+                    }
+                    return item;
+                });
+            }
 
             // If this is an IPD bill, load IPD admissions and set selected IPD
             if (bill.bill_type === 'ipd' && bill.ipd_id) {
@@ -804,6 +952,7 @@ onMounted(async () => {
                             s.service_name.toLowerCase().includes('opd')
                         );
 
+                        const currentDateTime = new Date().toISOString().slice(0, 16);
                         form.value.items = [{
                             service_id: consultationService?.hospital_service_id || '',
                             cost_head_id: opdCostHead?.cost_head_id || '',
@@ -812,13 +961,14 @@ onMounted(async () => {
                             quantity: 1,
                             unit_price: opdVisit.consultation_fee,
                             amount: opdVisit.consultation_fee,
-                            service_date: null,
+                            service_date: currentDateTime,
                             doctor_id: opdVisit.doctor_id || null
                         }];
                     }
 
                     // Add OPD services if any
                     if (opdVisit.services && opdVisit.services.length > 0) {
+                        const currentDateTime = new Date().toISOString().slice(0, 16);
                         const serviceItems = opdVisit.services.map(svc => ({
                             service_id: svc.service_id || '',
                             cost_head_id: opdCostHead?.cost_head_id || '',
@@ -827,7 +977,7 @@ onMounted(async () => {
                             quantity: svc.quantity || 1,
                             unit_price: svc.rate || 0,
                             amount: svc.amount || 0,
-                            service_date: null,
+                            service_date: currentDateTime,
                             doctor_id: opdVisit.doctor_id || null
                         }));
 
@@ -1378,7 +1528,25 @@ const onServiceChange = (item) => {
     const selectedService = allServices.value.find(s => s.hospital_service_id == item.service_id);
     if (selectedService) {
         item.item_name = selectedService.service_name;
-        item.unit_price = Number(selectedService.base_price) || 0;
+
+        // Check if cashless payment mode with insurance company selected
+        if ((form.value.payment_mode === 'cashless' || form.value.payment_mode === 'insurance') && form.value.insurance_company) {
+            // Find the insurance company ID by name
+            const selectedInsurance = insuranceCompanies.value.find(ins => ins.company_name === form.value.insurance_company);
+
+            // Check if this service has cashless prices for this insurance company
+            if (selectedInsurance && selectedService.cashless_pricelist == selectedInsurance.insurance_id) {
+                // Use cashless rate
+                item.unit_price = Number(selectedService.cl_rate) || Number(selectedService.base_price) || 0;
+            } else {
+                // Use base price as fallback
+                item.unit_price = Number(selectedService.base_price) || 0;
+            }
+        } else {
+            // Use base price for cash payment
+            item.unit_price = Number(selectedService.base_price) || 0;
+        }
+
         calculateAmount(item);
     }
 };
@@ -1481,7 +1649,7 @@ const getBedRate = () => {
 
 const printBill = () => {
     if (route.params.id) {
-        window.open(`/api/bills/${route.params.id}/print`, '_blank');
+        window.open(`/print/bill/${route.params.id}`, '_blank');
     }
 };
 
@@ -1517,23 +1685,26 @@ const saveBill = async () => {
 
         const response = await axios.post('/api/bills', billData);
 
-        // If bill was created from OPD, update OPD payment status and redirect to OPD list
+        const billId = response.data.bill_id;
+        const dueAmount = response.data.due_amount || total.value;
+
+        // If bill was created from OPD, redirect to payment collection page
         if (route.query.opd_id) {
-            try {
-                console.log('Updating OPD payment status for:', route.query.opd_id);
-                const paymentResponse = await axios.post(`/api/opd-visits/${route.query.opd_id}/payment`, {
-                    amount: total.value,
-                    payment_mode: form.value.payment_mode,
-                    reference_number: response.data.bill_number
-                });
-                console.log('OPD payment updated:', paymentResponse.data);
-                alert('Bill created and payment recorded successfully!');
-                // Add timestamp to force refresh
-                router.push(`/opd?refresh=${Date.now()}`);
-            } catch (error) {
-                console.error('Error updating OPD payment status:', error);
-                alert('Bill created but failed to update OPD payment status: ' + (error.response?.data?.message || error.message));
-                router.push('/opd');
+            // Redirect to payment collection with opd_id so payment can update OPD status
+            router.push(`/payments?bill_id=${billId}&amount=${dueAmount}&opd_id=${route.query.opd_id}`);
+        } else if (dueAmount > 0) {
+            // For other bills with due amount, ask if they want to collect payment
+            const collectPayment = confirm(
+                `Bill created successfully!\n\n` +
+                `Total: ₹${total.value}\n` +
+                `Due: ₹${dueAmount}\n\n` +
+                `Would you like to collect payment now?`
+            );
+
+            if (collectPayment) {
+                router.push(`/payments?bill_id=${billId}&amount=${dueAmount}`);
+            } else {
+                router.push('/billing');
             }
         } else {
             alert('Bill created successfully!');
@@ -1587,8 +1758,26 @@ const updateBill = async () => {
             }))
         };
 
-        await axios.put(`/api/bills/${route.params.id}`, updateData);
-        alert('Bill updated successfully!');
+        const response = await axios.put(`/api/bills/${route.params.id}`, updateData);
+
+        // Check if bill has due amount
+        const updatedBill = response.data;
+        if (updatedBill.due_amount > 0) {
+            const collectPayment = confirm(
+                `Bill updated successfully!\n\n` +
+                `Total: ₹${updatedBill.total_amount}\n` +
+                `Due: ₹${updatedBill.due_amount}\n\n` +
+                `Would you like to collect payment now?`
+            );
+
+            if (collectPayment) {
+                // Redirect to payment collection
+                router.push(`/payments?bill_id=${route.params.id}&amount=${updatedBill.due_amount}`);
+                return;
+            }
+        } else {
+            alert('Bill updated successfully!');
+        }
 
         // Navigate back to billing list
         router.push('/billing');

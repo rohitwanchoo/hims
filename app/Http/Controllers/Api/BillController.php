@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Bill;
 use App\Models\BillDetail;
+use App\Models\BillHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -189,6 +190,24 @@ class BillController extends Controller
         ]);
 
         return DB::transaction(function () use ($validated, $bill) {
+            // Save current state to history before making changes
+            BillHistory::create([
+                'bill_id' => $bill->bill_id,
+                'action' => 'updated',
+                'subtotal' => $bill->subtotal,
+                'discount_amount' => $bill->discount_amount,
+                'discount_percent' => $bill->discount_percent,
+                'tax_amount' => $bill->tax_amount,
+                'adjustment' => $bill->adjustment,
+                'total_amount' => $bill->total_amount,
+                'paid_amount' => $bill->paid_amount,
+                'due_amount' => $bill->due_amount,
+                'payment_mode' => $bill->payment_mode,
+                'payment_status' => $bill->payment_status,
+                'changed_by' => auth()->id(),
+                'changes' => $validated,
+            ]);
+
             // Update bill items if provided
             if (isset($validated['items'])) {
                 foreach ($validated['items'] as $item) {
@@ -234,9 +253,9 @@ class BillController extends Controller
             ]);
 
             // Update payment status
-            if ($bill->due_amount == 0 && $bill->paid_amount > 0) {
+            if ($bill->due_amount <= 0 && $bill->paid_amount > 0) {
                 $bill->payment_status = 'paid';
-            } elseif ($bill->paid_amount > 0) {
+            } elseif ($bill->paid_amount > 0 && $bill->due_amount > 0) {
                 $bill->payment_status = 'partial';
             } else {
                 $bill->payment_status = 'pending';
@@ -259,5 +278,20 @@ class BillController extends Controller
         $bill->delete();
 
         return response()->json(['message' => 'Bill deleted']);
+    }
+
+    public function history(string $id)
+    {
+        $bill = Bill::with(['patient', 'details'])->findOrFail($id);
+
+        $history = BillHistory::where('bill_id', $id)
+            ->with('changedBy')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'current' => $bill,
+            'history' => $history
+        ]);
     }
 }

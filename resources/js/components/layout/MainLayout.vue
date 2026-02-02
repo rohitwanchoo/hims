@@ -45,8 +45,25 @@
                             <i class="bi bi-chevron-right menu-arrow"></i>
                         </a>
                         <ul class="submenu" :class="{ 'show': expandedMenus.includes(section.id) }">
-                            <li class="nav-item" v-for="item in section.items" :key="item.path">
-                                <router-link class="nav-link" :to="item.path" active-class="active">
+                            <li class="nav-item" v-for="item in section.items" :key="item.path || item.id">
+                                <!-- Nested submenu item -->
+                                <a v-if="item.items"
+                                    class="nav-link menu-toggle"
+                                    href="#"
+                                    @click.prevent="toggleMenu(item.id)"
+                                    :class="{ 'expanded': expandedMenus.includes(item.id) }">
+                                    <span>{{ item.label }}</span>
+                                    <i class="bi bi-chevron-right menu-arrow"></i>
+                                </a>
+                                <ul v-if="item.items" class="submenu nested-submenu" :class="{ 'show': expandedMenus.includes(item.id) }">
+                                    <li class="nav-item" v-for="subItem in item.items" :key="subItem.path">
+                                        <router-link class="nav-link" :to="subItem.path" active-class="active">
+                                            <span>{{ subItem.label }}</span>
+                                        </router-link>
+                                    </li>
+                                </ul>
+                                <!-- Regular menu item -->
+                                <router-link v-else class="nav-link" :to="item.path" active-class="active">
                                     <span>{{ item.label }}</span>
                                 </router-link>
                             </li>
@@ -216,13 +233,9 @@ const menuSections = [
         title: 'Clinical',
         icon: 'bi bi-clipboard2-pulse',
         items: [
-            { path: '/doctors', label: 'Doctors' },
-            { path: '/departments', label: 'Departments' },
             { path: '/opd', label: 'OPD Visits' },
             { path: '/ipd', label: 'IPD Admissions' },
-            { path: '/discharge-summary', label: 'Summaries' },
-            { path: '/bed-transfers', label: 'Bed Transfer' },
-            { path: '/consultation-forms', label: 'Consultation Forms' }
+            { path: '/discharge-summary', label: 'Discharge Summary' }
         ]
     },
     {
@@ -234,6 +247,7 @@ const menuSections = [
             { path: '/payments', label: 'Payments' }
         ]
     },
+    /* Temporarily hidden sections
     {
         id: 'laboratory',
         title: 'Laboratory',
@@ -278,6 +292,7 @@ const menuSections = [
             { path: '/inventory/items', label: 'Items Master' }
         ]
     },
+    */
     {
         id: 'reports',
         title: 'Reports',
@@ -286,6 +301,7 @@ const menuSections = [
             { path: '/reports', label: 'Reports' }
         ]
     },
+    /*
     {
         id: 'mrd',
         title: 'Medical Records',
@@ -296,6 +312,7 @@ const menuSections = [
             { path: '/death-registrations', label: 'Death Registrations' }
         ]
     },
+    */
     {
         id: 'abha',
         title: 'ABHA Integration',
@@ -312,7 +329,9 @@ const menuSections = [
             { path: '/settings/opd-configuration', label: 'OPD Configuration' },
             { path: '/settings/opd-time-slots', label: 'OPD Time Slots' },
             { path: '/settings/rate-requests', label: 'Rate Requests' },
-            { path: '/discharge-summary-custom-fields', label: 'Discharge Summary Fields' }
+            { path: '/discharge-summary-custom-fields', label: 'Discharge Summary Fields' },
+            { path: '/bed-transfers', label: 'Bed Transfer' },
+            { path: '/consultation-forms', label: 'Consultation Forms' }
         ]
     },
     {
@@ -320,31 +339,38 @@ const menuSections = [
         title: 'Masters',
         icon: 'bi bi-database',
         items: [
-            { path: '/masters/reception/prefix', label: 'Prefix' },
-            { path: '/masters/reception/gender', label: 'Gender' },
-            { path: '/masters/reception/blood-group', label: 'Blood Group' },
-            { path: '/masters/reception/patient-type', label: 'Patient Type' },
-            { path: '/masters/reception/marital-status', label: 'Marital Status' },
-            { path: '/masters/reception/reference-doctor', label: 'Reference Master' },
-            { path: '/masters/reception/insurance-company', label: 'Insurance Company' },
-            { path: '/masters/reception/qualification', label: 'Qualification' },
-            { path: '/masters/reception/consult-master', label: 'Consult Master' },
-            { path: '/masters/prescription', label: 'Prescription Master' },
-            { path: '/masters/bed-allocation', label: 'Bed Allocation' },
-            { path: '/masters/hospital-services', label: 'Hospital Services' },
-            { path: '/masters/gst-plan', label: 'GST Plan Master' }
-        ]
-    },
-    {
-        id: 'address',
-        title: 'Address Masters',
-        icon: 'bi bi-geo-alt',
-        items: [
-            { path: '/masters/address/country', label: 'Country' },
-            { path: '/masters/address/state', label: 'State' },
-            { path: '/masters/address/district', label: 'District' },
-            { path: '/masters/address/city', label: 'City/Taluka' },
-            { path: '/masters/address/area', label: 'Area/Village' }
+            {
+                id: 'common-master',
+                label: 'Common Master',
+                items: [
+                    { path: '/doctors', label: 'Doctors' },
+                    { path: '/departments', label: 'Departments' },
+                    { path: '/masters/reception/prefix', label: 'Prefix' },
+                    { path: '/masters/reception/gender', label: 'Gender' },
+                    { path: '/masters/reception/blood-group', label: 'Blood Group' },
+                    { path: '/masters/reception/patient-type', label: 'Patient Type' },
+                    { path: '/masters/reception/marital-status', label: 'Marital Status' },
+                    { path: '/masters/reception/reference-doctor', label: 'Reference Master' },
+                    { path: '/masters/reception/insurance-company', label: 'Insurance Company' },
+                    { path: '/masters/reception/qualification', label: 'Qualification' },
+                    { path: '/masters/reception/consult-master', label: 'Consult Master' },
+                    { path: '/masters/prescription', label: 'Prescription Master' },
+                    { path: '/masters/bed-allocation', label: 'Bed Allocation' },
+                    { path: '/masters/hospital-services', label: 'Hospital Services' },
+                    { path: '/masters/gst-plan', label: 'GST Plan Master' }
+                ]
+            },
+            {
+                id: 'address-masters',
+                label: 'Address Masters',
+                items: [
+                    { path: '/masters/address/country', label: 'Country' },
+                    { path: '/masters/address/state', label: 'State' },
+                    { path: '/masters/address/district', label: 'District' },
+                    { path: '/masters/address/city', label: 'City/Taluka' },
+                    { path: '/masters/address/area', label: 'Area/Village' }
+                ]
+            }
         ]
     },
     {
@@ -391,7 +417,7 @@ const pageTitle = computed(() => {
         '/appointments': 'Appointments',
         '/opd': 'OPD Visits',
         '/ipd': 'IPD Admissions',
-        '/discharge-summary': 'Summaries',
+        '/discharge-summary': 'Discharge Summary',
         '/bed-transfers': 'Bed Transfer',
         '/laboratory/tests': 'Lab Tests',
         '/laboratory/orders': 'Lab Orders',
@@ -424,12 +450,23 @@ const pageTitle = computed(() => {
 });
 
 const toggleMenu = (menuId) => {
-    if (expandedMenus.value.includes(menuId)) {
-        // Collapse if already expanded
-        expandedMenus.value = [];
+    const index = expandedMenus.value.indexOf(menuId);
+
+    if (index > -1) {
+        // Collapse this menu and its children
+        expandedMenus.value.splice(index, 1);
     } else {
-        // Accordion style: only one open at a time
-        expandedMenus.value = [menuId];
+        // Check if this is a nested menu (contains a dash like 'common-master')
+        const isNestedMenu = menuId.includes('-');
+
+        if (isNestedMenu) {
+            // For nested menus, just add to the array (keep parent open)
+            expandedMenus.value.push(menuId);
+        } else {
+            // For top-level sections, use accordion style (close others)
+            const otherTopLevel = expandedMenus.value.filter(id => id.includes('-'));
+            expandedMenus.value = [menuId, ...otherTopLevel];
+        }
     }
 };
 
@@ -544,7 +581,7 @@ const clearHospitalContext = () => {
 }
 
 .submenu.show {
-    max-height: 500px;
+    max-height: 1000px;
     transition: max-height 0.4s ease-in;
 }
 
@@ -594,5 +631,49 @@ const clearHospitalContext = () => {
 
 .submenu .nav-link.active::before {
     background: #fff;
+}
+
+/* Nested submenu styling */
+.nested-submenu {
+    padding-left: 0;
+    list-style: none;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.nested-submenu.show {
+    max-height: 2000px;
+    transition: max-height 0.4s ease-in;
+}
+
+.nested-submenu .nav-link {
+    padding-left: 68px;
+    font-size: 13px;
+}
+
+.submenu .menu-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px 10px 52px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.submenu .menu-toggle:hover {
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.submenu .menu-toggle .menu-arrow {
+    font-size: 12px;
+    transition: transform 0.3s ease;
+}
+
+.submenu .menu-toggle.expanded .menu-arrow {
+    transform: rotate(90deg);
 }
 </style>

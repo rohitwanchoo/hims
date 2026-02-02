@@ -30,7 +30,18 @@ class IpdAdmissionController extends Controller
         $hospitalId = Auth::user()->hospital_id;
 
         $query = IpdAdmission::where('hospital_id', $hospitalId)
-            ->with(['patient', 'treatingDoctor', 'ward', 'bed', 'department']);
+            ->with([
+                'patient',
+                'treatingDoctor',
+                'ward',
+                'bed.ward',
+                'bed.room',
+                'department',
+                'bedTransfers.fromBed.room',
+                'bedTransfers.fromBed.ward',
+                'bedTransfers.toBed.room',
+                'bedTransfers.toBed.ward',
+            ]);
 
         // Status filter
         if ($request->has('status') && $request->status !== 'all') {
@@ -160,7 +171,11 @@ class IpdAdmissionController extends Controller
                            'charges_per_day', 'current_patient_id')
                   ->whereNotNull('room_id')  // Only beds created through Bed Allocation Master
                   ->with([
-                      'currentPatient:patient_id,first_name,last_name,gender',
+                      'currentPatient:patient_id,first_name,last_name,gender,mobile,address,city,state,pincode,permanent_address,permanent_pincode,current_address,current_pincode',
+                      'currentPatient.permanentCity:city_id,city_name',
+                      'currentPatient.permanentState:state_id,state_name',
+                      'currentPatient.currentCity:city_id,city_name',
+                      'currentPatient.currentState:state_id,state_name',
                       'room:room_id,room_name,ward_id'
                   ])
                   ->orderByRaw('CAST(bed_number AS UNSIGNED)');
@@ -337,7 +352,8 @@ class IpdAdmissionController extends Controller
                 'consultantDoctor',
                 'department',
                 'ward',
-                'bed',
+                'bed.ward',
+                'bed.room',
                 'opdVisit',
                 'progressNotes' => fn($q) => $q->limit(10)->with('doctor'),
                 'nursingCharts' => fn($q) => $q->limit(10),
@@ -345,7 +361,10 @@ class IpdAdmissionController extends Controller
                 'investigations' => fn($q) => $q->limit(20),
                 'medications' => fn($q) => $q->active(),
                 'advancePayments',
-                'bedTransfers',
+                'bedTransfers.fromBed.room',
+                'bedTransfers.fromBed.ward',
+                'bedTransfers.toBed.room',
+                'bedTransfers.toBed.ward',
             ])
             ->first();
 

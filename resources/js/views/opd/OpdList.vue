@@ -1,156 +1,143 @@
 <template>
-    <div>
+    <div class="opd-list">
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h5 class="mb-1">OPD Visits</h5>
-                <p class="text-muted mb-0">Today's outpatient registrations and queue</p>
+                <h2 class="mb-1 fw-bold">OPD Dashboard</h2>
+                <p class="text-muted mb-0 small">Manage outpatient registrations and consultations</p>
             </div>
             <div class="d-flex gap-2">
-                <button class="btn btn-outline-primary" @click="refreshData">
+                <button class="modern-btn modern-btn-outline" @click="refreshData">
                     <i class="bi bi-arrow-clockwise"></i>
+                    <span>Refresh</span>
                 </button>
-                <router-link to="/opd/create" class="btn btn-primary">
-                    <i class="bi bi-plus-lg me-1"></i> New Registration
+                <router-link to="/opd/create" class="modern-btn modern-btn-primary">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>New Registration</span>
                 </router-link>
             </div>
         </div>
 
         <!-- Summary Cards -->
         <div class="row g-3 mb-4">
-            <div class="col-md-2 col-6">
-                <div class="card bg-primary text-white h-100">
-                    <div class="card-body py-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="fs-4 fw-bold">{{ summary.total }}</div>
-                                <small>Total</small>
-                            </div>
-                            <i class="bi bi-clipboard2-pulse fs-3 opacity-50"></i>
-                        </div>
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card stat-card-gradient-primary">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Total Visits</div>
+                        <div class="stat-value-large">{{ summary.total }}</div>
+                        <div class="stat-description">Today's registrations</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-2 col-6">
-                <div class="card bg-warning text-dark h-100">
-                    <div class="card-body py-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="fs-4 fw-bold">{{ summary.waiting }}</div>
-                                <small>Waiting</small>
-                            </div>
-                            <i class="bi bi-hourglass-split fs-3 opacity-50"></i>
-                        </div>
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card stat-card-gradient-warning">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Waiting</div>
+                        <div class="stat-value-large">{{ summary.waiting }}</div>
+                        <div class="stat-description">In queue for consultation</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-2 col-6">
-                <div class="card bg-info text-white h-100">
-                    <div class="card-body py-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="fs-4 fw-bold">{{ summary.in_consultation }}</div>
-                                <small>In Consult</small>
-                            </div>
-                            <i class="bi bi-person-video3 fs-3 opacity-50"></i>
-                        </div>
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card stat-card-gradient-info">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">In Consultation</div>
+                        <div class="stat-value-large">{{ summary.in_consultation }}</div>
+                        <div class="stat-description">Currently with doctor</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-2 col-6">
-                <div class="card bg-success text-white h-100">
-                    <div class="card-body py-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="fs-4 fw-bold">{{ summary.completed }}</div>
-                                <small>Completed</small>
-                            </div>
-                            <i class="bi bi-check-circle fs-3 opacity-50"></i>
-                        </div>
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card stat-card-gradient-success">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Completed</div>
+                        <div class="stat-value-large">{{ summary.completed }}</div>
+                        <div class="stat-description">Finished consultations</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-2 col-6">
-                <div class="card bg-danger text-white h-100">
-                    <div class="card-body py-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="fs-4 fw-bold">{{ summary.cancelled }}</div>
-                                <small>Cancelled</small>
-                            </div>
-                            <i class="bi bi-x-circle fs-3 opacity-50"></i>
-                        </div>
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card stat-card-gradient-danger">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Cancelled</div>
+                        <div class="stat-value-large">{{ summary.cancelled }}</div>
+                        <div class="stat-description">Cancelled appointments</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-2 col-6">
-                <div class="card bg-secondary text-white h-100">
-                    <div class="card-body py-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="fs-4 fw-bold">{{ avgWaitTime }}</div>
-                                <small>Avg Wait</small>
-                            </div>
-                            <i class="bi bi-clock fs-3 opacity-50"></i>
-                        </div>
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card stat-card-gradient-secondary">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Avg Wait Time</div>
+                        <div class="stat-value-large">{{ avgWaitTime }}</div>
+                        <div class="stat-description">Average waiting period</div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Filters -->
-        <div class="card mb-4">
-            <div class="card-body py-3">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-2">
-                        <label class="form-label small">Date</label>
-                        <input type="date" class="form-control form-control-sm" v-model="filters.date" @change="fetchVisits">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">Department</label>
-                        <select class="form-select form-select-sm" v-model="filters.department_id" @change="fetchVisits">
-                            <option value="">All Departments</option>
-                            <option v-for="d in departments" :key="d.department_id" :value="d.department_id">
-                                {{ d.department_name }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">Doctor</label>
-                        <select class="form-select form-select-sm" v-model="filters.doctor_id" @change="fetchVisits">
-                            <option value="">All Doctors</option>
-                            <option v-for="d in filteredDoctors" :key="d.doctor_id" :value="d.doctor_id">
-                                {{ d.full_name }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">Status</label>
-                        <select class="form-select form-select-sm" v-model="filters.status" @change="fetchVisits">
-                            <option value="">All Status</option>
-                            <option value="waiting">Waiting</option>
-                            <option value="in_consultation">In Consultation</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small">Search</label>
-                        <div class="input-group input-group-sm">
-                            <input type="text" class="form-control" v-model="filters.search"
+        <div class="modern-card mb-4">
+            <div class="modern-card-header clickable" @click="showFilters = !showFilters">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <h6 class="mb-0">
+                        <i class="bi bi-funnel me-2"></i>Filters
+                        <span v-if="hasActiveFilters" class="badge bg-primary ms-2" style="font-size: 0.7rem;">Active</span>
+                    </h6>
+                    <button class="btn btn-sm btn-link text-decoration-none p-0">
+                        <i class="bi" :class="showFilters ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    </button>
+                </div>
+            </div>
+            <transition name="filter-collapse">
+                <div v-show="showFilters" class="modern-card-body">
+                    <div class="row g-3">
+                        <div class="col-md-2">
+                            <label class="modern-label">Date</label>
+                            <input type="date" class="modern-input" v-model="filters.date" @change="fetchVisits">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">Department</label>
+                            <select class="modern-select" v-model="filters.department_id" @change="fetchVisits">
+                                <option value="">All Departments</option>
+                                <option v-for="d in departments" :key="d.department_id" :value="d.department_id">
+                                    {{ d.department_name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">Doctor</label>
+                            <select class="modern-select" v-model="filters.doctor_id" @change="fetchVisits">
+                                <option value="">All Doctors</option>
+                                <option v-for="d in filteredDoctors" :key="d.doctor_id" :value="d.doctor_id">
+                                    {{ d.full_name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">Status</label>
+                            <select class="modern-select" v-model="filters.status" @change="fetchVisits">
+                                <option value="">All Status</option>
+                                <option value="waiting">Waiting</option>
+                                <option value="in_consultation">In Consultation</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="modern-label">Search</label>
+                            <input type="text" class="modern-input" v-model="filters.search"
                                    placeholder="Patient name, UHID, mobile..." @keyup.enter="fetchVisits">
-                            <button class="btn btn-outline-secondary" @click="fetchVisits">
-                                <i class="bi bi-search"></i>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="modern-label">&nbsp;</label>
+                            <button class="modern-btn-reset w-100" @click="clearFilters">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
                             </button>
                         </div>
                     </div>
-                    <div class="col-md-1">
-                        <button class="btn btn-sm btn-outline-secondary w-100" @click="clearFilters">
-                            <i class="bi bi-x-lg"></i> Clear
-                        </button>
-                    </div>
                 </div>
-            </div>
+            </transition>
         </div>
 
         <!-- View Toggle -->
@@ -171,9 +158,13 @@
         </div>
 
         <!-- List View -->
-        <div class="card" v-if="viewMode === 'list'">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
+        <div class="modern-card" v-if="viewMode === 'list'">
+            <div class="modern-card-header">
+                <h6 class="mb-0"><i class="bi bi-list-ul me-2"></i>Patient Visits</h6>
+            </div>
+            <div class="modern-card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 modern-table">
                     <thead>
                         <tr>
                             <th style="width: 60px;">Token</th>
@@ -243,39 +234,83 @@
                                 <span v-else class="text-muted">-</span>
                             </td>
                             <td>
-                                <div class="btn-group btn-group-sm">
-                                    <router-link :to="`/opd/${visit.opd_id}`" class="btn btn-outline-primary"
+                                <div class="d-flex gap-2 align-items-center">
+                                    <!-- Primary Action Button -->
+                                    <router-link :to="`/opd/${visit.opd_id}`"
+                                                 class="btn btn-sm btn-primary"
                                                  title="View Details">
-                                        <i class="bi bi-eye"></i>
+                                        <i class="bi bi-eye me-1"></i> View
                                     </router-link>
-                                    <button v-if="visit.status === 'waiting'" class="btn btn-outline-success"
-                                            @click="startConsultation(visit)" title="Start Consultation">
-                                        <i class="bi bi-play-fill"></i>
-                                    </button>
-                                    <button v-if="visit.payment_status !== 'paid' && visit.net_amount > 0"
-                                            class="btn btn-outline-info"
-                                            @click="collectPayment(visit)" title="Collect Payment">
-                                        <i class="bi bi-cash-coin"></i>
-                                    </button>
-                                    <button v-if="visit.payment_status === 'paid' || visit.payment_status === 'partial'"
-                                            class="btn btn-outline-success"
-                                            @click="editPayment(visit)" title="Edit Payment">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </button>
-                                    <!-- Continue Consultation button temporarily hidden -->
-                                    <!-- <button v-if="visit.status === 'in_consultation' && opdConfig.show_continue_consultation_button" class="btn btn-success"
-                                            @click="openConsultation(visit)" title="Continue Consultation">
-                                        <i class="bi bi-pencil"></i>
-                                    </button> -->
-                                    <button v-if="canCancel(visit)" class="btn btn-outline-danger"
-                                            @click="cancelVisit(visit)" title="Cancel">
-                                        <i class="bi bi-x"></i>
-                                    </button>
+
+                                    <!-- Actions Dropdown -->
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-light border"
+                                                type="button"
+                                                :id="`dropdown-${visit.opd_id}`"
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false"
+                                                title="More Actions">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" :aria-labelledby="`dropdown-${visit.opd_id}`">
+                                            <!-- Admit to IPD -->
+                                            <li>
+                                                <router-link :to="`/ipd/create?patient_id=${visit.patient_id}&source=opd`"
+                                                             class="dropdown-item">
+                                                    <i class="bi bi-hospital text-warning me-2"></i>
+                                                    <span>Admit to IPD</span>
+                                                </router-link>
+                                            </li>
+
+                                            <li><hr class="dropdown-divider" v-if="visit.status === 'waiting' || visit.payment_status !== 'paid'"></li>
+
+                                            <!-- Start Consultation -->
+                                            <li v-if="visit.status === 'waiting'">
+                                                <a class="dropdown-item" href="#" @click.prevent="startConsultation(visit)">
+                                                    <i class="bi bi-play-circle text-success me-2"></i>
+                                                    <span>Start Consultation</span>
+                                                </a>
+                                            </li>
+
+                                            <!-- Payment Actions -->
+                                            <li v-if="visit.payment_status !== 'paid' && visit.net_amount > 0">
+                                                <a class="dropdown-item" href="#" @click.prevent="collectPayment(visit)">
+                                                    <i class="bi bi-cash-coin text-info me-2"></i>
+                                                    <span>Collect Payment</span>
+                                                </a>
+                                            </li>
+
+                                            <li v-if="visit.payment_status === 'paid' || visit.payment_status === 'partial'">
+                                                <a class="dropdown-item" href="#" @click.prevent="editPayment(visit)">
+                                                    <i class="bi bi-pencil-square text-primary me-2"></i>
+                                                    <span>Edit Payment</span>
+                                                </a>
+                                            </li>
+
+                                            <li v-if="(visit.payment_status === 'paid' || visit.payment_status === 'partial') && visit.bill">
+                                                <a class="dropdown-item" href="#" @click.prevent="viewBillHistory(visit)">
+                                                    <i class="bi bi-clock-history text-secondary me-2"></i>
+                                                    <span>Bill History</span>
+                                                </a>
+                                            </li>
+
+                                            <li v-if="canCancel(visit)"><hr class="dropdown-divider"></li>
+
+                                            <!-- Cancel -->
+                                            <li v-if="canCancel(visit)">
+                                                <a class="dropdown-item text-danger" href="#" @click.prevent="cancelVisit(visit)">
+                                                    <i class="bi bi-x-circle me-2"></i>
+                                                    <span>Cancel Visit</span>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
                     </tbody>
-                </table>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -355,6 +390,145 @@
                 </div>
             </div>
         </div>
+
+        <!-- Bill History Modal -->
+        <div class="modal fade" id="billHistoryModal" tabindex="-1" ref="billHistoryModal">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Bill History</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div v-if="loadingHistory" class="text-center py-4">
+                            <span class="spinner-border spinner-border-sm me-2"></span> Loading history...
+                        </div>
+                        <div v-else-if="billHistory.length === 0" class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                            No history available
+                        </div>
+                        <div v-else>
+                            <div class="card mb-3">
+                                <div class="card-header bg-primary text-white">
+                                    <strong>Current Bill</strong>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-2">
+                                                <strong>Bill Number:</strong> {{ currentBill?.bill_number }}
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>Subtotal:</strong> {{ formatCurrency(currentBill?.subtotal || 0) }}
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>Discount:</strong> {{ formatCurrency(currentBill?.discount_amount || 0) }}
+                                                <span v-if="currentBill?.discount_percent > 0" class="text-muted">
+                                                    ({{ currentBill?.discount_percent }}%)
+                                                </span>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>Tax:</strong> {{ formatCurrency(currentBill?.tax_amount || 0) }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-2">
+                                                <strong>Adjustment:</strong> {{ formatCurrency(currentBill?.adjustment || 0) }}
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>Total:</strong> {{ formatCurrency(currentBill?.total_amount || 0) }}
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>Paid:</strong> {{ formatCurrency(currentBill?.paid_amount || 0) }}
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>Due:</strong> {{ formatCurrency(currentBill?.due_amount || 0) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h6 class="mb-3">Previous Changes</h6>
+                            <div class="timeline">
+                                <div v-for="(history, index) in billHistory" :key="history.history_id" class="card mb-3">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <span>
+                                            <strong>{{ history.action }}</strong>
+                                            <span class="badge bg-secondary ms-2">{{ formatDateTime(history.created_at) }}</span>
+                                        </span>
+                                        <span class="text-muted small">
+                                            By: {{ history.changed_by?.full_name || 'System' }}
+                                        </span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row small">
+                                            <div class="col-md-6">
+                                                <div class="mb-1">
+                                                    <strong>Subtotal:</strong> {{ formatCurrency(history.subtotal) }}
+                                                    <span v-if="showChange(history.subtotal, getNextValue(index, 'subtotal'))"
+                                                          class="text-danger ms-1">
+                                                        → {{ formatCurrency(getNextValue(index, 'subtotal')) }}
+                                                    </span>
+                                                </div>
+                                                <div class="mb-1">
+                                                    <strong>Discount:</strong> {{ formatCurrency(history.discount_amount) }}
+                                                    <span v-if="history.discount_percent > 0" class="text-muted">
+                                                        ({{ history.discount_percent }}%)
+                                                    </span>
+                                                    <span v-if="showChange(history.discount_amount, getNextValue(index, 'discount_amount'))"
+                                                          class="text-danger ms-1">
+                                                        → {{ formatCurrency(getNextValue(index, 'discount_amount')) }}
+                                                    </span>
+                                                </div>
+                                                <div class="mb-1">
+                                                    <strong>Tax:</strong> {{ formatCurrency(history.tax_amount) }}
+                                                    <span v-if="showChange(history.tax_amount, getNextValue(index, 'tax_amount'))"
+                                                          class="text-danger ms-1">
+                                                        → {{ formatCurrency(getNextValue(index, 'tax_amount')) }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-1">
+                                                    <strong>Adjustment:</strong> {{ formatCurrency(history.adjustment) }}
+                                                    <span v-if="showChange(history.adjustment, getNextValue(index, 'adjustment'))"
+                                                          class="text-danger ms-1">
+                                                        → {{ formatCurrency(getNextValue(index, 'adjustment')) }}
+                                                    </span>
+                                                </div>
+                                                <div class="mb-1">
+                                                    <strong>Total:</strong> {{ formatCurrency(history.total_amount) }}
+                                                    <span v-if="showChange(history.total_amount, getNextValue(index, 'total_amount'))"
+                                                          class="text-danger ms-1">
+                                                        → {{ formatCurrency(getNextValue(index, 'total_amount')) }}
+                                                    </span>
+                                                </div>
+                                                <div class="mb-1">
+                                                    <strong>Payment Status:</strong>
+                                                    <span class="badge" :class="getPaymentStatusBadge(history.payment_status)">
+                                                        {{ history.payment_status }}
+                                                    </span>
+                                                    <span v-if="history.payment_status !== getNextValue(index, 'payment_status')"
+                                                          class="ms-1">
+                                                        → <span class="badge" :class="getPaymentStatusBadge(getNextValue(index, 'payment_status'))">
+                                                            {{ getNextValue(index, 'payment_status') }}
+                                                        </span>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -377,10 +551,15 @@ const lastUpdated = ref('');
 const selectedVisit = ref(null);
 const cancelReasonId = ref('');
 const cancelModal = ref(null);
+const billHistoryModal = ref(null);
+const billHistory = ref([]);
+const currentBill = ref(null);
+const loadingHistory = ref(false);
 const opdConfig = ref({
     show_continue_consultation_button: true
 });
 let cancelModalInstance = null;
+let billHistoryModalInstance = null;
 let refreshInterval = null;
 
 const summary = reactive({
@@ -399,7 +578,18 @@ const filters = reactive({
     search: ''
 });
 
+const showFilters = ref(false);
+
 // Computed
+const hasActiveFilters = computed(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return filters.date !== today ||
+           filters.department_id !== '' ||
+           filters.doctor_id !== '' ||
+           filters.status !== '' ||
+           filters.search !== '';
+});
+
 const filteredDoctors = computed(() => {
     if (!filters.department_id) return doctors.value;
     return doctors.value.filter(d => d.department_id === parseInt(filters.department_id));
@@ -538,6 +728,33 @@ const editPayment = async (visit) => {
     }
 };
 
+const viewBillHistory = async (visit) => {
+    if (!visit.bill || !visit.bill.bill_id) {
+        alert('No bill found for this visit');
+        return;
+    }
+
+    loadingHistory.value = true;
+    billHistory.value = [];
+    currentBill.value = null;
+
+    if (!billHistoryModalInstance) {
+        billHistoryModalInstance = new Modal(billHistoryModal.value);
+    }
+    billHistoryModalInstance.show();
+
+    try {
+        const response = await axios.get(`/api/bills/${visit.bill.bill_id}/history`);
+        currentBill.value = response.data.current;
+        billHistory.value = response.data.history || [];
+    } catch (error) {
+        console.error('Error loading bill history:', error);
+        alert('Error loading bill history');
+    } finally {
+        loadingHistory.value = false;
+    }
+};
+
 const canCancel = (visit) => {
     return ['waiting', 'in_consultation'].includes(visit.status);
 };
@@ -642,6 +859,39 @@ const getWaitTime = (visit) => {
     return `${Math.floor(mins / 60)}h ${mins % 60}m wait`;
 };
 
+const formatDateTime = (datetime) => {
+    if (!datetime) return '';
+    const date = new Date(datetime);
+    return date.toLocaleString('en-IN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
+const getPaymentStatusBadge = (status) => {
+    const badges = {
+        pending: 'bg-warning text-dark',
+        partial: 'bg-info',
+        paid: 'bg-success'
+    };
+    return badges[status] || 'bg-secondary';
+};
+
+const getNextValue = (currentIndex, field) => {
+    // Get the next state (either from next history entry or from current bill)
+    if (currentIndex === 0) {
+        return currentBill.value?.[field];
+    }
+    return billHistory.value[currentIndex - 1]?.[field];
+};
+
+const showChange = (oldValue, newValue) => {
+    return oldValue !== newValue && newValue !== undefined;
+};
+
 // Auto-refresh every 30 seconds
 const fetchOpdConfig = async () => {
     try {
@@ -667,7 +917,310 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Modern Dashboard Styles */
+.opd-list {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 1.5rem;
+}
+
+/* Modern Buttons */
+.modern-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: none;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.modern-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+}
+
+.modern-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
+    color: white;
+}
+
+.modern-btn-outline {
+    background: white;
+    color: #6c757d;
+    border: 1px solid #e0e0e0;
+}
+
+.modern-btn-outline:hover {
+    background: #f8f9fa;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+/* Modern Stat Cards with Gradients */
+.stat-card {
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    min-height: 130px;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* Gradient Backgrounds */
+.stat-card-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.stat-card-gradient-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.stat-card-gradient-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
+
+.stat-card-gradient-success {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+}
+
+.stat-card-gradient-danger {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    color: white;
+}
+
+.stat-card-gradient-secondary {
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    color: #2c3e50;
+}
+
+.stat-content-full {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.stat-label-top {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+}
+
+.stat-value-large {
+    font-size: 2.25rem;
+    font-weight: 700;
+    line-height: 1;
+    margin: 0.25rem 0;
+}
+
+.stat-description {
+    font-size: 0.75rem;
+    opacity: 0.85;
+    line-height: 1.4;
+}
+
+/* Modern Cards */
+.modern-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.modern-card-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fafafa;
+}
+
+.modern-card-header h6 {
+    font-weight: 600;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+}
+
+.modern-card-body {
+    padding: 1.5rem;
+}
+
+/* Modern Table */
+.modern-table {
+    font-size: 0.875rem;
+}
+
+.modern-table thead th {
+    background: #fafafa;
+    color: #6c757d;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 1rem 1.25rem;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.modern-table tbody td {
+    padding: 1rem 1.25rem;
+    vertical-align: middle;
+    color: #2c3e50;
+}
+
+.modern-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.modern-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+/* Modern Filter Styles */
+.modern-card-header.clickable {
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+}
+
+.modern-card-header.clickable:hover {
+    background: #f5f5f5;
+}
+
+.modern-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modern-select,
+.modern-input {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: white;
+    color: #2c3e50;
+}
+
+.modern-select:focus,
+.modern-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.modern-select:hover,
+.modern-input:hover {
+    border-color: #b0b0b0;
+}
+
+.modern-btn-reset {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    color: #6c757d;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+}
+
+.modern-btn-reset:hover {
+    background: #f8f9fa;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+/* Filter Collapse Animation */
+.filter-collapse-enter-active,
+.filter-collapse-leave-active {
+    transition: all 0.3s ease;
+    max-height: 500px;
+    overflow: hidden;
+}
+
+.filter-collapse-enter-from,
+.filter-collapse-leave-to {
+    max-height: 0;
+    opacity: 0;
+}
+
 .bg-light-success {
     background-color: rgba(25, 135, 84, 0.1) !important;
+}
+
+/* Modern Actions Dropdown */
+.dropdown-menu {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    padding: 0.5rem 0;
+    min-width: 200px;
+}
+
+.dropdown-item {
+    padding: 0.6rem 1rem;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+.dropdown-item:hover {
+    background-color: rgba(54, 153, 255, 0.08);
+    padding-left: 1.2rem;
+}
+
+.dropdown-item i {
+    font-size: 16px;
+    width: 20px;
+}
+
+.dropdown-divider {
+    margin: 0.5rem 0;
+    opacity: 0.1;
+}
+
+.btn-light.border {
+    border-color: rgba(0, 0, 0, 0.1) !important;
+    transition: all 0.2s ease;
+}
+
+.btn-light.border:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.15) !important;
 }
 </style>

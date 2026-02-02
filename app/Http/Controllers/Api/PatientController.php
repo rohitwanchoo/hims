@@ -14,7 +14,7 @@ class PatientController extends Controller
     public function index(Request $request)
     {
         $query = Patient::query()
-            ->with(['genderRelation', 'permanentCity', 'bloodGroupRelation']);
+            ->with(['genderRelation', 'permanentCity', 'bloodGroupRelation', 'insuranceCompanyRelation']);
 
         // Search filter
         if ($request->filled('search')) {

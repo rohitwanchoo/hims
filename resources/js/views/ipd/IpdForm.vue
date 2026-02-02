@@ -1452,7 +1452,7 @@ export default {
             admission_date: new Date().toISOString().split('T')[0],
             admission_time: new Date().toTimeString().slice(0, 5),
             admission_type: 'elective',
-            admission_source: '',
+            admission_source: 'direct',
             department_id: '',
             treating_doctor_id: '',
             ward_id: '',
@@ -1698,6 +1698,11 @@ export default {
                             selectPatient(patient);
                         }
                     }
+
+                    // Set admission source if provided in query params
+                    if (route.query.source) {
+                        form.value.admission_source = route.query.source;
+                    }
                 }
             } catch (error) {
                 console.error('Failed to load master data:', error);
@@ -1857,6 +1862,12 @@ export default {
             form.value.patient_id = patient.patient_id;
             patientSearch.value = `${patient.first_name} ${patient.last_name}`;
             showPatientDropdown.value = false;
+
+            // Auto-set source to "opd" if patient has OPD visit today
+            const hasOpdToday = todaysOpdPatients.value.some(p => p.patient_id === patient.patient_id);
+            if (hasOpdToday) {
+                form.value.admission_source = 'opd';
+            }
         };
 
         const clearPatient = () => {

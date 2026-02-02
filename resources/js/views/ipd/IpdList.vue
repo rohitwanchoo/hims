@@ -2,145 +2,172 @@
     <div class="ipd-list">
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="mb-0">IPD Admissions</h4>
+            <div>
+                <h2 class="mb-1 fw-bold">IPD Dashboard</h2>
+                <p class="text-muted mb-0 small">Manage and monitor in-patient admissions</p>
+            </div>
             <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary" @click="showBedMap = true">
-                    <i class="bi bi-grid-3x3"></i> Bed Map
+                <button class="modern-btn modern-btn-outline" @click="showBedMap = true">
+                    <i class="bi bi-grid-3x3"></i>
+                    <span>Bed Map</span>
                 </button>
-                <router-link to="/ipd/create" class="btn btn-primary">
-                    <i class="bi bi-plus-lg"></i> New Admission
+                <router-link to="/ipd/create" class="modern-btn modern-btn-primary">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>New Admission</span>
                 </router-link>
             </div>
         </div>
 
         <!-- Summary Cards -->
         <div class="row g-3 mb-4">
-            <div class="col-md-2">
-                <div class="card bg-primary text-white h-100">
-                    <div class="card-body text-center">
-                        <h3 class="mb-1">{{ summary.total_admitted || 0 }}</h3>
-                        <small>Total Admitted</small>
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card stat-card-gradient-primary">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Total Admitted</div>
+                        <div class="stat-value-large">{{ summary.total_admitted || 0 }}</div>
+                        <div class="stat-description">Currently in hospital</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-2">
-                <div class="card bg-success text-white h-100">
-                    <div class="card-body text-center">
-                        <h3 class="mb-1">{{ summary.today_admissions || 0 }}</h3>
-                        <small>Today Admissions</small>
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card stat-card-gradient-success">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Today Admissions</div>
+                        <div class="stat-value-large">{{ summary.today_admissions || 0 }}</div>
+                        <div class="stat-description">New admissions today</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-2">
-                <div class="card bg-info text-white h-100">
-                    <div class="card-body text-center">
-                        <h3 class="mb-1">{{ summary.today_discharges || 0 }}</h3>
-                        <small>Today Discharges</small>
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card stat-card-gradient-info">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Today Discharges</div>
+                        <div class="stat-value-large">{{ summary.today_discharges || 0 }}</div>
+                        <div class="stat-description">Discharged patients today</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-2">
-                <div class="card bg-warning h-100">
-                    <div class="card-body text-center">
-                        <h3 class="mb-1">{{ summary.pending_discharge || 0 }}</h3>
-                        <small>Pending Discharge</small>
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card stat-card-gradient-warning">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Pending Discharge</div>
+                        <div class="stat-value-large">{{ summary.pending_discharge || 0 }}</div>
+                        <div class="stat-description">Awaiting discharge process</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-2">
-                <div class="card bg-danger text-white h-100">
-                    <div class="card-body text-center">
-                        <h3 class="mb-1">{{ summary.mlc_cases || 0 }}</h3>
-                        <small>MLC Cases</small>
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card stat-card-gradient-danger">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">MLC Cases</div>
+                        <div class="stat-value-large">{{ summary.mlc_cases || 0 }}</div>
+                        <div class="stat-description">Medico-legal cases</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-2">
-                <div class="card bg-secondary text-white h-100">
-                    <div class="card-body text-center">
-                        <h3 class="mb-1">{{ summary.insurance_cases || 0 }}</h3>
-                        <small>Insurance</small>
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card stat-card-gradient-secondary">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Insurance</div>
+                        <div class="stat-value-large">{{ summary.insurance_cases || 0 }}</div>
+                        <div class="stat-description">Insurance covered cases</div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Filters -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-2">
-                        <label class="form-label small">Status</label>
-                        <select v-model="filters.status" class="form-select form-select-sm" @change="loadAdmissions">
-                            <option value="all">All Status</option>
-                            <option value="admitted">Admitted</option>
-                            <option value="discharge_initiated">Discharge Initiated</option>
-                            <option value="discharged">Discharged</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">Ward</label>
-                        <select v-model="filters.ward_id" class="form-select form-select-sm" @change="loadAdmissions">
-                            <option value="">All Wards</option>
-                            <option v-for="ward in wards" :key="ward.ward_id" :value="ward.ward_id">
-                                {{ ward.ward_name }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">Department</label>
-                        <select v-model="filters.department_id" class="form-select form-select-sm" @change="loadAdmissions">
-                            <option value="">All Departments</option>
-                            <option v-for="dept in departments" :key="dept.department_id" :value="dept.department_id">
-                                {{ dept.department_name }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">Doctor</label>
-                        <select v-model="filters.doctor_id" class="form-select form-select-sm" @change="loadAdmissions">
-                            <option value="">All Doctors</option>
-                            <option v-for="doc in doctors" :key="doc.doctor_id" :value="doc.doctor_id">
-                                {{ doc.doctor_name }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">From Date</label>
-                        <input type="date" v-model="filters.from_date" class="form-control form-control-sm" @change="loadAdmissions">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">To Date</label>
-                        <input type="date" v-model="filters.to_date" class="form-control form-control-sm" @change="loadAdmissions">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small">Search</label>
-                        <input type="text" v-model="filters.search" class="form-control form-control-sm"
-                               placeholder="IPD No, Patient Name, Mobile..." @keyup.enter="loadAdmissions">
-                    </div>
-                    <div class="col-md-1">
-                        <label class="form-label small">&nbsp;</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" v-model="filters.is_mlc" @change="loadAdmissions">
-                            <label class="form-check-label small">MLC</label>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label small">&nbsp;</label>
-                        <button class="btn btn-outline-secondary btn-sm w-100" @click="resetFilters">
-                            <i class="bi bi-x-lg"></i> Reset
-                        </button>
-                    </div>
+        <div class="modern-card mb-4">
+            <div class="modern-card-header clickable" @click="showFilters = !showFilters">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <h6 class="mb-0">
+                        <i class="bi bi-funnel me-2"></i>Filters
+                        <span v-if="hasActiveFilters" class="badge bg-primary ms-2" style="font-size: 0.7rem;">Active</span>
+                    </h6>
+                    <button class="btn btn-sm btn-link text-decoration-none p-0">
+                        <i class="bi" :class="showFilters ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    </button>
                 </div>
             </div>
+            <transition name="filter-collapse">
+                <div v-show="showFilters" class="modern-card-body">
+                    <div class="row g-3">
+                        <div class="col-md-2">
+                            <label class="modern-label">Status</label>
+                            <select v-model="filters.status" class="modern-select" @change="loadAdmissions">
+                                <option value="all">All Status</option>
+                                <option value="admitted">Admitted</option>
+                                <option value="discharge_initiated">Discharge Initiated</option>
+                                <option value="discharged">Discharged</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">Ward</label>
+                            <select v-model="filters.ward_id" class="modern-select" @change="loadAdmissions">
+                                <option value="">All Wards</option>
+                                <option v-for="ward in wards" :key="ward.ward_id" :value="ward.ward_id">
+                                    {{ ward.ward_name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">Department</label>
+                            <select v-model="filters.department_id" class="modern-select" @change="loadAdmissions">
+                                <option value="">All Departments</option>
+                                <option v-for="dept in departments" :key="dept.department_id" :value="dept.department_id">
+                                    {{ dept.department_name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">Doctor</label>
+                            <select v-model="filters.doctor_id" class="modern-select" @change="loadAdmissions">
+                                <option value="">All Doctors</option>
+                                <option v-for="doc in doctors" :key="doc.doctor_id" :value="doc.doctor_id">
+                                    {{ doc.doctor_name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">From Date</label>
+                            <input type="date" v-model="filters.from_date" class="modern-input" @change="loadAdmissions">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">To Date</label>
+                            <input type="date" v-model="filters.to_date" class="modern-input" @change="loadAdmissions">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="modern-label">Search</label>
+                            <input type="text" v-model="filters.search" class="modern-input"
+                                   placeholder="IPD No, Patient Name, Mobile..." @keyup.enter="loadAdmissions">
+                        </div>
+                        <div class="col-md-1">
+                            <label class="modern-label">&nbsp;</label>
+                            <div class="modern-checkbox">
+                                <input class="form-check-input" type="checkbox" id="mlc-filter" v-model="filters.is_mlc" @change="loadAdmissions">
+                                <label class="form-check-label" for="mlc-filter">MLC</label>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">&nbsp;</label>
+                            <button class="modern-btn-reset w-100" @click="resetFilters">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </transition>
         </div>
 
         <!-- Admissions Table -->
-        <div class="card">
-            <div class="card-body p-0">
+        <div class="modern-card">
+            <div class="modern-card-header">
+                <h6 class="mb-0"><i class="bi bi-list-ul me-2"></i>Patient Admissions</h6>
+            </div>
+            <div class="modern-card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
+                    <table class="table table-hover mb-0 modern-table">
                         <thead class="table-light">
                             <tr>
                                 <th>IPD No</th>
@@ -204,7 +231,7 @@
                                     <span v-if="admission.insurance_applicable" class="badge bg-info" title="Insurance">INS</span>
                                 </td>
                                 <td>
-                                    <div class="btn-group btn-group-sm">
+                                    <div class="btn-group" role="group">
                                         <router-link :to="`/ipd/${admission.ipd_id}`" class="btn btn-outline-primary" title="View">
                                             <i class="bi bi-eye"></i>
                                         </router-link>
@@ -416,6 +443,19 @@ export default {
             is_mlc: false,
         });
 
+        const showFilters = ref(false);
+
+        const hasActiveFilters = computed(() => {
+            return filters.value.status !== 'admitted' ||
+                   filters.value.ward_id !== '' ||
+                   filters.value.department_id !== '' ||
+                   filters.value.doctor_id !== '' ||
+                   filters.value.from_date !== '' ||
+                   filters.value.to_date !== '' ||
+                   filters.value.search !== '' ||
+                   filters.value.is_mlc === true;
+        });
+
         const pagination = ref({
             current_page: 1,
             last_page: 1,
@@ -607,11 +647,41 @@ export default {
         };
 
         const getBedTooltip = (bed) => {
-            if (!bed.is_available) {
-                const patientName = bed.current_patient?.full_name || bed.current_patient?.patient_name || 'Unknown Patient';
-                return `Occupied - ${patientName}`;
+            if (!bed.is_available && bed.current_patient) {
+                const patient = bed.current_patient;
+                const patientName = patient.full_name || `${patient.first_name || ""} ${patient.last_name || ""}`.trim() || "Unknown Patient";
+                const mobile = patient.mobile || "N/A";
+
+                // Build address string - prioritize permanent address
+                const parts = [];
+
+                // Use permanent address if available
+                if (patient.permanent_address) {
+                    parts.push(patient.permanent_address);
+                    if (patient.permanent_city?.city_name) parts.push(patient.permanent_city.city_name);
+                    if (patient.permanent_state?.state_name) parts.push(patient.permanent_state.state_name);
+                    if (patient.permanent_pincode) parts.push(patient.permanent_pincode);
+                }
+                // Fall back to current address
+                else if (patient.current_address) {
+                    parts.push(patient.current_address);
+                    if (patient.current_city?.city_name) parts.push(patient.current_city.city_name);
+                    if (patient.current_state?.state_name) parts.push(patient.current_state.state_name);
+                    if (patient.current_pincode) parts.push(patient.current_pincode);
+                }
+                // Fall back to legacy address fields
+                else {
+                    if (patient.address) parts.push(patient.address);
+                    if (patient.city) parts.push(patient.city);
+                    if (patient.state) parts.push(patient.state);
+                    if (patient.pincode) parts.push(patient.pincode);
+                }
+
+                const address = parts.length > 0 ? parts.join(", ") : "Address not available";
+
+                return `Patient: ${patientName}\nMobile: ${mobile}\nAddress: ${address}`;
             }
-            return 'Available';
+            return "Available";
         };
 
         const getPatientInitials = (patient) => {
@@ -639,6 +709,8 @@ export default {
             departments,
             doctors,
             filters,
+            showFilters,
+            hasActiveFilters,
             pagination,
             paginationPages,
             loadAdmissions,
@@ -662,6 +734,296 @@ export default {
 </script>
 
 <style scoped>
+/* Modern Dashboard Styles */
+.ipd-list {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 1.5rem;
+}
+
+/* Modern Buttons */
+.modern-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: none;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.modern-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+}
+
+.modern-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
+    color: white;
+}
+
+.modern-btn-outline {
+    background: white;
+    color: #6c757d;
+    border: 1px solid #e0e0e0;
+}
+
+.modern-btn-outline:hover {
+    background: #f8f9fa;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+/* Modern Stat Cards with Gradients */
+.stat-card {
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    min-height: 130px;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* Gradient Backgrounds */
+.stat-card-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.stat-card-gradient-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.stat-card-gradient-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
+
+.stat-card-gradient-success {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+}
+
+.stat-card-gradient-danger {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    color: white;
+}
+
+.stat-card-gradient-secondary {
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    color: #2c3e50;
+}
+
+.stat-content-full {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.stat-label-top {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+}
+
+.stat-value-large {
+    font-size: 2.25rem;
+    font-weight: 700;
+    line-height: 1;
+    margin: 0.25rem 0;
+}
+
+.stat-description {
+    font-size: 0.75rem;
+    opacity: 0.85;
+    line-height: 1.4;
+}
+
+/* Modern Cards */
+.modern-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.modern-card-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fafafa;
+}
+
+.modern-card-header h6 {
+    font-weight: 600;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+}
+
+.modern-card-body {
+    padding: 1.5rem;
+}
+
+/* Modern Table */
+.modern-table {
+    font-size: 0.875rem;
+}
+
+.modern-table thead th {
+    background: #fafafa;
+    color: #6c757d;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 1rem 1.25rem;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.modern-table tbody td {
+    padding: 1rem 1.25rem;
+    vertical-align: middle;
+    color: #2c3e50;
+}
+
+.modern-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.modern-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+/* Modern Filter Styles */
+.modern-card-header.clickable {
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+}
+
+.modern-card-header.clickable:hover {
+    background: #f5f5f5;
+}
+
+.modern-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modern-select,
+.modern-input {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: white;
+    color: #2c3e50;
+}
+
+.modern-select:focus,
+.modern-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.modern-select:hover,
+.modern-input:hover {
+    border-color: #b0b0b0;
+}
+
+.modern-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0;
+}
+
+.modern-checkbox .form-check-input {
+    width: 1.125rem;
+    height: 1.125rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.modern-checkbox .form-check-input:checked {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.modern-checkbox .form-check-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #2c3e50;
+    cursor: pointer;
+    margin: 0;
+}
+
+.modern-btn-reset {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    color: #6c757d;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+}
+
+.modern-btn-reset:hover {
+    background: #f8f9fa;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+/* Filter Collapse Animation */
+.filter-collapse-enter-active,
+.filter-collapse-leave-active {
+    transition: all 0.3s ease;
+    max-height: 500px;
+    overflow: hidden;
+}
+
+.filter-collapse-enter-from,
+.filter-collapse-leave-to {
+    max-height: 0;
+    opacity: 0;
+}
+
 /* Bootstrap Modal Adjustments */
 .bed-map-modal {
     max-width: 95%;
@@ -1789,111 +2151,3 @@ export default {
     .ipd-list .table { min-width: 1000px; }
 }
 </style>
-
-/* IPD List Table Fixes */
-.ipd-list .table {
-    table-layout: auto;
-    width: 100%;
-}
-
-.ipd-list .table thead th {
-    white-space: nowrap;
-    vertical-align: middle;
-    font-weight: 600;
-    font-size: 0.875rem;
-    padding: 0.75rem 0.5rem;
-    background-color: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
-}
-
-.ipd-list .table tbody td {
-    vertical-align: middle;
-    padding: 0.75rem 0.5rem;
-    font-size: 0.875rem;
-}
-
-/* Column widths */
-.ipd-list .table th:nth-child(1),
-.ipd-list .table td:nth-child(1) {
-    width: 10%;
-    min-width: 100px;
-}
-
-.ipd-list .table th:nth-child(2),
-.ipd-list .table td:nth-child(2) {
-    width: 15%;
-    min-width: 150px;
-}
-
-.ipd-list .table th:nth-child(3),
-.ipd-list .table td:nth-child(3) {
-    width: 12%;
-    min-width: 120px;
-}
-
-.ipd-list .table th:nth-child(4),
-.ipd-list .table td:nth-child(4) {
-    width: 15%;
-    min-width: 150px;
-}
-
-.ipd-list .table th:nth-child(5),
-.ipd-list .table td:nth-child(5) {
-    width: 10%;
-    min-width: 100px;
-}
-
-.ipd-list .table th:nth-child(6),
-.ipd-list .table td:nth-child(6) {
-    width: 8%;
-    min-width: 80px;
-    text-align: center;
-}
-
-.ipd-list .table th:nth-child(7),
-.ipd-list .table td:nth-child(7) {
-    width: 10%;
-    min-width: 100px;
-    text-align: center;
-}
-
-.ipd-list .table th:nth-child(8),
-.ipd-list .table td:nth-child(8) {
-    width: 10%;
-    min-width: 100px;
-    text-align: center;
-}
-
-.ipd-list .table th:nth-child(9),
-.ipd-list .table td:nth-child(9) {
-    width: 10%;
-    min-width: 120px;
-    text-align: center;
-}
-
-/* Text wrapping */
-.ipd-list .table td > div {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
-}
-
-.ipd-list .table td small {
-    display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Responsive table */
-@media (max-width: 1200px) {
-    .ipd-list .table-responsive {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .ipd-list .table {
-        min-width: 1000px;
-    }
-}

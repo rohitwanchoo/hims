@@ -80,7 +80,7 @@
             @if($opdVisit->doctor)
             <div class="info-cell">
                 <div class="info-label">Doctor</div>
-                <div class="info-value">{{ $opdVisit->doctor->doctor_name ?? 'N/A' }}</div>
+                <div class="info-value">{{ $opdVisit->doctor->full_name ?? 'N/A' }}</div>
             </div>
             @endif
             @if($opdVisit->department)
@@ -100,7 +100,7 @@
         <div class="info-row">
             <div class="info-cell">
                 <div class="info-label">Reference Doctor</div>
-                <div class="info-value">{{ $opdVisit->referenceDoctor->doctor_name ?? 'N/A' }}</div>
+                <div class="info-value">{{ $opdVisit->referenceDoctor->full_name ?? 'N/A' }}</div>
             </div>
         </div>
         @endif

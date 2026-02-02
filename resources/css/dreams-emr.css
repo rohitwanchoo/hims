@@ -240,7 +240,8 @@ a:hover {
 
 /* Sidebar Menu */
 .sidebar-menu {
-    padding: 0 12px 20px;
+    padding: 0 12px 100px;
+    /* Increased bottom padding to ensure all items are accessible when scrolling */
 }
 
 .sidebar-menu .nav {
@@ -304,7 +305,8 @@ a:hover {
 }
 
 .sidebar-menu .submenu.show {
-    max-height: 500px;
+    max-height: 2000px;
+    /* Increased to accommodate all submenu items */
 }
 
 .sidebar-menu .submenu .nav-link {

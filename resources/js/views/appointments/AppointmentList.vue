@@ -1,123 +1,162 @@
 <template>
-    <div>
+    <div class="appointment-list">
         <!-- Page Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h4 class="mb-1">Appointments</h4>
-                <p class="text-muted mb-0">Manage patient appointments</p>
+                <h2 class="mb-1 fw-bold">Appointments Dashboard</h2>
+                <p class="text-muted mb-0 small">Manage and track patient appointments</p>
             </div>
             <div class="d-flex gap-2">
-                <button class="btn btn-outline-primary" @click="showTransferModal = true">
-                    <i class="bi bi-arrow-left-right me-1"></i>Transfer
+                <button class="modern-btn modern-btn-outline" @click="fetchAppointments">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    <span>Refresh</span>
                 </button>
-                <router-link to="/appointments/create" class="btn btn-primary">
-                    <i class="bi bi-plus-lg me-1"></i>New Appointment
+                <button class="modern-btn modern-btn-outline" @click="showTransferModal = true">
+                    <i class="bi bi-arrow-left-right"></i>
+                    <span>Transfer</span>
+                </button>
+                <router-link to="/appointments/create" class="modern-btn modern-btn-primary">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>New Appointment</span>
                 </router-link>
             </div>
         </div>
 
         <!-- Summary Stats Cards -->
-        <div class="stats-row mb-4">
-            <div class="stat-card primary">
-                <div class="stat-icon"><i class="bi bi-calendar-check"></i></div>
-                <div class="stat-content">
-                    <div class="stat-value">{{ summary.total }}</div>
-                    <div class="stat-label">Total Appointments</div>
+        <div class="row g-3 mb-4">
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card-modern stat-card-gradient-primary">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Total</div>
+                        <div class="stat-value-large">{{ summary.total }}</div>
+                        <div class="stat-description">All appointments</div>
+                    </div>
                 </div>
             </div>
-            <div class="stat-card warning">
-                <div class="stat-icon"><i class="bi bi-clock"></i></div>
-                <div class="stat-content">
-                    <div class="stat-value">{{ summary.scheduled }}</div>
-                    <div class="stat-label">Scheduled</div>
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card-modern stat-card-gradient-warning">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Scheduled</div>
+                        <div class="stat-value-large">{{ summary.scheduled }}</div>
+                        <div class="stat-description">Upcoming slots</div>
+                    </div>
                 </div>
             </div>
-            <div class="stat-card info">
-                <div class="stat-icon"><i class="bi bi-person-check"></i></div>
-                <div class="stat-content">
-                    <div class="stat-value">{{ summary.confirmed }}</div>
-                    <div class="stat-label">Arrived</div>
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card-modern stat-card-gradient-info">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Arrived</div>
+                        <div class="stat-value-large">{{ summary.confirmed }}</div>
+                        <div class="stat-description">Patients arrived</div>
+                    </div>
                 </div>
             </div>
-            <div class="stat-card success">
-                <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
-                <div class="stat-content">
-                    <div class="stat-value">{{ summary.completed }}</div>
-                    <div class="stat-label">Completed</div>
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card-modern stat-card-gradient-success">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Completed</div>
+                        <div class="stat-value-large">{{ summary.completed }}</div>
+                        <div class="stat-description">Finished visits</div>
+                    </div>
                 </div>
             </div>
-            <div class="stat-card danger">
-                <div class="stat-icon"><i class="bi bi-x-circle"></i></div>
-                <div class="stat-content">
-                    <div class="stat-value">{{ summary.cancelled }}</div>
-                    <div class="stat-label">Cancelled</div>
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card-modern stat-card-gradient-danger">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">Cancelled</div>
+                        <div class="stat-value-large">{{ summary.cancelled }}</div>
+                        <div class="stat-description">Cancelled slots</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-2 col-lg-4 col-md-6">
+                <div class="stat-card-modern stat-card-gradient-secondary">
+                    <div class="stat-content-full">
+                        <div class="stat-label-top">No Show</div>
+                        <div class="stat-value-large">{{ summary.no_show || 0 }}</div>
+                        <div class="stat-description">Missed appointments</div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Filters Card -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-2">
-                        <label class="form-label">Date</label>
-                        <input type="date" class="form-control" v-model="filters.date" @change="fetchAppointments">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Doctor</label>
-                        <select class="form-select" v-model="filters.doctor_id" @change="fetchAppointments">
-                            <option value="">All Doctors</option>
-                            <option v-for="doc in doctors" :key="doc.doctor_id" :value="doc.doctor_id">
-                                {{ doc.full_name }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Department</label>
-                        <select class="form-select" v-model="filters.department_id" @change="fetchAppointments">
-                            <option value="">All Departments</option>
-                            <option v-for="dept in departments" :key="dept.department_id" :value="dept.department_id">
-                                {{ dept.department_name }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Status</label>
-                        <select class="form-select" v-model="filters.status" @change="fetchAppointments">
-                            <option value="">All Status</option>
-                            <option value="scheduled">Scheduled</option>
-                            <option value="confirmed">Arrived</option>
-                            <option value="checked_in">Checked In</option>
-                            <option value="in_consultation">In Consultation</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                            <option value="no_show">No Show</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Search</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-search"></i></span>
-                            <input type="text" class="form-control" v-model="filters.search" @input="debounceSearch" placeholder="Patient/Mobile">
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <button class="btn btn-light w-100" @click="resetFilters">
-                            <i class="bi bi-arrow-clockwise me-1"></i>Reset
-                        </button>
-                    </div>
+        <div class="modern-card mb-4">
+            <div class="modern-card-header clickable" @click="showFilters = !showFilters">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <h6 class="mb-0">
+                        <i class="bi bi-funnel me-2"></i>Filters
+                        <span v-if="hasActiveFilters" class="badge bg-primary ms-2" style="font-size: 0.7rem;">Active</span>
+                    </h6>
+                    <button class="btn btn-sm btn-link text-decoration-none p-0">
+                        <i class="bi" :class="showFilters ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    </button>
                 </div>
             </div>
+            <transition name="filter-collapse">
+                <div v-show="showFilters" class="modern-card-body">
+                    <div class="row g-3">
+                        <div class="col-md-2">
+                            <label class="modern-label">Date</label>
+                            <input type="date" class="modern-input" v-model="filters.date" @change="fetchAppointments">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">Doctor</label>
+                            <select class="modern-select" v-model="filters.doctor_id" @change="fetchAppointments">
+                                <option value="">All Doctors</option>
+                                <option v-for="doc in doctors" :key="doc.doctor_id" :value="doc.doctor_id">
+                                    {{ doc.full_name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">Department</label>
+                            <select class="modern-select" v-model="filters.department_id" @change="fetchAppointments">
+                                <option value="">All Departments</option>
+                                <option v-for="dept in departments" :key="dept.department_id" :value="dept.department_id">
+                                    {{ dept.department_name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="modern-label">Status</label>
+                            <select class="modern-select" v-model="filters.status" @change="fetchAppointments">
+                                <option value="">All Status</option>
+                                <option value="scheduled">Scheduled</option>
+                                <option value="confirmed">Arrived</option>
+                                <option value="checked_in">Checked In</option>
+                                <option value="in_consultation">In Consultation</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                                <option value="no_show">No Show</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="modern-label">Search</label>
+                            <input type="text" class="modern-input" v-model="filters.search" @input="debounceSearch" placeholder="Patient/Mobile">
+                        </div>
+                        <div class="col-md-1">
+                            <label class="modern-label">&nbsp;</label>
+                            <button class="modern-btn-reset w-100" @click="resetFilters">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </transition>
         </div>
 
         <!-- Appointments Table Card -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Appointment List</h5>
-                <span class="badge badge-soft-primary">{{ appointments.length }} appointments</span>
+        <div class="modern-card">
+            <div class="modern-card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Appointment List</h6>
+                    <span class="badge bg-primary">{{ appointments.length }} appointments</span>
+                </div>
             </div>
-            <div class="table-responsive">
-                <table class="table mb-0">
+            <div class="modern-card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 modern-table">
                     <thead>
                         <tr>
                             <th>Slot</th>
@@ -229,6 +268,7 @@
                         </tr>
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
 
@@ -324,7 +364,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
 import { Modal } from 'bootstrap';
 
@@ -337,6 +377,7 @@ const cancelling = ref(false);
 const transferring = ref(false);
 const selectedAppointment = ref(null);
 const showTransferModal = ref(false);
+const showFilters = ref(false);
 
 const cancelModal = ref(null);
 const transferModal = ref(null);
@@ -376,6 +417,16 @@ const transferForm = reactive({
 });
 
 let searchTimeout = null;
+
+// Computed
+const hasActiveFilters = computed(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return filters.date !== today ||
+           filters.doctor_id !== '' ||
+           filters.department_id !== '' ||
+           filters.status !== '' ||
+           filters.search !== '';
+});
 
 const fetchAppointments = async () => {
     loading.value = true;
@@ -629,6 +680,269 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* Modern Dashboard Styles */
+.appointment-list {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 1.5rem;
+}
+
+/* Modern Buttons */
+.modern-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: none;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.modern-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+}
+
+.modern-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
+    color: white;
+}
+
+.modern-btn-outline {
+    background: white;
+    color: #6c757d;
+    border: 1px solid #e0e0e0;
+}
+
+.modern-btn-outline:hover {
+    background: #f8f9fa;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+/* Modern Stat Cards with Gradients */
+.stat-card-modern {
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    min-height: 130px;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card-modern:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* Gradient Backgrounds */
+.stat-card-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.stat-card-gradient-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.stat-card-gradient-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
+
+.stat-card-gradient-success {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+}
+
+.stat-card-gradient-danger {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    color: white;
+}
+
+.stat-card-gradient-secondary {
+    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    color: #2c3e50;
+}
+
+.stat-content-full {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.stat-label-top {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+}
+
+.stat-value-large {
+    font-size: 2.25rem;
+    font-weight: 700;
+    line-height: 1;
+    margin: 0.25rem 0;
+}
+
+.stat-description {
+    font-size: 0.75rem;
+    opacity: 0.85;
+    line-height: 1.4;
+}
+
+/* Modern Cards */
+.modern-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.modern-card-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fafafa;
+}
+
+.modern-card-header h6 {
+    font-weight: 600;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+}
+
+.modern-card-body {
+    padding: 1.5rem;
+}
+
+/* Modern Table */
+.modern-table {
+    font-size: 0.875rem;
+}
+
+.modern-table thead th {
+    background: #fafafa;
+    color: #6c757d;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 1rem 1.25rem;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.modern-table tbody td {
+    padding: 1rem 1.25rem;
+    vertical-align: middle;
+    color: #2c3e50;
+}
+
+.modern-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.modern-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+/* Modern Filter Styles */
+.modern-card-header.clickable {
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+}
+
+.modern-card-header.clickable:hover {
+    background: #f5f5f5;
+}
+
+.modern-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modern-select,
+.modern-input {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: white;
+    color: #2c3e50;
+}
+
+.modern-select:focus,
+.modern-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.modern-select:hover,
+.modern-input:hover {
+    border-color: #b0b0b0;
+}
+
+.modern-btn-reset {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    color: #6c757d;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+}
+
+.modern-btn-reset:hover {
+    background: #f8f9fa;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+/* Filter Collapse Animation */
+.filter-collapse-enter-active,
+.filter-collapse-leave-active {
+    transition: all 0.3s ease;
+    max-height: 500px;
+    overflow: hidden;
+}
+
+.filter-collapse-enter-from,
+.filter-collapse-leave-to {
+    max-height: 0;
+    opacity: 0;
+}
+
+/* Legacy Styles */
 .avatar-sm {
     width: 32px;
     height: 32px;
@@ -636,34 +950,16 @@ onMounted(() => {
 }
 
 .table-row-success {
-    background-color: var(--success-light) !important;
+    background-color: rgba(25, 135, 84, 0.1) !important;
 }
 
 .table-row-danger {
-    background-color: var(--danger-light) !important;
+    background-color: rgba(220, 53, 69, 0.1) !important;
 }
 
 .table-row-past {
     background-color: #f8f9fa !important;
     opacity: 0.7;
     color: #6c757d;
-}
-
-.stats-row {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 16px;
-}
-
-@media (max-width: 1199.98px) {
-    .stats-row {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
-
-@media (max-width: 767.98px) {
-    .stats-row {
-        grid-template-columns: repeat(2, 1fr);
-    }
 }
 </style>

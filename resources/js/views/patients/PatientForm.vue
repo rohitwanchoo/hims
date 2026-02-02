@@ -100,7 +100,7 @@
                                     <label class="form-label">Insurance Company</label>
                                     <select class="form-select" v-model="form.insurance_company_id">
                                         <option value="">Select</option>
-                                        <option v-for="ic in insuranceCompanies" :key="ic.insurance_company_id" :value="ic.insurance_company_id">
+                                        <option v-for="ic in insuranceCompanies" :key="ic.insurance_id" :value="ic.insurance_id">
                                             {{ ic.company_name }}
                                         </option>
                                     </select>
