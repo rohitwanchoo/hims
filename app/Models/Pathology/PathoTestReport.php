@@ -10,7 +10,7 @@ class PathoTestReport extends Model
 {
     use HasFactory, BelongsToHospital;
 
-    protected $table = 'patho_test_report';
+    protected $table = 'patho_test_reports';
     protected $primaryKey = 'report_id';
 
     protected $fillable = [
@@ -88,9 +88,27 @@ class PathoTestReport extends Model
 
     /**
      * Get the skill mappings for this report.
+     * Note: This relationship is outdated as skill_patho_test_maps now uses test_id instead of report_id
      */
-    public function skillMappings()
+    // public function skillMappings()
+    // {
+    //     return $this->hasMany(SkillPathoTestMap::class, 'test_report_id', 'report_id');
+    // }
+
+    /**
+     * Get the tests mapped to this report.
+     */
+    public function pathoTests()
     {
-        return $this->hasMany(SkillPathoTestMap::class, 'test_report_id', 'report_id');
+        return $this->belongsToMany(
+            PathoTest::class,
+            'patho_test_report_test_maps',
+            'report_id',
+            'test_id',
+            'report_id',
+            'test_id'
+        )->withPivot('test_sequence', 'is_mandatory', 'is_active')
+          ->withTimestamps()
+          ->orderBy('test_sequence');
     }
 }

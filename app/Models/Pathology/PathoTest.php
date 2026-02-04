@@ -10,7 +10,7 @@ class PathoTest extends Model
 {
     use HasFactory, BelongsToHospital;
 
-    protected $table = 'patho_test';
+    protected $table = 'patho_tests';
     protected $primaryKey = 'test_id';
 
     protected $fillable = [
@@ -129,5 +129,13 @@ class PathoTest extends Model
     public function testNotes()
     {
         return $this->hasMany(PathoTestNote::class, 'test_id', 'test_id');
+    }
+
+    /**
+     * Get the reference ranges for this test.
+     */
+    public function referenceRanges()
+    {
+        return $this->hasMany(PathoTestReferenceRange::class, 'test_id', 'test_id');
     }
 }

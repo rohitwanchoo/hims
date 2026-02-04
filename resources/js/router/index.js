@@ -130,6 +130,7 @@ import AbhaManagement from '../views/abha/AbhaManagement.vue';
 // Masters - Reception
 import PrefixList from '../views/masters/reception/PrefixList.vue';
 import GenderList from '../views/masters/reception/GenderList.vue';
+import AgeGroupMaster from '../views/masters/reception/AgeGroupMaster.vue';
 import BloodGroupList from '../views/masters/reception/BloodGroupList.vue';
 import PatientTypeList from '../views/masters/reception/PatientTypeList.vue';
 import MaritalStatusList from '../views/masters/reception/MaritalStatusList.vue';
@@ -212,6 +213,11 @@ const routes = [
                 path: 'masters/reception/gender',
                 name: 'masters.reception.gender',
                 component: GenderList
+            },
+            {
+                path: 'masters/reception/age-group',
+                name: 'masters.reception.age-group',
+                component: AgeGroupMaster
             },
             {
                 path: 'masters/reception/blood-group',

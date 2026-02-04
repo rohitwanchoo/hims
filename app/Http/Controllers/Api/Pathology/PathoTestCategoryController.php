@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Pathology;
 
 use App\Http\Controllers\Controller;
-use App\Models\PathoTestCategory;
+use App\Models\Pathology\PathoTestCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -16,7 +16,7 @@ class PathoTestCategoryController extends Controller
             $hospitalId = Auth::user()->hospital_id;
 
             $query = PathoTestCategory::where('hospital_id', $hospitalId)
-                ->with(['faculty']);
+                ->with(['parent']);
 
             // Search filter
             if ($request->filled('search')) {
@@ -27,9 +27,9 @@ class PathoTestCategoryController extends Controller
                 });
             }
 
-            // Faculty filter
-            if ($request->filled('faculty_id')) {
-                $query->where('faculty_id', $request->faculty_id);
+            // Parent category filter
+            if ($request->filled('parent_category_id')) {
+                $query->where('parent_category_id', $request->parent_category_id);
             }
 
             // Active filter
@@ -69,9 +69,10 @@ class PathoTestCategoryController extends Controller
             $validator = Validator::make($request->all(), [
                 'category_name' => 'required|string|max:100',
                 'category_code' => 'nullable|string|max:50',
-                'faculty_id' => 'nullable|exists:patho_faculties,faculty_id',
-                'description' => 'nullable|string',
-                'display_order' => 'nullable|integer',
+                'parent_category_id' => 'nullable|exists:patho_test_categories,category_id',
+                'fit_100' => 'boolean',
+                'has_sub_category' => 'boolean',
+                'remarks' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -86,16 +87,17 @@ class PathoTestCategoryController extends Controller
                 'hospital_id' => Auth::user()->hospital_id,
                 'category_name' => $request->category_name,
                 'category_code' => $request->category_code,
-                'faculty_id' => $request->faculty_id,
-                'description' => $request->description,
-                'display_order' => $request->display_order ?? 0,
+                'parent_category_id' => $request->parent_category_id,
+                'fit_100' => $request->fit_100 ?? false,
+                'has_sub_category' => $request->has_sub_category ?? false,
+                'remarks' => $request->remarks,
                 'is_active' => $request->is_active ?? true,
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Test category created successfully',
-                'data' => $category->load('faculty')
+                'data' => $category->load('parent')
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
@@ -112,7 +114,7 @@ class PathoTestCategoryController extends Controller
             $hospitalId = Auth::user()->hospital_id;
             $category = PathoTestCategory::where('hospital_id', $hospitalId)
                 ->where('category_id', $id)
-                ->with(['faculty'])
+                ->with(['parent', 'pathoTests'])
                 ->firstOrFail();
 
             return response()->json([
@@ -139,9 +141,10 @@ class PathoTestCategoryController extends Controller
             $validator = Validator::make($request->all(), [
                 'category_name' => 'required|string|max:100',
                 'category_code' => 'nullable|string|max:50',
-                'faculty_id' => 'nullable|exists:patho_faculties,faculty_id',
-                'description' => 'nullable|string',
-                'display_order' => 'nullable|integer',
+                'parent_category_id' => 'nullable|exists:patho_test_categories,category_id',
+                'fit_100' => 'boolean',
+                'has_sub_category' => 'boolean',
+                'remarks' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -155,16 +158,17 @@ class PathoTestCategoryController extends Controller
             $category->update([
                 'category_name' => $request->category_name,
                 'category_code' => $request->category_code,
-                'faculty_id' => $request->faculty_id,
-                'description' => $request->description,
-                'display_order' => $request->display_order ?? $category->display_order,
+                'parent_category_id' => $request->parent_category_id,
+                'fit_100' => $request->fit_100 ?? $category->fit_100,
+                'has_sub_category' => $request->has_sub_category ?? $category->has_sub_category,
+                'remarks' => $request->remarks,
                 'is_active' => $request->is_active ?? $category->is_active,
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Test category updated successfully',
-                'data' => $category->load('faculty')
+                'data' => $category->load('parent')
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -193,6 +197,84 @@ class PathoTestCategoryController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete test category',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Add a test to this category
+     */
+    public function addTest(Request $request, $categoryId)
+    {
+        try {
+            $hospitalId = Auth::user()->hospital_id;
+
+            // Verify category belongs to hospital
+            $category = PathoTestCategory::where('hospital_id', $hospitalId)
+                ->where('category_id', $categoryId)
+                ->firstOrFail();
+
+            $validator = Validator::make($request->all(), [
+                'test_id' => 'required|exists:patho_tests,test_id',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Update test's category
+            $test = \App\Models\Pathology\PathoTest::where('test_id', $request->test_id)
+                ->where('hospital_id', $hospitalId)
+                ->firstOrFail();
+
+            $test->update(['category_id' => $categoryId]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Test added to category successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to add test to category',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Remove a test from this category
+     */
+    public function removeTest($categoryId, $testId)
+    {
+        try {
+            $hospitalId = Auth::user()->hospital_id;
+
+            // Verify category belongs to hospital
+            PathoTestCategory::where('hospital_id', $hospitalId)
+                ->where('category_id', $categoryId)
+                ->firstOrFail();
+
+            // Update test's category to null
+            $test = \App\Models\Pathology\PathoTest::where('test_id', $testId)
+                ->where('hospital_id', $hospitalId)
+                ->where('category_id', $categoryId)
+                ->firstOrFail();
+
+            $test->update(['category_id' => null]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Test removed from category successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to remove test from category',
                 'error' => $e->getMessage()
             ], 500);
         }

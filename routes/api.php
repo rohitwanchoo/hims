@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\FhirController;
 use App\Http\Controllers\Api\ClaudeAssistantController;
 use App\Http\Controllers\Api\PrefixController;
 use App\Http\Controllers\Api\GenderController;
+use App\Http\Controllers\Api\AgeGroupController;
 use App\Http\Controllers\Api\BloodGroupController;
 use App\Http\Controllers\Api\PatientTypeController;
 use App\Http\Controllers\Api\MaritalStatusController;
@@ -43,12 +44,14 @@ use App\Http\Controllers\Api\DoseMasterController;
 use App\Http\Controllers\Api\DiseaseMasterController;
 use App\Http\Controllers\Api\DrugTypeController;
 use App\Http\Controllers\Api\DrugMasterController;
+use App\Http\Controllers\Api\FrontendLogController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/log-frontend-error', [FrontendLogController::class, 'logError']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -107,6 +110,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Genders (Master > Reception)
     Route::apiResource('genders', GenderController::class);
     Route::get('genders-active', [GenderController::class, 'active']);
+
+    // Age Groups (Master > Common)
+    Route::apiResource('age-groups', AgeGroupController::class);
+    Route::get('age-groups-active', [AgeGroupController::class, 'active']);
 
     // Blood Groups (Master > Reception)
     Route::apiResource('blood-groups', BloodGroupController::class);
@@ -356,19 +363,24 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('instructions', \App\Http\Controllers\Api\Pathology\PathoInstructionController::class);
 
         // Complex Masters
-        Route::apiResource('analyzers', \App\Http\Controllers\Api\Pathology\AnalyzerController::class);
+        Route::get('analyzers/{id}/tests', [\App\Http\Controllers\Api\Pathology\AnalyzerController::class, 'getTests']);
+        Route::post('analyzers/{id}/tests', [\App\Http\Controllers\Api\Pathology\AnalyzerController::class, 'addTest']);
+        Route::delete('analyzers/{id}/tests/{testId}', [\App\Http\Controllers\Api\Pathology\AnalyzerController::class, 'removeTest']);
         Route::post('analyzers/{id}/map-tests', [\App\Http\Controllers\Api\Pathology\AnalyzerController::class, 'mapTests']);
+        Route::apiResource('analyzers', \App\Http\Controllers\Api\Pathology\AnalyzerController::class);
 
         Route::apiResource('external-labs', \App\Http\Controllers\Api\Pathology\ExternalLabCenterController::class);
 
         Route::apiResource('test-categories', \App\Http\Controllers\Api\Pathology\PathoTestCategoryController::class);
+        Route::post('test-categories/{categoryId}/tests', [\App\Http\Controllers\Api\Pathology\PathoTestCategoryController::class, 'addTest']);
+        Route::delete('test-categories/{categoryId}/tests/{testId}', [\App\Http\Controllers\Api\Pathology\PathoTestCategoryController::class, 'removeTest']);
 
         Route::apiResource('test-groups', \App\Http\Controllers\Api\Pathology\PathoTestGroupController::class);
-        Route::post('test-groups/{id}/map-tests', [\App\Http\Controllers\Api\Pathology\PathoTestGroupController::class, 'mapTests']);
+        Route::get('test-groups/{id}/tests', [\App\Http\Controllers\Api\Pathology\PathoTestGroupController::class, 'getGroupTests']);
+        Route::post('test-groups/{id}/tests', [\App\Http\Controllers\Api\Pathology\PathoTestGroupController::class, 'addTestToGroup']);
+        Route::delete('test-groups/{groupId}/tests/{testId}', [\App\Http\Controllers\Api\Pathology\PathoTestGroupController::class, 'removeTestFromGroup']);
 
-        Route::apiResource('pathologist-maps', \App\Http\Controllers\Api\Pathology\PathologistDoctorMapController::class);
-        Route::get('pathologist-maps/default/{facultyId}', [\App\Http\Controllers\Api\Pathology\PathologistDoctorMapController::class, 'getDefaultPathologist']);
-        Route::post('pathologist-maps/{id}/set-default', [\App\Http\Controllers\Api\Pathology\PathologistDoctorMapController::class, 'setDefault']);
+        Route::apiResource('pathologist-mappings', \App\Http\Controllers\Api\Pathology\PathologistDoctorMapController::class);
 
         Route::apiResource('tests', \App\Http\Controllers\Api\Pathology\PathoTestController::class);
         Route::get('tests/by-category/{categoryId}', [\App\Http\Controllers\Api\Pathology\PathoTestController::class, 'getByCategory']);
@@ -376,14 +388,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('test-notes', \App\Http\Controllers\Api\Pathology\PathoTestNoteController::class);
         Route::get('test-notes/by-test/{testId}', [\App\Http\Controllers\Api\Pathology\PathoTestNoteController::class, 'getByTest']);
 
+        Route::get('skill-test-maps/by-department/{departmentId}', [\App\Http\Controllers\Api\Pathology\SkillPathoTestMapController::class, 'getTestsByDepartment']);
+        Route::get('skill-test-maps/by-test/{testId}', [\App\Http\Controllers\Api\Pathology\SkillPathoTestMapController::class, 'getDepartmentsByTest']);
+        Route::delete('skill-test-maps/{departmentId}/{testId}', [\App\Http\Controllers\Api\Pathology\SkillPathoTestMapController::class, 'destroyByDepartmentAndTest']);
         Route::apiResource('skill-test-maps', \App\Http\Controllers\Api\Pathology\SkillPathoTestMapController::class);
-        Route::get('skill-test-maps/by-user/{userId}', [\App\Http\Controllers\Api\Pathology\SkillPathoTestMapController::class, 'getTestsByUser']);
-        Route::get('skill-test-maps/by-test/{testId}', [\App\Http\Controllers\Api\Pathology\SkillPathoTestMapController::class, 'getUsersByTest']);
-        Route::post('skill-test-maps/bulk-map', [\App\Http\Controllers\Api\Pathology\SkillPathoTestMapController::class, 'bulkMapTests']);
 
-        Route::apiResource('test-reports', \App\Http\Controllers\Api\Pathology\PathoTestReportController::class);
-        Route::get('test-reports/by-test/{testId}', [\App\Http\Controllers\Api\Pathology\PathoTestReportController::class, 'getByTest']);
+        Route::get('test-reports/{reportId}/tests', [\App\Http\Controllers\Api\Pathology\PathoTestReportController::class, 'getTests']);
+        Route::post('test-reports/{reportId}/tests', [\App\Http\Controllers\Api\Pathology\PathoTestReportController::class, 'addTest']);
+        Route::delete('test-reports/{reportId}/tests/{testId}', [\App\Http\Controllers\Api\Pathology\PathoTestReportController::class, 'removeTest']);
+        Route::get('test-reports/by-faculty/{facultyId}', [\App\Http\Controllers\Api\Pathology\PathoTestReportController::class, 'getByFaculty']);
         Route::get('test-reports/by-type/{type}', [\App\Http\Controllers\Api\Pathology\PathoTestReportController::class, 'getByType']);
+        Route::apiResource('test-reports', \App\Http\Controllers\Api\Pathology\PathoTestReportController::class);
     });
 
     // Pharmacy

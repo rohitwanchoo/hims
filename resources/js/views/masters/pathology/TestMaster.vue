@@ -27,7 +27,7 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <select class="form-select form-select-sm" v-model="filters.status" @change="loadTests">
+                        <select class="form-select form-select-sm" v-model="filters.is_active" @change="loadTests">
                             <option value="">All Status</option>
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
@@ -71,7 +71,7 @@
                                     No tests found
                                 </td>
                             </tr>
-                            <tr v-else v-for="(item, index) in tests" :key="item.id">
+                            <tr v-else v-for="(item, index) in tests" :key="item.test_id">
                                 <td>{{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}</td>
                                 <td>{{ item.test_name }}</td>
                                 <td>{{ item.test_code || '-' }}</td>
@@ -91,7 +91,7 @@
                                     <button class="btn btn-sm btn-outline-primary me-1" @click="editTest(item)" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger" @click="deleteTest(item.id)" title="Delete">
+                                    <button class="btn btn-sm btn-outline-danger" @click="deleteTest(item.test_id)" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
@@ -168,11 +168,11 @@
                                     <small class="text-muted">Numeric: for measurable values with ranges | Alphanumeric: for text results</small>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Sort Order</label>
+                                    <label class="form-label">Test Sequence</label>
                                     <input
                                         type="number"
                                         class="form-control"
-                                        v-model.number="form.sort_order"
+                                        v-model.number="form.test_sequence"
                                         placeholder="Display order">
                                 </div>
                             </div>
@@ -184,7 +184,7 @@
                                     <label class="form-label">Method</label>
                                     <select class="form-select" v-model="form.method_id">
                                         <option :value="null">Select Method</option>
-                                        <option v-for="method in methods" :key="method.id" :value="method.id">
+                                        <option v-for="method in methods" :key="method.method_id" :value="method.method_id">
                                             {{ method.method_name }}
                                         </option>
                                     </select>
@@ -193,7 +193,7 @@
                                     <label class="form-label">Unit</label>
                                     <select class="form-select" v-model="form.unit_id">
                                         <option :value="null">Select Unit</option>
-                                        <option v-for="unit in units" :key="unit.id" :value="unit.id">
+                                        <option v-for="unit in units" :key="unit.unit_id" :value="unit.unit_id">
                                             {{ unit.unit_name }}
                                         </option>
                                     </select>
@@ -202,7 +202,7 @@
                                     <label class="form-label">Container</label>
                                     <select class="form-select" v-model="form.container_id">
                                         <option :value="null">Select Container</option>
-                                        <option v-for="container in containers" :key="container.id" :value="container.id">
+                                        <option v-for="container in containers" :key="container.container_id" :value="container.container_id">
                                             {{ container.container_name }}
                                         </option>
                                     </select>
@@ -213,102 +213,89 @@
                             <div v-if="form.value_type === 'numeric'">
                                 <h6 class="border-bottom pb-2 mb-3 mt-4">Reference Ranges</h6>
 
-                                <!-- Male Range -->
+                                <!-- Normal Range -->
                                 <div class="row">
-                                    <div class="col-md-12 mb-2">
-                                        <label class="fw-bold text-primary">Male Range</label>
-                                    </div>
-                                    <div class="col-md-3 mb-3">
+                                    <div class="col-md-6 mb-3">
                                         <label class="form-label">Min Value</label>
                                         <input
                                             type="number"
                                             step="any"
                                             class="form-control"
-                                            v-model.number="form.male_min"
+                                            v-model.number="form.min_value"
                                             placeholder="e.g., 13.0">
                                     </div>
-                                    <div class="col-md-3 mb-3">
+                                    <div class="col-md-6 mb-3">
                                         <label class="form-label">Max Value</label>
                                         <input
                                             type="number"
                                             step="any"
                                             class="form-control"
-                                            v-model.number="form.male_max"
+                                            v-model.number="form.max_value"
                                             placeholder="e.g., 17.0">
                                     </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Reference Text</label>
-                                        <input
-                                            type="text"
-                                            class="form-control"
-                                            v-model="form.male_reference"
-                                            placeholder="e.g., 13.0 - 17.0 g/dL">
-                                    </div>
                                 </div>
 
-                                <!-- Female Range -->
-                                <div class="row">
-                                    <div class="col-md-12 mb-2">
-                                        <label class="fw-bold text-danger">Female Range</label>
+                                <!-- Gender, Age Group & Race Specific Ranges -->
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="fw-bold">Gender, Age Group & Race Specific Ranges</label>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" @click="addReferenceRange">
+                                            <i class="bi bi-plus-circle"></i> Add Range
+                                        </button>
                                     </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label">Min Value</label>
-                                        <input
-                                            type="number"
-                                            step="any"
-                                            class="form-control"
-                                            v-model.number="form.female_min"
-                                            placeholder="e.g., 12.0">
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label">Max Value</label>
-                                        <input
-                                            type="number"
-                                            step="any"
-                                            class="form-control"
-                                            v-model.number="form.female_max"
-                                            placeholder="e.g., 15.0">
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Reference Text</label>
-                                        <input
-                                            type="text"
-                                            class="form-control"
-                                            v-model="form.female_reference"
-                                            placeholder="e.g., 12.0 - 15.0 g/dL">
-                                    </div>
-                                </div>
 
-                                <!-- Child Range -->
-                                <div class="row">
-                                    <div class="col-md-12 mb-2">
-                                        <label class="fw-bold text-success">Child Range</label>
+                                    <div v-if="form.reference_ranges.length === 0" class="text-muted small">
+                                        No specific ranges defined. Click "Add Range" to specify gender, age group, and race combinations this test applies to.
                                     </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label">Min Value</label>
-                                        <input
-                                            type="number"
-                                            step="any"
-                                            class="form-control"
-                                            v-model.number="form.child_min"
-                                            placeholder="e.g., 11.0">
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label">Max Value</label>
-                                        <input
-                                            type="number"
-                                            step="any"
-                                            class="form-control"
-                                            v-model.number="form.child_max"
-                                            placeholder="e.g., 14.0">
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Reference Text</label>
-                                        <input
-                                            type="text"
-                                            class="form-control"
-                                            v-model="form.child_reference"
-                                            placeholder="e.g., 11.0 - 14.0 g/dL">
+
+                                    <div v-else class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                                        <table class="table table-sm table-bordered">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th style="width: 25%;">Gender</th>
+                                                    <th style="width: 40%;">Age Group</th>
+                                                    <th style="width: 25%;">Race</th>
+                                                    <th style="width: 10%;" class="text-center">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr v-for="(range, index) in form.reference_ranges" :key="index">
+                                                    <td>
+                                                        <select class="form-select form-select-sm" v-model="range.gender_id">
+                                                            <option :value="null">All Genders</option>
+                                                            <option v-for="gender in genders" :key="gender.gender_id" :value="gender.gender_id">
+                                                                {{ gender.gender_name }}
+                                                            </option>
+                                                        </select>
+                                                    </td>
+                                                    <td>
+                                                        <select class="form-select form-select-sm" v-model="range.age_group_id">
+                                                            <option :value="null">All Ages</option>
+                                                            <option v-for="ageGroup in ageGroups" :key="ageGroup.age_group_id" :value="ageGroup.age_group_id">
+                                                                {{ ageGroup.age_group_caption }} ({{ ageGroup.from_age }}-{{ ageGroup.to_age }} {{ formatAgeUnit(ageGroup.age_unit) }})
+                                                            </option>
+                                                        </select>
+                                                    </td>
+                                                    <td>
+                                                        <select class="form-select form-select-sm" v-model="range.race_id">
+                                                            <option :value="null">All Races</option>
+                                                            <option v-for="race in races" :key="race.race_id" :value="race.race_id">
+                                                                {{ race.race_description }}
+                                                            </option>
+                                                        </select>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button
+                                                            type="button"
+                                                            class="btn btn-sm btn-outline-danger"
+                                                            @click="removeReferenceRange(index)"
+                                                            title="Remove">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
 
@@ -341,50 +328,22 @@
                             <!-- Additional Information -->
                             <h6 class="border-bottom pb-2 mb-3 mt-4">Additional Information</h6>
                             <div class="mb-3">
-                                <label class="form-label">Description/Notes</label>
+                                <label class="form-label">Remarks</label>
                                 <textarea
                                     class="form-control"
-                                    v-model="form.description"
+                                    v-model="form.remarks"
                                     rows="2"
                                     placeholder="Optional notes about the test"></textarea>
                             </div>
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="form-check">
-                                        <input
-                                            type="checkbox"
-                                            class="form-check-input"
-                                            id="isBold"
-                                            v-model="form.is_bold">
-                                        <label class="form-check-label" for="isBold">
-                                            Bold in Report
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-check">
-                                        <input
-                                            type="checkbox"
-                                            class="form-check-input"
-                                            id="isHeading"
-                                            v-model="form.is_heading">
-                                        <label class="form-check-label" for="isHeading">
-                                            Show as Heading
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-check">
-                                        <input
-                                            type="checkbox"
-                                            class="form-check-input"
-                                            id="isActive"
-                                            v-model="form.is_active">
-                                        <label class="form-check-label" for="isActive">
-                                            Active
-                                        </label>
-                                    </div>
-                                </div>
+                            <div class="form-check">
+                                <input
+                                    type="checkbox"
+                                    class="form-check-input"
+                                    id="isActive"
+                                    v-model="form.is_active">
+                                <label class="form-check-label" for="isActive">
+                                    Active
+                                </label>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -413,11 +372,14 @@ const tests = ref([]);
 const methods = ref([]);
 const units = ref([]);
 const containers = ref([]);
+const genders = ref([]);
+const ageGroups = ref([]);
+const races = ref([]);
 
 const filters = ref({
     search: '',
     value_type: '',
-    status: '',
+    is_active: '',
     per_page: 20,
     page: 1,
 });
@@ -439,22 +401,14 @@ const form = ref({
     method_id: null,
     unit_id: null,
     container_id: null,
-    sort_order: 0,
-    male_min: null,
-    male_max: null,
-    male_reference: '',
-    female_min: null,
-    female_max: null,
-    female_reference: '',
-    child_min: null,
-    child_max: null,
-    child_reference: '',
+    test_sequence: 0,
+    min_value: null,
+    max_value: null,
     critical_low: null,
     critical_high: null,
-    description: '',
-    is_bold: false,
-    is_heading: false,
+    remarks: '',
     is_active: true,
+    reference_ranges: [],
 });
 
 let testModal = null;
@@ -484,6 +438,9 @@ onMounted(async () => {
     loadMethods();
     loadUnits();
     loadContainers();
+    loadGenders();
+    loadAgeGroups();
+    loadRaces();
 });
 
 const formatValueType = (type) => {
@@ -495,19 +452,25 @@ const loadTests = async () => {
     loading.value = true;
     error.value = null;
     try {
-        const response = await axios.get('/api/pathology/test-masters', { params: filters.value });
-        if (response.data.data) {
-            tests.value = response.data.data;
+        const response = await axios.get('/api/pathology/tests', { params: filters.value });
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            tests.value = paginatedData.data || paginatedData;
             pagination.value = {
-                current_page: response.data.current_page,
-                last_page: response.data.last_page,
-                per_page: response.data.per_page,
-                total: response.data.total,
-                from: response.data.from,
-                to: response.data.to,
+                current_page: paginatedData.current_page || 1,
+                last_page: paginatedData.last_page || 1,
+                per_page: paginatedData.per_page || 20,
+                total: paginatedData.total || 0,
+                from: paginatedData.from || 0,
+                to: paginatedData.to || 0,
             };
         } else {
-            tests.value = response.data;
+            tests.value = response.data.data || response.data;
+        }
+
+        // Ensure array
+        if (!Array.isArray(tests.value)) {
+            tests.value = [];
         }
     } catch (err) {
         console.error('Error loading tests:', err);
@@ -519,8 +482,16 @@ const loadTests = async () => {
 
 const loadMethods = async () => {
     try {
-        const response = await axios.get('/api/pathology/test-methods', { params: { status: 1 } });
-        methods.value = response.data.data || response.data;
+        const response = await axios.get('/api/pathology/test-methods', { params: { is_active: 1, per_page: 100 } });
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            methods.value = paginatedData.data || paginatedData;
+        } else {
+            methods.value = response.data.data || response.data;
+        }
+        if (!Array.isArray(methods.value)) {
+            methods.value = [];
+        }
     } catch (err) {
         console.error('Error loading methods:', err);
     }
@@ -528,8 +499,16 @@ const loadMethods = async () => {
 
 const loadUnits = async () => {
     try {
-        const response = await axios.get('/api/pathology/test-units', { params: { status: 1 } });
-        units.value = response.data.data || response.data;
+        const response = await axios.get('/api/pathology/test-units', { params: { is_active: 1, per_page: 100 } });
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            units.value = paginatedData.data || paginatedData;
+        } else {
+            units.value = response.data.data || response.data;
+        }
+        if (!Array.isArray(units.value)) {
+            units.value = [];
+        }
     } catch (err) {
         console.error('Error loading units:', err);
     }
@@ -537,10 +516,53 @@ const loadUnits = async () => {
 
 const loadContainers = async () => {
     try {
-        const response = await axios.get('/api/pathology/containers', { params: { status: 1 } });
-        containers.value = response.data.data || response.data;
+        const response = await axios.get('/api/pathology/containers', { params: { is_active: 1, per_page: 100 } });
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            containers.value = paginatedData.data || paginatedData;
+        } else {
+            containers.value = response.data.data || response.data;
+        }
+        if (!Array.isArray(containers.value)) {
+            containers.value = [];
+        }
     } catch (err) {
         console.error('Error loading containers:', err);
+    }
+};
+
+const loadGenders = async () => {
+    try {
+        const response = await axios.get('/api/genders-active');
+        genders.value = response.data || [];
+    } catch (err) {
+        console.error('Error loading genders:', err);
+    }
+};
+
+const loadAgeGroups = async () => {
+    try {
+        const response = await axios.get('/api/age-groups-active');
+        ageGroups.value = response.data || [];
+    } catch (err) {
+        console.error('Error loading age groups:', err);
+    }
+};
+
+const loadRaces = async () => {
+    try {
+        const response = await axios.get('/api/pathology/races', { params: { is_active: 1, per_page: 100 } });
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            races.value = paginatedData.data || paginatedData;
+        } else {
+            races.value = response.data.data || response.data;
+        }
+        if (!Array.isArray(races.value)) {
+            races.value = [];
+        }
+    } catch (err) {
+        console.error('Error loading races:', err);
     }
 };
 
@@ -549,6 +571,23 @@ const changePage = (page) => {
         filters.value.page = page;
         loadTests();
     }
+};
+
+const addReferenceRange = () => {
+    form.value.reference_ranges.push({
+        gender_id: null,
+        age_group_id: null,
+        race_id: null,
+    });
+};
+
+const formatAgeUnit = (unit) => {
+    if (!unit) return '';
+    return unit.charAt(0).toUpperCase() + unit.slice(1);
+};
+
+const removeReferenceRange = (index) => {
+    form.value.reference_ranges.splice(index, 1);
 };
 
 const openAddModal = () => {
@@ -561,22 +600,14 @@ const openAddModal = () => {
         method_id: null,
         unit_id: null,
         container_id: null,
-        sort_order: 0,
-        male_min: null,
-        male_max: null,
-        male_reference: '',
-        female_min: null,
-        female_max: null,
-        female_reference: '',
-        child_min: null,
-        child_max: null,
-        child_reference: '',
+        test_sequence: 0,
+        min_value: null,
+        max_value: null,
         critical_low: null,
         critical_high: null,
-        description: '',
-        is_bold: false,
-        is_heading: false,
+        remarks: '',
         is_active: true,
+        reference_ranges: [],
     };
     if (testModal) {
         testModal.show();
@@ -587,29 +618,25 @@ const editTest = (item) => {
     editMode.value = true;
     error.value = null;
     form.value = {
-        id: item.id,
+        test_id: item.test_id,
         test_name: item.test_name,
         test_code: item.test_code,
         value_type: item.value_type,
         method_id: item.method_id,
         unit_id: item.unit_id,
         container_id: item.container_id,
-        sort_order: item.sort_order,
-        male_min: item.male_min,
-        male_max: item.male_max,
-        male_reference: item.male_reference,
-        female_min: item.female_min,
-        female_max: item.female_max,
-        female_reference: item.female_reference,
-        child_min: item.child_min,
-        child_max: item.child_max,
-        child_reference: item.child_reference,
+        test_sequence: item.test_sequence,
+        min_value: item.min_value,
+        max_value: item.max_value,
         critical_low: item.critical_low,
         critical_high: item.critical_high,
-        description: item.description,
-        is_bold: item.is_bold,
-        is_heading: item.is_heading,
+        remarks: item.remarks,
         is_active: item.is_active,
+        reference_ranges: item.reference_ranges ? item.reference_ranges.map(r => ({
+            gender_id: r.gender_id,
+            age_group_id: r.age_group_id,
+            race_id: r.race_id,
+        })) : [],
     };
     if (testModal) {
         testModal.show();
@@ -621,9 +648,9 @@ const saveTest = async () => {
     error.value = null;
     try {
         if (editMode.value) {
-            await axios.put(`/api/pathology/test-masters/${form.value.id}`, form.value);
+            await axios.put(`/api/pathology/tests/${form.value.test_id}`, form.value);
         } else {
-            await axios.post('/api/pathology/test-masters', form.value);
+            await axios.post('/api/pathology/tests', form.value);
         }
         closeModal();
         loadTests();
@@ -641,7 +668,7 @@ const deleteTest = async (id) => {
     }
 
     try {
-        await axios.delete(`/api/pathology/test-masters/${id}`);
+        await axios.delete(`/api/pathology/tests/${id}`);
         loadTests();
     } catch (err) {
         console.error('Error deleting test:', err);
