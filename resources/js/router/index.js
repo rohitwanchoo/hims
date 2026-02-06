@@ -780,7 +780,11 @@ const routes = [
             {
                 path: 'roles',
                 name: 'roles',
-                component: RoleList
+                component: RoleList,
+                meta: {
+                    requiresAuth: true,
+                    permission: 'admin.manage_roles'
+                }
             },
             // Notifications
             {
@@ -850,13 +854,65 @@ router.beforeEach((to, from, next) => {
     // Initialize auth headers from localStorage on every navigation
     authStore.initializeAuth();
 
+    // Check authentication
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {
         next({ name: 'login' });
-    } else if (to.meta.guest && authStore.isAuthenticated) {
-        next({ name: 'dashboard' });
-    } else {
-        next();
+        return;
     }
+
+    if (to.meta.guest && authStore.isAuthenticated) {
+        next({ name: 'dashboard' });
+        return;
+    }
+
+    // Check super admin routes
+    if (to.meta.superAdmin && !authStore.isSuperAdmin) {
+        console.warn('Access denied: Super admin required');
+        next({ name: 'dashboard' });
+        return;
+    }
+
+    // Check permissions
+    if (to.meta.permission && authStore.isAuthenticated) {
+        const hasPermission = authStore.hasPermission(to.meta.permission);
+        if (!hasPermission) {
+            console.warn(`Access denied: Missing permission ${to.meta.permission}`);
+            next({ name: 'dashboard' });
+            return;
+        }
+    }
+
+    // Check if user has any of the required permissions (OR logic)
+    if (to.meta.permissions && authStore.isAuthenticated) {
+        const hasAnyPermission = authStore.hasAnyPermission(to.meta.permissions);
+        if (!hasAnyPermission) {
+            console.warn(`Access denied: Missing any of permissions ${to.meta.permissions.join(', ')}`);
+            next({ name: 'dashboard' });
+            return;
+        }
+    }
+
+    // Check module access
+    if (to.meta.module && authStore.isAuthenticated) {
+        const canAccessModule = authStore.canAccessModule(to.meta.module);
+        if (!canAccessModule) {
+            console.warn(`Access denied: Cannot access module ${to.meta.module}`);
+            next({ name: 'dashboard' });
+            return;
+        }
+    }
+
+    // Check role
+    if (to.meta.role && authStore.isAuthenticated) {
+        const hasRole = authStore.hasRole(to.meta.role);
+        if (!hasRole) {
+            console.warn(`Access denied: Missing role ${to.meta.role}`);
+            next({ name: 'dashboard' });
+            return;
+        }
+    }
+
+    next();
 });
 
 export default router;

@@ -12,10 +12,18 @@ import 'bootstrap';
 // Import Dreams EMR Design System
 import '../css/dreams-emr.css';
 
+// Import permission directives
+import { canDirective, canAllDirective, roleDirective } from './directives/permission';
+
 const app = createApp(App);
 const pinia = createPinia();
 
 app.use(pinia);
 app.use(router);
+
+// Register permission directives
+app.directive('can', canDirective);
+app.directive('can-all', canAllDirective);
+app.directive('role', roleDirective);
 
 app.mount('#app');

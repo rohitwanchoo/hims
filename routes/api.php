@@ -66,6 +66,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth routes
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+    Route::get('/user/permissions', [AuthController::class, 'permissions']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
     Route::post('/switch-hospital', [AuthController::class, 'switchHospital']);
 
@@ -486,7 +487,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('rate-change-requests/bulk-approve', [\App\Http\Controllers\Api\RateChangeRequestController::class, 'bulkApprove']);
 
     // Users (Admin only)
-    Route::apiResource('users', \App\Http\Controllers\Api\UserController::class);
+    Route::apiResource('users', \App\Http\Controllers\Api\UserController::class)
+        ->middleware('permission:admin.manage_users');
 
     // Settings
     Route::get('settings', [\App\Http\Controllers\Api\SettingController::class, 'index']);
@@ -510,7 +512,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // ============================================
     // RBAC - Role Based Access Control
     // ============================================
-    Route::prefix('roles')->group(function () {
+    Route::prefix('roles')->middleware('permission:admin.manage_roles')->group(function () {
         Route::get('/', [RoleController::class, 'index']);
         Route::post('/', [RoleController::class, 'store']);
         Route::get('/permissions', [RoleController::class, 'permissions']);

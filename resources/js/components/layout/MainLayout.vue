@@ -33,7 +33,7 @@
                     </li>
 
                     <!-- Menu Sections with Submenus -->
-                    <li class="nav-item has-submenu" v-for="section in menuSections" :key="section.id">
+                    <li class="nav-item has-submenu" v-for="section in visibleMenuSections" :key="section.id">
                         <a
                             class="nav-link menu-toggle"
                             href="#"
@@ -209,42 +209,47 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
+import { usePermissions } from '../../composables/usePermissions';
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+const { can, canAny, canAccessModule, isSuperAdmin } = usePermissions();
 const sidebarOpen = ref(false);
 const expandedMenus = ref([]);
 
-// Menu structure
+// Menu structure with permissions
 const menuSections = [
     {
         id: 'patients',
         title: 'Patient Management',
         icon: 'bi bi-people',
+        module: 'patient',
         items: [
-            { path: '/patients', label: 'Patients' },
-            { path: '/appointments', label: 'Appointments' },
-            { path: '/calendar', label: 'Calendar' }
+            { path: '/patients', label: 'Patients', permission: 'patient.view' },
+            { path: '/appointments', label: 'Appointments', permission: 'appointment.view' },
+            { path: '/calendar', label: 'Calendar', permission: 'appointment.view' }
         ]
     },
     {
         id: 'clinical',
         title: 'Clinical',
         icon: 'bi bi-clipboard2-pulse',
+        module: 'clinical',
         items: [
-            { path: '/opd', label: 'OPD Visits' },
-            { path: '/ipd', label: 'IPD Admissions' },
-            { path: '/discharge-summary', label: 'Discharge Summary' }
+            { path: '/opd', label: 'OPD Visits', permission: 'opd.view' },
+            { path: '/ipd', label: 'IPD Admissions', permission: 'ipd.view' },
+            { path: '/discharge-summary', label: 'Discharge Summary', permission: 'ipd.view' }
         ]
     },
     {
         id: 'billing',
         title: 'Billing',
         icon: 'bi bi-receipt',
+        module: 'billing',
         items: [
-            { path: '/billing', label: 'Bills' },
-            { path: '/payments', label: 'Payments' }
+            { path: '/billing', label: 'Bills', permission: 'billing.view' },
+            { path: '/payments', label: 'Payments', permission: 'billing.view' }
         ]
     },
     /* Temporarily hidden sections
@@ -297,8 +302,9 @@ const menuSections = [
         id: 'reports',
         title: 'Reports',
         icon: 'bi bi-bar-chart-line',
+        module: 'reports',
         items: [
-            { path: '/reports', label: 'Reports' }
+            { path: '/reports', label: 'Reports', permission: 'reports.view' }
         ]
     },
     /*
@@ -317,27 +323,30 @@ const menuSections = [
         id: 'abha',
         title: 'ABHA Integration',
         icon: 'bi bi-shield-check',
+        module: 'abha',
         items: [
-            { path: '/abha', label: 'ABHA Management' }
+            { path: '/abha', label: 'ABHA Management', permission: 'patient.view' }
         ]
     },
     {
         id: 'config',
         title: 'Configuration',
         icon: 'bi bi-sliders',
+        module: 'settings',
         items: [
-            { path: '/settings/opd-configuration', label: 'OPD Configuration' },
-            { path: '/settings/opd-time-slots', label: 'OPD Time Slots' },
-            { path: '/settings/rate-requests', label: 'Rate Requests' },
-            { path: '/discharge-summary-custom-fields', label: 'Discharge Summary Fields' },
-            { path: '/bed-transfers', label: 'Bed Transfer' },
-            { path: '/consultation-forms', label: 'Consultation Forms' }
+            { path: '/settings/opd-configuration', label: 'OPD Configuration', permission: 'settings.manage' },
+            { path: '/settings/opd-time-slots', label: 'OPD Time Slots', permission: 'settings.manage' },
+            { path: '/settings/rate-requests', label: 'Rate Requests', permission: 'settings.manage' },
+            { path: '/discharge-summary-custom-fields', label: 'Discharge Summary Fields', permission: 'settings.manage' },
+            { path: '/bed-transfers', label: 'Bed Transfer', permission: 'ipd.view' },
+            { path: '/consultation-forms', label: 'Consultation Forms', permission: 'settings.manage' }
         ]
     },
     {
         id: 'masters',
         title: 'Masters',
         icon: 'bi bi-database',
+        module: 'masters',
         items: [
             {
                 id: 'common-master',
@@ -401,14 +410,68 @@ const menuSections = [
         id: 'system',
         title: 'System',
         icon: 'bi bi-gear',
+        module: 'admin',
         items: [
-            { path: '/users', label: 'Users' },
-            { path: '/roles', label: 'Roles & Permissions' },
-            { path: '/notifications/settings', label: 'Notifications' },
-            { path: '/settings', label: 'Settings' }
+            { path: '/users', label: 'Users', permission: 'admin.manage_users' },
+            { path: '/roles', label: 'Roles & Permissions', permission: 'admin.manage_roles' },
+            { path: '/notifications/settings', label: 'Notifications', permission: 'admin.manage_settings' },
+            { path: '/settings', label: 'Settings', permission: 'admin.manage_settings' }
         ]
     }
 ];
+
+// Filter menu sections based on permissions
+const visibleMenuSections = computed(() => {
+    if (isSuperAdmin()) {
+        return menuSections;
+    }
+
+    return menuSections.filter(section => {
+        // If section has a module, check if user can access it
+        if (section.module && !canAccessModule(section.module)) {
+            return false;
+        }
+
+        // Filter items within the section
+        const visibleItems = filterMenuItems(section.items);
+
+        // Only show section if it has visible items
+        return visibleItems.length > 0;
+    }).map(section => ({
+        ...section,
+        items: filterMenuItems(section.items)
+    }));
+});
+
+// Recursively filter menu items based on permissions
+function filterMenuItems(items) {
+    if (!items) return [];
+
+    return items.filter(item => {
+        // If item has nested items, filter them recursively
+        if (item.items) {
+            const visibleSubItems = filterMenuItems(item.items);
+            return visibleSubItems.length > 0;
+        }
+
+        // If item has permission requirement, check it
+        if (item.permission) {
+            return can(item.permission);
+        }
+
+        // Show items without permission requirements
+        return true;
+    }).map(item => {
+        // If item has nested items, return filtered version
+        if (item.items) {
+            return {
+                ...item,
+                items: filterMenuItems(item.items)
+            };
+        }
+        return item;
+    });
+}
 
 const userInitials = computed(() => {
     const name = authStore.user?.full_name || 'User';

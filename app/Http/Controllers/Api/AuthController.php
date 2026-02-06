@@ -63,6 +63,8 @@ class AuthController extends Controller
                 'is_super_admin' => $user->isSuperAdmin(),
             ],
             'token' => $token,
+            'permissions' => $user->getPermissionCodes(),
+            'roles' => $user->getRoleNames(),
         ];
 
         // Include hospital info for non-super-admin users
@@ -108,6 +110,8 @@ class AuthController extends Controller
             'department' => $user->department,
             'hospital_id' => $user->hospital_id,
             'is_super_admin' => $user->isSuperAdmin(),
+            'permissions' => $user->getPermissionCodes(),
+            'roles' => $user->getRoleNames(),
         ];
 
         if ($user->hospital_id) {
@@ -164,5 +168,16 @@ class AuthController extends Controller
         $user->save();
 
         return response()->json(['message' => 'Password changed successfully']);
+    }
+
+    public function permissions(Request $request)
+    {
+        $user = $request->user();
+
+        return response()->json([
+            'permissions' => $user->getPermissionCodes(),
+            'roles' => $user->getRoleNames(),
+            'is_super_admin' => $user->isSuperAdmin(),
+        ]);
     }
 }

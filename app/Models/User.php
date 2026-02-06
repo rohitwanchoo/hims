@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\BelongsToHospital;
+use App\Traits\HasRoles;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -10,7 +11,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasApiTokens, BelongsToHospital;
+    use HasFactory, Notifiable, HasApiTokens, BelongsToHospital, HasRoles;
 
     protected $primaryKey = 'user_id';
 

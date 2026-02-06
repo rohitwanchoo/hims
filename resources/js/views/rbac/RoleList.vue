@@ -2,13 +2,36 @@
     <div>
         <div class="d-flex justify-content-between mb-4">
             <h4><i class="bi bi-shield-lock me-2"></i>Roles & Permissions</h4>
-            <button class="btn btn-primary" @click="showRoleForm = true">
+            <button class="btn btn-primary" @click="showRoleForm = true" :disabled="loading">
                 <i class="bi bi-plus-lg"></i> Create Role
             </button>
         </div>
 
+        <!-- Loading State -->
+        <div v-if="loading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading roles...</p>
+        </div>
+
+        <!-- Error State -->
+        <div v-else-if="error" class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            {{ error }}
+            <button @click="loadRoles" class="btn btn-sm btn-outline-danger ms-2">
+                <i class="bi bi-arrow-clockwise"></i> Retry
+            </button>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else-if="roles.length === 0" class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            No roles found. Click "Create Role" to add a new role.
+        </div>
+
         <!-- Roles Grid -->
-        <div class="row">
+        <div v-else class="row">
             <div v-for="role in roles" :key="role.role_id" class="col-md-4 mb-4">
                 <div class="card h-100" :class="{ 'border-primary': role.is_system_role }">
                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -124,6 +147,8 @@ import axios from 'axios';
 
 const roles = ref([]);
 const allPermissions = ref({});
+const loading = ref(false);
+const error = ref(null);
 const showRoleForm = ref(false);
 const showPermissionsModal = ref(false);
 const editingRole = ref(null);
@@ -138,11 +163,17 @@ const roleForm = ref({
 const groupedPermissions = computed(() => allPermissions.value);
 
 const loadRoles = async () => {
+    loading.value = true;
+    error.value = null;
     try {
         const response = await axios.get('/api/roles');
         roles.value = response.data.roles || [];
-    } catch (error) {
-        console.error('Failed to load roles:', error);
+        console.log('Loaded roles:', roles.value.length);
+    } catch (err) {
+        console.error('Failed to load roles:', err);
+        error.value = err.response?.data?.message || 'Failed to load roles. Please check your permissions.';
+    } finally {
+        loading.value = false;
     }
 };
 

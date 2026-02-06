@@ -190,6 +190,38 @@ trait HasRoles
         return $byModule;
     }
 
+    public function getRoleNames(): array
+    {
+        $roleNames = [];
+
+        // Get roles from many-to-many relationship
+        $roles = $this->roles()->get();
+        foreach ($roles as $role) {
+            $roleNames[] = $role->role_name;
+        }
+
+        // Get primary role if exists and not already in the list
+        if ($this->primaryRole && !in_array($this->primaryRole->role_name, $roleNames)) {
+            $roleNames[] = $this->primaryRole->role_name;
+        }
+
+        return array_unique($roleNames);
+    }
+
+    public function getPermissionCodes(): array
+    {
+        $allPermissions = $this->getAllPermissions();
+        $permissionCodes = [];
+
+        foreach ($allPermissions as $code => $granted) {
+            if ($granted === true) {
+                $permissionCodes[] = $code;
+            }
+        }
+
+        return $permissionCodes;
+    }
+
     protected function clearPermissionCache(): void
     {
         Cache::forget("user_permissions_{$this->user_id}");

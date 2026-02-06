@@ -8,6 +8,8 @@ export const useAuthStore = defineStore('auth', {
         hospital: JSON.parse(localStorage.getItem('hospital')) || null,
         hospitals: JSON.parse(localStorage.getItem('hospitals')) || [],
         currentHospitalId: localStorage.getItem('currentHospitalId') || null,
+        permissions: JSON.parse(localStorage.getItem('permissions')) || [],
+        roles: JSON.parse(localStorage.getItem('roles')) || [],
     }),
 
     getters: {
@@ -17,6 +19,38 @@ export const useAuthStore = defineStore('auth', {
         isSuperAdmin: (state) => state.user?.is_super_admin === true,
         currentHospital: (state) => state.hospital,
         availableHospitals: (state) => state.hospitals,
+
+        // Permission getters
+        userPermissions: (state) => state.permissions,
+        userRoles: (state) => state.roles,
+
+        hasPermission: (state) => (permission) => {
+            if (state.user?.is_super_admin) return true;
+            return state.permissions.includes(permission);
+        },
+
+        hasAnyPermission: (state) => (permissions) => {
+            if (state.user?.is_super_admin) return true;
+            if (!Array.isArray(permissions)) return false;
+            return permissions.some(permission => state.permissions.includes(permission));
+        },
+
+        hasAllPermissions: (state) => (permissions) => {
+            if (state.user?.is_super_admin) return true;
+            if (!Array.isArray(permissions)) return false;
+            return permissions.every(permission => state.permissions.includes(permission));
+        },
+
+        hasRole: (state) => (role) => {
+            if (state.user?.is_super_admin) return true;
+            return state.roles.includes(role);
+        },
+
+        canAccessModule: (state) => (module) => {
+            if (state.user?.is_super_admin) return true;
+            // Check if user has any permission for this module
+            return state.permissions.some(permission => permission.startsWith(`${module}.`));
+        },
     },
 
     actions: {
@@ -27,9 +61,13 @@ export const useAuthStore = defineStore('auth', {
                 this.user = response.data.user;
                 this.hospital = response.data.hospital || null;
                 this.hospitals = response.data.hospitals || [];
+                this.permissions = response.data.permissions || [];
+                this.roles = response.data.roles || [];
 
                 localStorage.setItem('token', this.token);
                 localStorage.setItem('user', JSON.stringify(this.user));
+                localStorage.setItem('permissions', JSON.stringify(this.permissions));
+                localStorage.setItem('roles', JSON.stringify(this.roles));
                 if (this.hospital) {
                     localStorage.setItem('hospital', JSON.stringify(this.hospital));
                 }
@@ -67,11 +105,15 @@ export const useAuthStore = defineStore('auth', {
                 this.hospital = null;
                 this.hospitals = [];
                 this.currentHospitalId = null;
+                this.permissions = [];
+                this.roles = [];
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
                 localStorage.removeItem('hospital');
                 localStorage.removeItem('hospitals');
                 localStorage.removeItem('currentHospitalId');
+                localStorage.removeItem('permissions');
+                localStorage.removeItem('roles');
                 delete axios.defaults.headers.common['Authorization'];
                 delete axios.defaults.headers.common['X-Hospital-Id'];
             }
@@ -83,7 +125,11 @@ export const useAuthStore = defineStore('auth', {
                 this.user = response.data;
                 this.hospital = response.data.hospital || null;
                 this.hospitals = response.data.hospitals || [];
+                this.permissions = response.data.permissions || [];
+                this.roles = response.data.roles || [];
                 localStorage.setItem('user', JSON.stringify(this.user));
+                localStorage.setItem('permissions', JSON.stringify(this.permissions));
+                localStorage.setItem('roles', JSON.stringify(this.roles));
                 if (this.hospital) {
                     localStorage.setItem('hospital', JSON.stringify(this.hospital));
                 }
