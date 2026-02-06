@@ -151,17 +151,21 @@ class DrugMasterController extends Controller
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="drug_import_template.csv"',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0'
         ];
 
-        $columns = ['drug_name', 'drug_type', 'language', 'dose_time', 'days', 'quantity'];
+        $columns = ['Drug Type', 'Dose Time', 'Drug Name', 'Language', 'Days', 'Qty'];
 
         $callback = function() use ($columns) {
             $file = fopen('php://output', 'w');
             fputcsv($file, $columns);
 
             // Add sample data
-            fputcsv($file, ['Paracetamol 500mg', 'Tablet', 'english', '1-1-1', '5', '15']);
-            fputcsv($file, ['Amoxicillin 250mg', 'Capsule', 'english', '1-0-1', '7', '14']);
+            fputcsv($file, ['Tablet', '1-1-1', 'Paracetamol 500mg', 'english', '5', '15']);
+            fputcsv($file, ['Capsule', '1-0-1', 'Amoxicillin 250mg', 'english', '7', '14']);
+            fputcsv($file, ['Syrup', '1-1-1', 'Cough Syrup 100ml', 'marathi', '3', '1']);
 
             fclose($file);
         };
@@ -171,6 +175,7 @@ class DrugMasterController extends Controller
 
     /**
      * Import drugs from Excel/CSV file.
+     * CSV Format: Drug Type, Dose Time, Drug Name, Language, Days, Qty
      */
     public function import(Request $request)
     {
@@ -189,27 +194,65 @@ class DrugMasterController extends Controller
                 $header = fgetcsv($handle); // Skip header row
 
                 while (($row = fgetcsv($handle)) !== false) {
+                    // Skip empty rows
+                    if (empty($row[2])) continue;
+
                     try {
+                        // CSV Format: Drug Type (0), Dose Time (1), Drug Name (2), Language (3), Days (4), Qty (5)
+
+                        // Validate and normalize language
+                        $language = !empty($row[3]) ? strtolower(trim($row[3])) : 'english';
+                        if (!in_array($language, ['english', 'marathi', 'hindi'])) {
+                            $language = 'english'; // Default to english if invalid
+                        }
+
                         // Find or create drug type
                         $drugTypeId = null;
-                        if (!empty($row[1])) {
-                            $drugType = \App\Models\DrugType::firstOrCreate([
-                                'hospital_id' => $hospitalId,
-                                'type_name' => trim($row[1])
-                            ]);
+                        if (!empty($row[0])) {
+                            $drugType = \App\Models\DrugType::firstOrCreate(
+                                [
+                                    'hospital_id' => $hospitalId,
+                                    'type_name' => trim($row[0])
+                                ],
+                                [
+                                    'is_active' => true
+                                ]
+                            );
                             $drugTypeId = $drugType->drug_type_id;
                         }
 
-                        DrugMaster::create([
-                            'hospital_id' => $hospitalId,
-                            'drug_name' => trim($row[0]),
-                            'drug_type_id' => $drugTypeId,
-                            'language' => !empty($row[2]) ? trim($row[2]) : 'english',
-                            'dose_time' => !empty($row[3]) ? trim($row[3]) : null,
-                            'days' => !empty($row[4]) ? (int)$row[4] : null,
-                            'quantity' => !empty($row[5]) ? (int)$row[5] : null,
-                            'is_active' => true,
-                        ]);
+                        // Find or create dose time master
+                        if (!empty($row[1])) {
+                            $doseTimeText = trim($row[1]);
+                            \App\Models\DoseTimeMaster::firstOrCreate(
+                                [
+                                    'hospital_id' => $hospitalId,
+                                    'dose_time_text' => $doseTimeText,
+                                    'language' => $language
+                                ],
+                                [
+                                    'is_active' => true
+                                ]
+                            );
+                        }
+
+                        // Update or create drug master (prevent duplicates)
+                        $drugName = trim($row[2]);
+
+                        DrugMaster::updateOrCreate(
+                            [
+                                'hospital_id' => $hospitalId,
+                                'drug_name' => $drugName,
+                                'language' => $language
+                            ],
+                            [
+                                'drug_type_id' => $drugTypeId,
+                                'dose_time' => !empty($row[1]) ? trim($row[1]) : null,
+                                'days' => !empty($row[4]) ? (int)$row[4] : null,
+                                'quantity' => !empty($row[5]) ? (int)$row[5] : null,
+                                'is_active' => true,
+                            ]
+                        );
 
                         $importedCount++;
                     } catch (\Exception $e) {
@@ -232,5 +275,48 @@ class DrugMasterController extends Controller
                 'message' => 'Error importing file: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Export all drugs to CSV
+     */
+    public function export()
+    {
+        $hospitalId = Auth::user()->hospital_id;
+
+        $drugs = DrugMaster::with('drugType')
+            ->where('hospital_id', $hospitalId)
+            ->orderBy('drug_name')
+            ->get();
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="drug_masters_export.csv"',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0'
+        ];
+
+        $columns = ['Drug Type', 'Dose Time', 'Drug Name', 'Language', 'Days', 'Qty'];
+
+        $callback = function() use ($drugs, $columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+
+            foreach ($drugs as $drug) {
+                fputcsv($file, [
+                    $drug->drugType->type_name ?? '',
+                    $drug->dose_time ?? '',
+                    $drug->drug_name,
+                    $drug->language,
+                    $drug->days ?? '',
+                    $drug->quantity ?? ''
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

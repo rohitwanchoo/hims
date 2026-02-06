@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Pathology;
 
 use App\Http\Controllers\Controller;
-use App\Models\PathoTestUnit;
+use App\Models\Pathology\PathoTestUnit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -62,8 +62,8 @@ class PathoTestUnitController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'unit_name' => 'required|string|max:100',
-                'unit_code' => 'nullable|string|max:50',
-                'description' => 'nullable|string',
+                'decimal_places' => 'integer|min:0|max:10',
+                'remarks' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -77,8 +77,8 @@ class PathoTestUnitController extends Controller
             $unit = PathoTestUnit::create([
                 'hospital_id' => Auth::user()->hospital_id,
                 'unit_name' => $request->unit_name,
-                'unit_code' => $request->unit_code,
-                'description' => $request->description,
+                'decimal_places' => $request->decimal_places ?? 2,
+                'remarks' => $request->remarks,
                 'is_active' => $request->is_active ?? true,
             ]);
 
@@ -127,8 +127,8 @@ class PathoTestUnitController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'unit_name' => 'required|string|max:100',
-                'unit_code' => 'nullable|string|max:50',
-                'description' => 'nullable|string',
+                'decimal_places' => 'integer|min:0|max:10',
+                'remarks' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -141,8 +141,8 @@ class PathoTestUnitController extends Controller
 
             $unit->update([
                 'unit_name' => $request->unit_name,
-                'unit_code' => $request->unit_code,
-                'description' => $request->description,
+                'decimal_places' => $request->decimal_places ?? $unit->decimal_places,
+                'remarks' => $request->remarks,
                 'is_active' => $request->is_active ?? $unit->is_active,
             ]);
 

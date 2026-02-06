@@ -10,10 +10,22 @@
                     </option>
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-2">
                 <label class="form-label">&nbsp;</label>
                 <button class="btn btn-success w-100" @click="openAddDrugTypeModal">
-                    <i class="bi bi-plus-lg me-1"></i> Add New Drug Type
+                    <i class="bi bi-plus-lg me-1"></i> Add Drug Type
+                </button>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button class="btn btn-primary w-100" @click="openImportModal">
+                    <i class="bi bi-upload me-1"></i> Import Drugs
+                </button>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button class="btn btn-info w-100" @click="exportDrugs">
+                    <i class="bi bi-download me-1"></i> Export Drugs
                 </button>
             </div>
         </div>
@@ -151,6 +163,40 @@
             </div>
         </div>
 
+        <!-- Import Modal -->
+        <div class="modal fade" id="importModal" tabindex="-1" ref="importModalRef">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Import Drugs Data</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <strong>CSV Format:</strong> Drug Type, Dose Time, Drug Name, Language, Days, Qty
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Download Template</label>
+                            <button class="btn btn-outline-primary btn-sm w-100" @click="downloadTemplate">
+                                <i class="bi bi-download"></i> Download CSV Template
+                            </button>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Upload File</label>
+                            <input type="file" class="form-control" @change="handleFileUpload" accept=".xlsx,.xls,.csv" ref="fileInput" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" @click="importDrugs" :disabled="!importFile || importing">
+                            <span v-if="importing" class="spinner-border spinner-border-sm me-1"></span>
+                            Import
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Edit Drug Modal -->
         <div class="modal fade" id="editDrugModal" tabindex="-1" ref="editDrugModalRef">
             <div class="modal-dialog">
@@ -235,10 +281,15 @@ const doseTimes = ref([]);
 const editDoseTimes = ref([]);
 const loading = ref(false);
 const saving = ref(false);
+const importing = ref(false);
+const importFile = ref(null);
+const fileInput = ref(null);
 const addDrugTypeModalRef = ref(null);
 const editDrugModalRef = ref(null);
+const importModalRef = ref(null);
 let addDrugTypeModal = null;
 let editDrugModal = null;
+let importModal = null;
 
 const form = ref({
     drug_name: '',
@@ -448,9 +499,87 @@ const saveDrugType = async () => {
     saving.value = false;
 };
 
+const openImportModal = () => {
+    importModal.show();
+};
+
+const handleFileUpload = (event) => {
+    importFile.value = event.target.files[0];
+};
+
+const downloadTemplate = async () => {
+    try {
+        const response = await axios.get('/api/drug-masters-template', {
+            responseType: 'blob'
+        });
+
+        // Create a blob URL and trigger download
+        const blob = new Blob([response.data], { type: 'text/csv' });
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = 'drug_import_template.csv';
+        link.click();
+        window.URL.revokeObjectURL(link.href);
+    } catch (error) {
+        console.error('Error downloading template:', error);
+        alert('Error downloading template');
+    }
+};
+
+const importDrugs = async () => {
+    if (!importFile.value) {
+        alert('Please select a file');
+        return;
+    }
+
+    importing.value = true;
+    const formData = new FormData();
+    formData.append('file', importFile.value);
+
+    try {
+        const response = await axios.post('/api/drug-masters-import', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+
+        if (response.data.success) {
+            alert(`Successfully imported ${response.data.count} drugs`);
+            importModal.hide();
+            await fetchDrugs();
+            importFile.value = null;
+            if (fileInput.value) {
+                fileInput.value.value = '';
+            }
+        }
+    } catch (error) {
+        console.error('Error importing drugs:', error);
+        alert(error.response?.data?.message || 'Error importing drugs');
+    }
+    importing.value = false;
+};
+
+const exportDrugs = async () => {
+    try {
+        const response = await axios.get('/api/drug-masters-export', {
+            responseType: 'blob'
+        });
+
+        // Create a blob URL and trigger download
+        const blob = new Blob([response.data], { type: 'text/csv' });
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = 'drug_masters_export.csv';
+        link.click();
+        window.URL.revokeObjectURL(link.href);
+    } catch (error) {
+        console.error('Error exporting drugs:', error);
+        alert('Error exporting drugs');
+    }
+};
+
 onMounted(() => {
     addDrugTypeModal = new Modal(addDrugTypeModalRef.value);
     editDrugModal = new Modal(editDrugModalRef.value);
+    importModal = new Modal(importModalRef.value);
     fetchDrugTypes();
     fetchDoseTimes();
     fetchDrugs();

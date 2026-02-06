@@ -27,7 +27,7 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <select class="form-select form-select-sm" v-model="filters.status" @change="loadNotes">
+                        <select class="form-select form-select-sm" v-model="filters.is_active" @change="loadNotes">
                             <option value="">All Status</option>
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
@@ -48,17 +48,16 @@
                         <thead class="table-light sticky-top">
                             <tr>
                                 <th style="width: 60px;">#</th>
-                                <th style="min-width: 200px;">Note Title</th>
                                 <th style="min-width: 120px;">Note For</th>
                                 <th style="min-width: 200px;">Linked To</th>
-                                <th style="min-width: 250px;">Note Content</th>
+                                <th style="min-width: 350px;">Note Content</th>
                                 <th style="width: 100px;" class="text-center">Status</th>
                                 <th style="width: 120px;" class="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="loading">
-                                <td colspan="7" class="text-center py-3">
+                                <td colspan="6" class="text-center py-3">
                                     <div class="spinner-border spinner-border-sm" role="status">
                                         <span class="visually-hidden">Loading...</span>
                                     </div>
@@ -66,13 +65,12 @@
                                 </td>
                             </tr>
                             <tr v-else-if="notes.length === 0">
-                                <td colspan="7" class="text-center text-muted py-3">
+                                <td colspan="6" class="text-center text-muted py-3">
                                     No test notes found
                                 </td>
                             </tr>
-                            <tr v-else v-for="(item, index) in notes" :key="item.id">
+                            <tr v-else v-for="(item, index) in notes" :key="item.note_id">
                                 <td>{{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}</td>
-                                <td>{{ item.note_title }}</td>
                                 <td>
                                     <span :class="item.note_for === 'test_master' ? 'badge bg-primary' : 'badge bg-info'">
                                         {{ formatNoteFor(item.note_for) }}
@@ -80,15 +78,15 @@
                                 </td>
                                 <td>
                                     <span v-if="item.note_for === 'test_master'">
-                                        {{ item.test_master?.test_name || '-' }}
+                                        {{ item.patho_test?.test_name || '-' }}
                                     </span>
                                     <span v-else>
-                                        {{ item.test_report?.report_name || '-' }}
+                                        {{ item.patho_test_report?.report_name || '-' }}
                                     </span>
                                 </td>
                                 <td>
-                                    <div class="text-truncate" style="max-width: 250px;" :title="item.note_content">
-                                        {{ item.note_content }}
+                                    <div class="text-truncate" style="max-width: 350px;" :title="item.note_text">
+                                        {{ item.note_text || '-' }}
                                     </div>
                                 </td>
                                 <td class="text-center">
@@ -100,7 +98,7 @@
                                     <button class="btn btn-sm btn-outline-primary me-1" @click="editNote(item)" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger" @click="deleteNote(item.id)" title="Delete">
+                                    <button class="btn btn-sm btn-outline-danger" @click="deleteNote(item.note_id)" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
@@ -144,27 +142,16 @@
                             <div class="alert alert-danger" v-if="error">
                                 {{ error }}
                             </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Note Title *</label>
-                                    <input
-                                        type="text"
-                                        class="form-control"
-                                        v-model="form.note_title"
-                                        placeholder="e.g., Fasting Required"
-                                        required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Note For *</label>
-                                    <select class="form-select" v-model="form.note_for" @change="handleNoteForChange" required>
-                                        <option value="">Select Type</option>
-                                        <option value="test_master">Test Master</option>
-                                        <option value="test_report">Test Report</option>
-                                    </select>
-                                    <small class="text-muted">
-                                        Test Master: applies to individual test | Test Report: applies to entire report
-                                    </small>
-                                </div>
+                            <div class="mb-3">
+                                <label class="form-label">Note For *</label>
+                                <select class="form-select" v-model="form.note_for" @change="handleNoteForChange" required>
+                                    <option value="">Select Type</option>
+                                    <option value="test_master">Test Master</option>
+                                    <option value="test_report">Test Report</option>
+                                </select>
+                                <small class="text-muted">
+                                    Test Master: applies to individual test | Test Report: applies to entire report
+                                </small>
                             </div>
 
                             <!-- Conditional Field: Test Master -->
@@ -172,7 +159,7 @@
                                 <label class="form-label">Select Test *</label>
                                 <select class="form-select" v-model="form.test_master_id" required>
                                     <option value="">Select Test</option>
-                                    <option v-for="test in testMasters" :key="test.id" :value="test.id">
+                                    <option v-for="test in testMasters" :key="test.test_id" :value="test.test_id">
                                         {{ test.test_name }} {{ test.test_code ? `(${test.test_code})` : '' }}
                                     </option>
                                 </select>
@@ -183,7 +170,7 @@
                                 <label class="form-label">Select Report *</label>
                                 <select class="form-select" v-model="form.test_report_id" required>
                                     <option value="">Select Report</option>
-                                    <option v-for="report in testReports" :key="report.id" :value="report.id">
+                                    <option v-for="report in testReports" :key="report.report_id" :value="report.report_id">
                                         {{ report.report_name }} {{ report.report_code ? `(${report.report_code})` : '' }}
                                     </option>
                                 </select>
@@ -202,27 +189,15 @@
                             </div>
 
                             <!-- Additional Options -->
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Display Order</label>
-                                    <input
-                                        type="number"
-                                        class="form-control"
-                                        v-model.number="form.sort_order"
-                                        placeholder="Sort order">
-                                </div>
-                                <div class="col-md-6 mb-3 d-flex align-items-end">
-                                    <div class="form-check">
-                                        <input
-                                            type="checkbox"
-                                            class="form-check-input"
-                                            id="isActive"
-                                            v-model="form.is_active">
-                                        <label class="form-check-label" for="isActive">
-                                            Active
-                                        </label>
-                                    </div>
-                                </div>
+                            <div class="form-check mb-3">
+                                <input
+                                    type="checkbox"
+                                    class="form-check-input"
+                                    id="isActive"
+                                    v-model="form.is_active">
+                                <label class="form-check-label" for="isActive">
+                                    Active
+                                </label>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -254,7 +229,7 @@ const testReports = ref([]);
 const filters = ref({
     search: '',
     note_for: '',
-    status: '',
+    is_active: '',
     per_page: 20,
     page: 1,
 });
@@ -270,12 +245,10 @@ const pagination = ref({
 
 const editMode = ref(false);
 const form = ref({
-    note_title: '',
     note_for: '',
     test_master_id: '',
     test_report_id: '',
     note_content: '',
-    sort_order: 0,
     is_active: true,
 });
 
@@ -315,18 +288,23 @@ const loadNotes = async () => {
     error.value = null;
     try {
         const response = await axios.get('/api/pathology/test-notes', { params: filters.value });
-        if (response.data.data) {
-            notes.value = response.data.data;
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            notes.value = paginatedData.data || paginatedData;
             pagination.value = {
-                current_page: response.data.current_page,
-                last_page: response.data.last_page,
-                per_page: response.data.per_page,
-                total: response.data.total,
-                from: response.data.from,
-                to: response.data.to,
+                current_page: paginatedData.current_page || 1,
+                last_page: paginatedData.last_page || 1,
+                per_page: paginatedData.per_page || 20,
+                total: paginatedData.total || 0,
+                from: paginatedData.from || 0,
+                to: paginatedData.to || 0,
             };
         } else {
-            notes.value = response.data;
+            notes.value = response.data.data || response.data;
+        }
+
+        if (!Array.isArray(notes.value)) {
+            notes.value = [];
         }
     } catch (err) {
         console.error('Error loading notes:', err);
@@ -338,8 +316,16 @@ const loadNotes = async () => {
 
 const loadTestMasters = async () => {
     try {
-        const response = await axios.get('/api/pathology/test-masters', { params: { status: 1 } });
-        testMasters.value = response.data.data || response.data;
+        const response = await axios.get('/api/pathology/tests', { params: { is_active: 1, per_page: 100 } });
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            testMasters.value = paginatedData.data || paginatedData;
+        } else {
+            testMasters.value = response.data.data || response.data;
+        }
+        if (!Array.isArray(testMasters.value)) {
+            testMasters.value = [];
+        }
     } catch (err) {
         console.error('Error loading test masters:', err);
     }
@@ -347,8 +333,16 @@ const loadTestMasters = async () => {
 
 const loadTestReports = async () => {
     try {
-        const response = await axios.get('/api/pathology/test-reports', { params: { status: 1 } });
-        testReports.value = response.data.data || response.data;
+        const response = await axios.get('/api/pathology/test-reports', { params: { is_active: 1, per_page: 100 } });
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            testReports.value = paginatedData.data || paginatedData;
+        } else {
+            testReports.value = response.data.data || response.data;
+        }
+        if (!Array.isArray(testReports.value)) {
+            testReports.value = [];
+        }
     } catch (err) {
         console.error('Error loading test reports:', err);
     }
@@ -378,12 +372,10 @@ const openAddModal = () => {
     editMode.value = false;
     error.value = null;
     form.value = {
-        note_title: '',
         note_for: '',
         test_master_id: '',
         test_report_id: '',
         note_content: '',
-        sort_order: 0,
         is_active: true,
     };
     if (noteModal) {
@@ -395,13 +387,11 @@ const editNote = async (item) => {
     editMode.value = true;
     error.value = null;
     form.value = {
-        id: item.id,
-        note_title: item.note_title,
+        note_id: item.note_id,
         note_for: item.note_for,
-        test_master_id: item.test_master_id || '',
-        test_report_id: item.test_report_id || '',
-        note_content: item.note_content,
-        sort_order: item.sort_order,
+        test_master_id: item.test_id || '',
+        test_report_id: item.report_id || '',
+        note_content: item.note_text || '',
         is_active: item.is_active,
     };
 
@@ -430,7 +420,7 @@ const saveNote = async () => {
         }
 
         if (editMode.value) {
-            await axios.put(`/api/pathology/test-notes/${form.value.id}`, payload);
+            await axios.put(`/api/pathology/test-notes/${form.value.note_id}`, payload);
         } else {
             await axios.post('/api/pathology/test-notes', payload);
         }

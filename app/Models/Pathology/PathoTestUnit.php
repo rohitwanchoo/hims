@@ -10,7 +10,7 @@ class PathoTestUnit extends Model
 {
     use HasFactory, BelongsToHospital;
 
-    protected $table = 'patho_test_unit';
+    protected $table = 'patho_test_units';
     protected $primaryKey = 'unit_id';
 
     protected $fillable = [

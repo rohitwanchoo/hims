@@ -417,6 +417,7 @@ const loadLastPrescription = async () => {
 
     try {
         const response = await axios.get(`/api/prescriptions/last/${props.patientId}`);
+        console.log('Prescription response:', response.data);
         if (response.data && response.data.drugs) {
             // Check if prescription is from today
             const prescriptionDate = new Date(response.data.created_at || response.data.prescription_date);
@@ -681,12 +682,23 @@ const handleFileUpload = (event) => {
     importFile.value = event.target.files[0];
 };
 
-const downloadTemplate = () => {
-    // Create template download
-    const link = document.createElement('a');
-    link.href = '/api/drug-masters/template';
-    link.download = 'drug_import_template.xlsx';
-    link.click();
+const downloadTemplate = async () => {
+    try {
+        const response = await axios.get('/api/drug-masters-template', {
+            responseType: 'blob'
+        });
+
+        // Create a blob URL and trigger download
+        const blob = new Blob([response.data], { type: 'text/csv' });
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = 'drug_import_template.csv';
+        link.click();
+        window.URL.revokeObjectURL(link.href);
+    } catch (error) {
+        console.error('Error downloading template:', error);
+        alert('Error downloading template');
+    }
 };
 
 const importDrugs = async () => {
@@ -700,7 +712,7 @@ const importDrugs = async () => {
     formData.append('file', importFile.value);
 
     try {
-        const response = await axios.post('/api/drug-masters/import', formData, {
+        const response = await axios.post('/api/drug-masters-import', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
 

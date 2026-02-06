@@ -17,10 +17,17 @@
                             class="form-control form-control-sm"
                             v-model="filters.search"
                             @input="loadInstructions"
-                            placeholder="Search by instruction name...">
+                            placeholder="Search instructions...">
                     </div>
                     <div class="col-md-2">
-                        <select class="form-select form-select-sm" v-model="filters.status" @change="loadInstructions">
+                        <select class="form-select form-select-sm" v-model="filters.instruction_type" @change="loadInstructions">
+                            <option value="">All Types</option>
+                            <option value="pathology">Pathology</option>
+                            <option value="procedure">Procedure</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select form-select-sm" v-model="filters.is_active" @change="loadInstructions">
                             <option value="">All Status</option>
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
@@ -41,8 +48,8 @@
                         <thead class="table-light sticky-top">
                             <tr>
                                 <th style="width: 60px;">#</th>
-                                <th style="min-width: 250px;">Instruction Name</th>
-                                <th style="min-width: 200px;">Description</th>
+                                <th style="width: 120px;">Type</th>
+                                <th style="min-width: 300px;">Instruction Text</th>
                                 <th style="width: 100px;" class="text-center">Status</th>
                                 <th style="width: 120px;" class="text-center">Actions</th>
                             </tr>
@@ -61,10 +68,14 @@
                                     No instructions found
                                 </td>
                             </tr>
-                            <tr v-else v-for="(item, index) in instructions" :key="item.id">
+                            <tr v-else v-for="(item, index) in instructions" :key="item.instruction_id">
                                 <td>{{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}</td>
-                                <td>{{ item.instruction_name }}</td>
-                                <td>{{ item.description || '-' }}</td>
+                                <td>
+                                    <span class="badge" :class="item.instruction_type === 'pathology' ? 'bg-info' : 'bg-warning'">
+                                        {{ item.instruction_type }}
+                                    </span>
+                                </td>
+                                <td>{{ item.instruction_text }}</td>
                                 <td class="text-center">
                                     <span :class="item.is_active ? 'badge bg-success' : 'badge bg-secondary'">
                                         {{ item.is_active ? 'Active' : 'Inactive' }}
@@ -74,7 +85,7 @@
                                     <button class="btn btn-sm btn-outline-primary me-1" @click="editInstruction(item)" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger" @click="deleteInstruction(item.id)" title="Delete">
+                                    <button class="btn btn-sm btn-outline-danger" @click="deleteInstruction(item.instruction_id)" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
@@ -118,23 +129,29 @@
                             <div class="alert alert-danger" v-if="error">
                                 {{ error }}
                             </div>
+
                             <div class="mb-3">
-                                <label class="form-label">Instruction Name *</label>
-                                <input
-                                    type="text"
-                                    class="form-control"
-                                    v-model="form.instruction_name"
-                                    placeholder="e.g., Fasting Required, Morning Sample"
-                                    required>
+                                <label class="form-label">Instruction Type *</label>
+                                <select class="form-select" v-model="form.instruction_type" required>
+                                    <option value="">Select Type</option>
+                                    <option value="pathology">Pathology</option>
+                                    <option value="procedure">Procedure</option>
+                                </select>
                             </div>
+
                             <div class="mb-3">
-                                <label class="form-label">Description</label>
+                                <label class="form-label">Instruction Text *</label>
                                 <textarea
                                     class="form-control"
-                                    v-model="form.description"
-                                    rows="3"
-                                    placeholder="Optional description"></textarea>
+                                    v-model="form.instruction_text"
+                                    rows="4"
+                                    placeholder="Enter instruction details..."
+                                    required></textarea>
+                                <small class="text-muted">
+                                    E.g., "Fasting required for 8-12 hours before test" or "Collect morning sample"
+                                </small>
                             </div>
+
                             <div class="form-check">
                                 <input
                                     type="checkbox"
@@ -171,7 +188,8 @@ const error = ref(null);
 const instructions = ref([]);
 const filters = ref({
     search: '',
-    status: '',
+    instruction_type: '',
+    is_active: '',
     per_page: 20,
     page: 1,
 });
@@ -187,8 +205,8 @@ const pagination = ref({
 
 const editMode = ref(false);
 const form = ref({
-    instruction_name: '',
-    description: '',
+    instruction_type: '',
+    instruction_text: '',
     is_active: true,
 });
 
@@ -223,18 +241,23 @@ const loadInstructions = async () => {
     error.value = null;
     try {
         const response = await axios.get('/api/pathology/instructions', { params: filters.value });
-        if (response.data.data) {
-            instructions.value = response.data.data;
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            instructions.value = paginatedData.data || paginatedData;
             pagination.value = {
-                current_page: response.data.current_page,
-                last_page: response.data.last_page,
-                per_page: response.data.per_page,
-                total: response.data.total,
-                from: response.data.from,
-                to: response.data.to,
+                current_page: paginatedData.current_page || 1,
+                last_page: paginatedData.last_page || 1,
+                per_page: paginatedData.per_page || 20,
+                total: paginatedData.total || 0,
+                from: paginatedData.from || 0,
+                to: paginatedData.to || 0,
             };
         } else {
-            instructions.value = response.data;
+            instructions.value = response.data.data || response.data;
+        }
+
+        if (!Array.isArray(instructions.value)) {
+            instructions.value = [];
         }
     } catch (err) {
         console.error('Error loading instructions:', err);
@@ -255,8 +278,8 @@ const openAddModal = () => {
     editMode.value = false;
     error.value = null;
     form.value = {
-        instruction_name: '',
-        description: '',
+        instruction_type: '',
+        instruction_text: '',
         is_active: true,
     };
     if (instructionModal) {
@@ -268,9 +291,9 @@ const editInstruction = (item) => {
     editMode.value = true;
     error.value = null;
     form.value = {
-        id: item.id,
-        instruction_name: item.instruction_name,
-        description: item.description,
+        instruction_id: item.instruction_id,
+        instruction_type: item.instruction_type,
+        instruction_text: item.instruction_text,
         is_active: item.is_active,
     };
     if (instructionModal) {
@@ -283,7 +306,7 @@ const saveInstruction = async () => {
     error.value = null;
     try {
         if (editMode.value) {
-            await axios.put(`/api/pathology/instructions/${form.value.id}`, form.value);
+            await axios.put(`/api/pathology/instructions/${form.value.instruction_id}`, form.value);
         } else {
             await axios.post('/api/pathology/instructions', form.value);
         }

@@ -237,31 +237,31 @@
                                     <table class="table table-borderless table-sm mb-0">
                                         <tr>
                                             <td class="text-muted" style="width: 35%;">Address</td>
-                                            <td>{{ patient.current_address || '-' }}</td>
+                                            <td>{{ patient.same_as_permanent ? (patient.permanent_address || '-') : (patient.current_address || '-') }}</td>
                                         </tr>
                                         <tr>
                                             <td class="text-muted">Area/Village</td>
-                                            <td>{{ patient.current_area?.area_name || '-' }}</td>
+                                            <td>{{ patient.same_as_permanent ? (patient.permanent_area?.area_name || '-') : (patient.current_area?.area_name || '-') }}</td>
                                         </tr>
                                         <tr>
                                             <td class="text-muted">City/Taluka</td>
-                                            <td>{{ patient.current_city?.city_name || '-' }}</td>
+                                            <td>{{ patient.same_as_permanent ? (patient.permanent_city?.city_name || '-') : (patient.current_city?.city_name || '-') }}</td>
                                         </tr>
                                         <tr>
                                             <td class="text-muted">District</td>
-                                            <td>{{ patient.current_district?.district_name || '-' }}</td>
+                                            <td>{{ patient.same_as_permanent ? (patient.permanent_district?.district_name || '-') : (patient.current_district?.district_name || '-') }}</td>
                                         </tr>
                                         <tr>
                                             <td class="text-muted">State</td>
-                                            <td>{{ patient.current_state?.state_name || '-' }}</td>
+                                            <td>{{ patient.same_as_permanent ? (patient.permanent_state?.state_name || '-') : (patient.current_state?.state_name || '-') }}</td>
                                         </tr>
                                         <tr>
                                             <td class="text-muted">Country</td>
-                                            <td>{{ patient.current_country?.country_name || '-' }}</td>
+                                            <td>{{ patient.same_as_permanent ? (patient.permanent_country?.country_name || '-') : (patient.current_country?.country_name || '-') }}</td>
                                         </tr>
                                         <tr>
                                             <td class="text-muted">Pin Code</td>
-                                            <td>{{ patient.current_pincode || '-' }}</td>
+                                            <td>{{ patient.same_as_permanent ? (patient.permanent_pincode || '-') : (patient.current_pincode || '-') }}</td>
                                         </tr>
                                     </table>
                                 </div>

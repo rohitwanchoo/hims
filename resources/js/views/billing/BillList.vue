@@ -1,15 +1,13 @@
 <template>
     <div>
         <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-1">
             <div>
-                <h2 class="mb-1 fw-bold">Billing Dashboard</h2>
-                <p class="text-muted mb-0 small">Manage and track all billing transactions</p>
+                <h4 class="mb-0 fw-bold">Billing Dashboard</h4>
             </div>
             <div class="d-flex gap-2">
                 <button class="modern-btn modern-btn-outline" @click="fetchBills(pagination.current_page)">
                     <i class="bi bi-arrow-clockwise"></i>
-                    <span>Refresh</span>
                 </button>
                 <router-link to="/billing/create" class="modern-btn modern-btn-primary">
                     <i class="bi bi-plus-lg"></i>
@@ -19,47 +17,35 @@
         </div>
 
         <!-- Summary Cards -->
-        <div class="row g-3 mb-4">
-            <div class="col-xl-3 col-lg-6 col-md-6">
-                <div class="stat-card stat-card-gradient-primary">
-                    <div class="stat-content-full">
-                        <div class="stat-label-top">Total Bills</div>
-                        <div class="stat-value-large">{{ summary.total_count || 0 }}</div>
-                        <div class="stat-description">All billing records</div>
-                    </div>
+        <div class="row g-2 mb-1">
+            <div class="col-3">
+                <div class="stat-card-compact stat-card-gradient-primary">
+                    <div class="stat-label-compact">Total Bills</div>
+                    <div class="stat-value-compact">{{ summary.total_count || 0 }}</div>
                 </div>
             </div>
-            <div class="col-xl-3 col-lg-6 col-md-6">
-                <div class="stat-card stat-card-gradient-info">
-                    <div class="stat-content-full">
-                        <div class="stat-label-top">Total Amount</div>
-                        <div class="stat-value-large">{{ formatCurrency(summary.total_amount || 0) }}</div>
-                        <div class="stat-description">Total billing value</div>
-                    </div>
+            <div class="col-3">
+                <div class="stat-card-compact stat-card-gradient-info">
+                    <div class="stat-label-compact">Total Amount</div>
+                    <div class="stat-value-compact">{{ formatCurrency(summary.total_amount || 0) }}</div>
                 </div>
             </div>
-            <div class="col-xl-3 col-lg-6 col-md-6">
-                <div class="stat-card stat-card-gradient-success">
-                    <div class="stat-content-full">
-                        <div class="stat-label-top">Paid Amount</div>
-                        <div class="stat-value-large">{{ formatCurrency(summary.paid_amount || 0) }}</div>
-                        <div class="stat-description">Total payments received</div>
-                    </div>
+            <div class="col-3">
+                <div class="stat-card-compact stat-card-gradient-success">
+                    <div class="stat-label-compact">Paid Amount</div>
+                    <div class="stat-value-compact">{{ formatCurrency(summary.paid_amount || 0) }}</div>
                 </div>
             </div>
-            <div class="col-xl-3 col-lg-6 col-md-6">
-                <div class="stat-card stat-card-gradient-danger">
-                    <div class="stat-content-full">
-                        <div class="stat-label-top">Pending Amount</div>
-                        <div class="stat-value-large">{{ formatCurrency(summary.pending_amount || 0) }}</div>
-                        <div class="stat-description">Outstanding balance</div>
-                    </div>
+            <div class="col-3">
+                <div class="stat-card-compact stat-card-gradient-danger">
+                    <div class="stat-label-compact">Pending Amount</div>
+                    <div class="stat-value-compact">{{ formatCurrency(summary.pending_amount || 0) }}</div>
                 </div>
             </div>
         </div>
 
         <!-- Filters -->
-        <div class="modern-card mb-4">
+        <div class="modern-card mb-1">
             <div class="modern-card-header clickable" @click="showFilters = !showFilters">
                 <div class="d-flex justify-content-between align-items-center w-100">
                     <h6 class="mb-0">
@@ -160,7 +146,7 @@
                 </div>
 
                 <!-- Table Content -->
-                <table class="table table-hover mb-0 align-middle" v-else>
+                <table class="table table-hover table-sm mb-0 align-middle" v-else>
                     <thead class="table-light">
                         <tr>
                             <th>Bill #</th>
@@ -288,6 +274,75 @@
 </template>
 
 <style scoped>
+/* Responsive optimization for 13-14" screens */
+@media (max-width: 1600px) {
+    h2 {
+        font-size: 1.5rem !important;
+    }
+
+    .stat-value-large {
+        font-size: 1.75rem !important;
+    }
+
+    .stat-card {
+        padding: 1rem !important;
+        min-height: 110px !important;
+    }
+
+    .stat-label-top {
+        font-size: 0.7rem !important;
+    }
+
+    .stat-description {
+        font-size: 0.7rem !important;
+    }
+
+    .table {
+        font-size: 0.813rem;
+    }
+
+    .table th,
+    .table td {
+        padding: 0.5rem 0.4rem;
+    }
+
+    .btn-group-sm > .btn {
+        padding: 0.25rem 0.35rem;
+        font-size: 0.75rem;
+    }
+
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .modern-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.813rem;
+    }
+
+    .modern-card-header {
+        padding: 0.5rem 0.75rem;
+    }
+
+    .modern-card-body {
+        padding: 0.75rem;
+    }
+
+    .card-header {
+        padding: 0.5rem 0.75rem;
+    }
+
+    .fw-medium {
+        font-size: 0.813rem;
+    }
+
+    small,
+    .small {
+        font-size: 0.75rem;
+    }
+}
+
 /* Modern Dashboard Styles */
 .spin {
     animation: spin 1s linear infinite;
@@ -335,6 +390,43 @@
     background: #f8f9fa;
     border-color: #667eea;
     color: #667eea;
+}
+
+/* Compact Stat Cards */
+.stat-card-compact {
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    height: 100%;
+    min-height: 70px;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card-compact:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.stat-label-compact {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    opacity: 0.9;
+    color: white;
+}
+
+.stat-value-compact {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+    color: white;
 }
 
 /* Modern Stat Cards with Gradients */
@@ -426,7 +518,7 @@
 }
 
 .modern-card-header {
-    padding: 1.25rem 1.5rem;
+    padding: 0.75rem 1rem;
     border-bottom: 1px solid #f0f0f0;
     background: #fafafa;
 }
@@ -439,7 +531,7 @@
 }
 
 .modern-card-body {
-    padding: 1.5rem;
+    padding: 1rem;
 }
 
 /* Modern Filter Styles */

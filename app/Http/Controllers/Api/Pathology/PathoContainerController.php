@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Pathology;
 
 use App\Http\Controllers\Controller;
-use App\Models\PathoContainer;
+use App\Models\Pathology\PathoContainer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -21,8 +21,7 @@ class PathoContainerController extends Controller
             if ($request->filled('search')) {
                 $search = $request->search;
                 $query->where(function($q) use ($search) {
-                    $q->where('container_name', 'like', "%{$search}%")
-                      ->orWhere('container_code', 'like', "%{$search}%");
+                    $q->where('container_name', 'like', "%{$search}%");
                 });
             }
 
@@ -61,9 +60,8 @@ class PathoContainerController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'container_name' => 'required|string|max:100',
-                'container_code' => 'nullable|string|max:50',
-                'description' => 'nullable|string',
+                'container_name' => 'required|string|max:255',
+                'remarks' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -77,8 +75,7 @@ class PathoContainerController extends Controller
             $container = PathoContainer::create([
                 'hospital_id' => Auth::user()->hospital_id,
                 'container_name' => $request->container_name,
-                'container_code' => $request->container_code,
-                'description' => $request->description,
+                'remarks' => $request->remarks,
                 'is_active' => $request->is_active ?? true,
             ]);
 
@@ -126,9 +123,8 @@ class PathoContainerController extends Controller
                 ->firstOrFail();
 
             $validator = Validator::make($request->all(), [
-                'container_name' => 'required|string|max:100',
-                'container_code' => 'nullable|string|max:50',
-                'description' => 'nullable|string',
+                'container_name' => 'required|string|max:255',
+                'remarks' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -141,8 +137,7 @@ class PathoContainerController extends Controller
 
             $container->update([
                 'container_name' => $request->container_name,
-                'container_code' => $request->container_code,
-                'description' => $request->description,
+                'remarks' => $request->remarks,
                 'is_active' => $request->is_active ?? $container->is_active,
             ]);
 

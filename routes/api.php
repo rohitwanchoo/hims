@@ -163,6 +163,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('drug-masters', DrugMasterController::class);
     Route::get('drug-masters-template', [DrugMasterController::class, 'downloadTemplate']);
     Route::post('drug-masters-import', [DrugMasterController::class, 'import']);
+    Route::get('drug-masters-export', [DrugMasterController::class, 'export']);
 
     // Advice Masters (Master > Prescription)
     Route::apiResource('advice-masters', \App\Http\Controllers\Api\AdviceMasterController::class);
@@ -170,6 +171,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Prescriptions
     Route::post('prescriptions', [\App\Http\Controllers\Api\PrescriptionController::class, 'store']);
     Route::get('prescriptions/last/{patientId}', [\App\Http\Controllers\Api\PrescriptionController::class, 'getLastPrescription']);
+    Route::get('prescriptions/opd-visit/{opdId}', [\App\Http\Controllers\Api\PrescriptionController::class, 'getByOpdVisit']);
     Route::get('prescriptions/{prescription}', [\App\Http\Controllers\Api\PrescriptionController::class, 'show']);
 
     // Standard Rx
@@ -229,6 +231,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('opd-visits', \App\Http\Controllers\Api\OpdVisitController::class);
     Route::post('opd-visits/{opdVisit}/start-consultation', [\App\Http\Controllers\Api\OpdVisitController::class, 'startConsultation']);
     Route::post('opd-visits/{opdVisit}/complete-consultation', [\App\Http\Controllers\Api\OpdVisitController::class, 'completeConsultation']);
+    Route::get('opd-visits/{opdVisit}/consultation-record', [\App\Http\Controllers\Api\OpdVisitController::class, 'getConsultationRecord']);
     Route::post('opd-visits/{opdVisit}/add-investigation', [\App\Http\Controllers\Api\OpdVisitController::class, 'addInvestigation']);
     Route::post('opd-visits/{opdVisit}/add-service', [\App\Http\Controllers\Api\OpdVisitController::class, 'addService']);
     Route::post('opd-visits/{opdVisit}/payment', [\App\Http\Controllers\Api\OpdVisitController::class, 'recordPayment']);
@@ -310,6 +313,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('ipd-admissions/{admission}/running-bill', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'getRunningBill']);
     Route::post('ipd-admissions/{admission}/initiate-discharge', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'initiateDischarge']);
     Route::post('ipd-admissions/{admission}/complete-discharge', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'completeDischarge']);
+    Route::get('ipd-admissions/{admission}/discharge-receipt-url', [\App\Http\Controllers\Api\IpdAdmissionController::class, 'getDischargeReceiptUrl']);
 
     // Discharge Summaries
     Route::get('discharge-summaries/discharged-patients', [\App\Http\Controllers\Api\DischargeSummaryController::class, 'getDischargedPatients']);

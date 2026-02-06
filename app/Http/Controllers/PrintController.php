@@ -238,4 +238,96 @@ class PrintController extends Controller
 
         return view('prints.bill', compact('bill', 'hospital'));
     }
+
+    /**
+     * Print IPD Discharge Receipt
+     */
+    public function ipdDischargeReceipt(Request $request, $id)
+    {
+        // Find admission first to get hospital_id from the record
+        $admission = IpdAdmission::where('ipd_id', $id)
+            ->with([
+                'patient',
+                'treatingDoctor',
+                'consultantDoctor',
+                'admittingDoctor',
+                'department',
+                'ward',
+                'bed',
+                'services',
+                'advancePayments',
+                'bill'
+            ])
+            ->first();
+
+        if (!$admission) {
+            abort(404, 'IPD admission not found');
+        }
+
+        // Get hospital from admission record
+        $hospital = Hospital::find($admission->hospital_id);
+
+        if (!$hospital) {
+            abort(404, 'Hospital not found');
+        }
+
+        // Get all services grouped by type
+        $services = \App\Models\IpdService::where('ipd_id', $id)
+            ->orderBy('service_date', 'asc')
+            ->orderBy('service_type', 'asc')
+            ->get()
+            ->groupBy('service_type');
+
+        // Calculate bed charges
+        $losDays = $admission->los_days ?? 0;
+        $bedChargesPerDay = $admission->bed->charges_per_day ?? 0;
+        $bedCharges = $losDays * $bedChargesPerDay;
+
+        // Calculate service totals
+        $servicesAmount = \App\Models\IpdService::where('ipd_id', $id)->sum('amount');
+        $servicesDiscount = \App\Models\IpdService::where('ipd_id', $id)->sum('discount');
+        $servicesTotal = \App\Models\IpdService::where('ipd_id', $id)->sum('net_amount');
+
+        // Calculate totals
+        $grossTotal = $bedCharges + $servicesAmount;
+        $totalDiscount = ($admission->discount_amount ?? 0) + $servicesDiscount;
+        $netTotal = $grossTotal - $totalDiscount;
+        $taxAmount = $admission->tax_amount ?? 0;
+        $finalTotal = $netTotal + $taxAmount;
+
+        // Get advance payments
+        $advancePayments = $admission->advancePayments;
+        $totalAdvance = $advancePayments->sum('amount');
+        $totalRefunded = $advancePayments->sum('refund_amount');
+        $netAdvance = $totalAdvance - $totalRefunded;
+
+        // Calculate balance
+        $balanceDue = $finalTotal - $netAdvance;
+
+        $billing = [
+            'bed_charges' => $bedCharges,
+            'bed_days' => $losDays,
+            'bed_rate' => $bedChargesPerDay,
+            'services_amount' => $servicesAmount,
+            'services_discount' => $servicesDiscount,
+            'services_total' => $servicesTotal,
+            'gross_total' => $grossTotal,
+            'discount' => $totalDiscount,
+            'net_total' => $netTotal,
+            'tax_amount' => $taxAmount,
+            'final_total' => $finalTotal,
+            'advance_paid' => $netAdvance,
+            'total_advance' => $totalAdvance,
+            'total_refunded' => $totalRefunded,
+            'balance_due' => $balanceDue,
+        ];
+
+        return view('prints.ipd-discharge-receipt', compact(
+            'admission',
+            'hospital',
+            'services',
+            'billing',
+            'advancePayments'
+        ));
+    }
 }

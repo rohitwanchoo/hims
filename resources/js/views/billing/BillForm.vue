@@ -49,7 +49,7 @@
                         <div class="row g-2">
                             <div class="col-md-3">
                                 <label class="form-label small mb-1">Bill Type</label>
-                                <select class="form-select form-select-sm" v-model="form.bill_type" :disabled="isViewMode" @change="onBillTypeChange">
+                                <select class="form-select form-select-sm" v-model="form.bill_type" :disabled="isViewMode || ($route.query.opd_id && $route.query.patient_id)" @change="onBillTypeChange">
                                     <option value="general">General</option>
                                     <option value="opd">OPD</option>
                                     <option value="ipd">IPD</option>
@@ -58,7 +58,7 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label small mb-1">Payment Mode</label>
+                                <label class="form-label small mb-1">Class</label>
                                 <select class="form-select form-select-sm" v-model="form.payment_mode" :disabled="isViewMode">
                                     <option value="cash">Cash</option>
                                     <option value="cashless">Cashless</option>
@@ -80,7 +80,7 @@
                                     <span v-if="form.bill_type === 'opd' && opdPatients.length > 0" class="text-success small">({{ opdPatients.length }} Today's OPD)</span>
                                     <span v-else-if="form.bill_type === 'opd'" class="text-muted small">(All Patients)</span>
                                 </label>
-                                <select class="form-select form-select-sm" v-model="form.patient_id" :disabled="isViewMode">
+                                <select class="form-select form-select-sm" v-model="form.patient_id" :disabled="isViewMode || ($route.query.opd_id && $route.query.patient_id)">
                                     <option value="">Select Patient</option>
                                     <template v-for="p in filteredPatients" :key="p?.patient_id">
                                         <option v-if="p && p.patient_id" :value="p.patient_id">
@@ -131,7 +131,47 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
+            <!-- Right Column - Compact Summary -->
+            <div class="col-md-4">
+                <div class="card shadow-sm sticky-summary">
+                    <div class="card-header bg-primary text-white py-2">
+                        <h6 class="mb-0 small"><i class="bi bi-calculator me-2"></i>Bill Summary</h6>
+                    </div>
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between mb-2 small">
+                            <span>Subtotal:</span>
+                            <strong>{{ formatCurrency(subtotal) }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2 small">
+                            <span>Discount:</span>
+                            <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.discount_amount" :disabled="isViewMode" step="0.01">
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2 small">
+                            <span>GST:</span>
+                            <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.tax_amount" :disabled="isViewMode" step="0.01">
+                        </div>
+                        <div v-if="form.bill_type === 'ipd' && runningBill" class="d-flex justify-content-between mb-2 small">
+                            <span class="text-muted">Previous Balance:</span>
+                            <strong class="text-info">{{ formatCurrency(runningBill.running_balance || 0) }}</strong>
+                        </div>
+                        <div v-if="form.bill_type === 'ipd' && runningBill && runningBill.total_paid > 0" class="d-flex justify-content-between mb-2 small">
+                            <span class="text-muted">Total Paid:</span>
+                            <strong class="text-success">{{ formatCurrency(runningBill.total_paid || 0) }}</strong>
+                        </div>
+                        <div class="border-top pt-2 mt-2 d-flex justify-content-between">
+                            <strong>Net Total:</strong>
+                            <h5 class="mb-0 text-primary">{{ formatCurrency(total) }}</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bill Items Section - Full Width -->
+        <div class="row g-3 mt-2">
+            <div class="col-12">
                 <!-- Compact Bill Items with Scrollable Table -->
                 <div class="card shadow-sm">
                     <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
@@ -157,8 +197,8 @@
                                         <thead class="table-light">
                                             <tr class="small">
                                                 <th>Service</th>
-                                                <th width="120">Ward Name</th>
-                                                <th width="100">Bed Name</th>
+                                                <th v-if="form.bill_type !== 'opd'" width="120">Ward Name</th>
+                                                <th v-if="form.bill_type !== 'opd'" width="100">Bed Name</th>
                                                 <th width="130">Date & Time</th>
                                                 <th width="120">Doctor</th>
                                                 <th width="50" class="text-center">Qty</th>
@@ -169,8 +209,8 @@
                                         <tbody>
                                             <tr v-for="item in group.items" :key="item.service_id" class="small">
                                                 <td>{{ item.item_name || getServiceName(item.service_id) }}</td>
-                                                <td>{{ item.ward_name || '-' }}</td>
-                                                <td>{{ item.bed_name || '-' }}</td>
+                                                <td v-if="form.bill_type !== 'opd'">{{ item.ward_name || '-' }}</td>
+                                                <td v-if="form.bill_type !== 'opd'">{{ item.bed_name || '-' }}</td>
                                                 <td>{{ formatDateTime(item.service_date) }}</td>
                                                 <td>{{ getDoctorName(item.doctor_id) }}</td>
                                                 <td class="text-center">{{ item.quantity }}</td>
@@ -184,19 +224,19 @@
                         </div>
 
                         <!-- Edit Mode: Regular Table -->
-                        <div v-else class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                        <div v-else class="table-responsive">
                             <table class="table table-sm table-hover mb-0">
                                 <thead class="table-light sticky-top">
                                     <tr class="small">
-                                        <th width="150">Cost Head</th>
-                                        <th width="180">Service</th>
-                                        <th width="120">Ward Name</th>
-                                        <th width="100">Bed Name</th>
+                                        <th width="140">Cost Head</th>
+                                        <th width="280">Service</th>
+                                        <th v-if="form.bill_type !== 'opd'" width="100">Ward Name</th>
+                                        <th v-if="form.bill_type !== 'opd'" width="90">Bed Name</th>
                                         <th width="130">Date & Time</th>
-                                        <th width="120">Doctor</th>
+                                        <th width="110">Doctor</th>
                                         <th width="50">Qty</th>
-                                        <th width="80">Rate</th>
-                                        <th width="90">Amount</th>
+                                        <th width="70">Rate</th>
+                                        <th width="80">Amount</th>
                                         <th width="40"></th>
                                     </tr>
                                 </thead>
@@ -205,7 +245,7 @@
                                         <td class="p-1">
                                             <select class="form-select form-select-sm" v-model="item.cost_head_id" @change="onCostHeadChange(item, index)">
                                                 <option value="">Select</option>
-                                                <option v-for="ch in costHeads" :key="ch.cost_head_id" :value="ch.cost_head_id">
+                                                <option v-for="ch in filteredCostHeads" :key="ch.cost_head_id" :value="ch.cost_head_id">
                                                     {{ ch.cost_head_name }}
                                                 </option>
                                             </select>
@@ -218,10 +258,10 @@
                                                 </option>
                                             </select>
                                         </td>
-                                        <td class="p-1">
+                                        <td v-if="form.bill_type !== 'opd'" class="p-1">
                                             <input type="text" class="form-control form-control-sm" v-model="item.ward_name" readonly :placeholder="item.ward_name ? '' : '-'">
                                         </td>
-                                        <td class="p-1">
+                                        <td v-if="form.bill_type !== 'opd'" class="p-1">
                                             <input type="text" class="form-control form-control-sm" v-model="item.bed_name" readonly :placeholder="item.bed_name ? '' : '-'">
                                         </td>
                                         <td class="p-1">
@@ -256,92 +296,14 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Right Column - Compact Summary -->
-            <div class="col-md-4">
-                <div class="card shadow-sm sticky-summary">
-                    <div class="card-header bg-primary text-white py-2">
-                        <h6 class="mb-0 small"><i class="bi bi-calculator me-2"></i>Bill Summary</h6>
-                    </div>
-                    <div class="card-body py-2">
-                        <div class="d-flex justify-content-between mb-2 small">
-                            <span>Subtotal:</span>
-                            <strong>{{ formatCurrency(subtotal) }}</strong>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-2 small">
-                            <span>Discount:</span>
-                            <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.discount_amount" :disabled="isViewMode" step="0.01">
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-2 small">
-                            <span>GST:</span>
-                            <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.tax_amount" :disabled="isViewMode" step="0.01">
-                        </div>
-                        <div v-if="form.bill_type === 'ipd' && runningBill" class="d-flex justify-content-between mb-2 small">
-                            <span>Advance Paid</span>
-                            <strong class="text-success">{{ formatCurrency(advancePaid) }}</strong>
-                        </div>
-                        <div v-if="form.bill_type === 'ipd' && runningBill" class="d-flex justify-content-between mb-2 small">
-                            <span>Refund</span>
-                            <strong class="text-info">{{ formatCurrency(refundAmount) }}</strong>
-                        </div>
-                        <div v-else class="d-flex justify-content-between align-items-center mb-2 small">
-                            <span>Refund:</span>
-                            <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.refund_amount" :disabled="isViewMode" step="0.01">
-                        </div>
-                        <hr class="my-2">
-                        <div class="d-flex justify-content-between mb-2">
-                            <strong>Total:</strong>
-                            <strong class="text-primary fs-5">{{ formatCurrency(total) }}</strong>
-                        </div>
-
-                        <!-- Insurance/Cashless Billing -->
-                        <div v-if="form.payment_mode === 'cashless' || form.payment_mode === 'insurance'" class="mt-2 pt-2 border-top">
-                            <div class="d-flex justify-content-between align-items-center mb-2 small">
-                                <span>Insurance Amount:</span>
-                                <input type="number" class="form-control form-control-sm text-end" style="width: 100px;" v-model.number="form.insurance_amount" :disabled="isViewMode" step="0.01">
-                            </div>
-                            <div class="d-flex justify-content-between mb-2 small">
-                                <span>Co-pay (Patient):</span>
-                                <strong class="text-warning">{{ formatCurrency(copayAmount) }}</strong>
-                            </div>
-                        </div>
-
-                        <!-- IPD Balance Due -->
-                        <div v-if="form.bill_type === 'ipd' && runningBill" class="d-flex justify-content-between mb-2 pt-2 border-top">
-                            <strong class="text-danger">Balance Due:</strong>
-                            <strong class="text-danger fs-5">{{ formatCurrency(balanceDue) }}</strong>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Quick Actions -->
-                <div class="card shadow-sm mt-2" v-if="$route.params.id && !editMode">
-                    <div class="card-header bg-white py-2">
-                        <h6 class="mb-0 small"><i class="bi bi-lightning me-2"></i>Quick Actions</h6>
-                    </div>
-                    <div class="card-body py-2">
-                        <div class="d-grid gap-1">
-                            <button class="btn btn-sm btn-outline-primary" @click="printBill">
-                                <i class="bi bi-printer"></i> Print Bill
-                            </button>
-                            <button class="btn btn-sm btn-outline-success" v-if="canEdit" @click="enableEditMode">
-                                <i class="bi bi-pencil"></i> Edit Bill
-                            </button>
-                            <button class="btn btn-sm btn-outline-info">
-                                <i class="bi bi-share"></i> Share Bill
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </template>
 
 <style scoped>
 .bill-form-container {
-    max-height: calc(100vh - 120px);
-    overflow: hidden;
+    min-height: calc(100vh - 60px);
+    overflow: visible;
 }
 
 .cursor-pointer {
@@ -440,7 +402,7 @@ const form = ref({
     items: [{ cost_head_id: '', service_id: '', item_name: '', ward_name: '', bed_name: '', quantity: 1, unit_price: 0, amount: 0 }]
 });
 
-const subtotal = computed(() => form.value.items.reduce((sum, item) => sum + (item.amount || 0), 0));
+const subtotal = computed(() => form.value.items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0));
 
 const total = computed(() => {
     const sub = subtotal.value;
@@ -506,6 +468,22 @@ const filteredPatients = computed(() => {
         }
     }
     return patients.value;
+});
+
+// Filter cost heads based on bill type
+const filteredCostHeads = computed(() => {
+    // For OPD bills, exclude IPD-related cost heads
+    if (form.value.bill_type === 'opd') {
+        return costHeads.value.filter(ch => {
+            const name = ch.cost_head_name.toLowerCase();
+            // Exclude cost heads containing ipd, bed, ward, accommodation
+            return !name.includes('ipd') &&
+                   !name.includes('bed') &&
+                   !name.includes('ward') &&
+                   !name.includes('accommodation');
+        });
+    }
+    return costHeads.value;
 });
 
 // Function to auto-populate insurance data from patient
@@ -959,8 +937,8 @@ onMounted(async () => {
                             item_name: 'OPD Consultation',
                             item_type: 'service',
                             quantity: 1,
-                            unit_price: opdVisit.consultation_fee,
-                            amount: opdVisit.consultation_fee,
+                            unit_price: Number(opdVisit.consultation_fee) || 0,
+                            amount: Number(opdVisit.consultation_fee) || 0,
                             service_date: currentDateTime,
                             doctor_id: opdVisit.doctor_id || null
                         }];
@@ -974,9 +952,9 @@ onMounted(async () => {
                             cost_head_id: opdCostHead?.cost_head_id || '',
                             item_name: svc.service?.service_name || 'Service',
                             item_type: 'service',
-                            quantity: svc.quantity || 1,
-                            unit_price: svc.rate || 0,
-                            amount: svc.amount || 0,
+                            quantity: Number(svc.quantity) || 1,
+                            unit_price: Number(svc.rate) || 0,
+                            amount: Number(svc.amount) || 0,
                             service_date: currentDateTime,
                             doctor_id: opdVisit.doctor_id || null
                         }));
@@ -1254,8 +1232,8 @@ const calculateBedChargesItem = (admission) => {
                 service_date: dateTimeStr,
                 doctor_id: null,
                 quantity: 1,
-                unit_price: bedRate,
-                amount: bedRate
+                unit_price: Number(bedRate) || 0,
+                amount: Number(bedRate) || 0
             });
 
             console.log(`PUSHED ITEM: ward=${bedChargeItems[bedChargeItems.length - 1].ward_name}, bed=${bedChargeItems[bedChargeItems.length - 1].bed_name}, date=${dateStr}`);
@@ -1575,7 +1553,16 @@ const removeItem = (index) => {
 const calculateAmount = (item) => {
     const quantity = Number(item.quantity) || 0;
     const unitPrice = Number(item.unit_price) || 0;
-    item.amount = quantity * unitPrice;
+    const newAmount = quantity * unitPrice;
+
+    // Find the item in the array to ensure reactivity
+    const index = form.value.items.findIndex(i => i === item);
+    if (index !== -1) {
+        form.value.items[index].amount = newAmount;
+    } else {
+        // Fallback if item not found in array
+        item.amount = newAmount;
+    }
 };
 
 const formatCurrency = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount || 0);

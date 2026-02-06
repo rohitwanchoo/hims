@@ -348,6 +348,12 @@ class OpdVisitController extends Controller
     {
         $opdVisit = OpdVisit::findOrFail($id);
 
+        // Log the incoming request data
+        \Log::info('OPD Visit Update Request', [
+            'opd_id' => $id,
+            'request_data' => $request->all()
+        ]);
+
         $validated = $request->validate([
             'department_id' => 'nullable|exists:departments,department_id',
             'doctor_id' => 'nullable|exists:doctors,doctor_id',
@@ -390,6 +396,13 @@ class OpdVisitController extends Controller
         }
 
         $opdVisit->update($validated);
+
+        // Log the validated data that was saved
+        \Log::info('OPD Visit Updated Successfully', [
+            'opd_id' => $id,
+            'validated_data' => $validated,
+            'updated_record' => $opdVisit->only(['chief_complaints', 'diagnosis', 'advice'])
+        ]);
 
         return response()->json($opdVisit->load([
             'patient',
@@ -611,5 +624,24 @@ class OpdVisitController extends Controller
             'type' => 'receipt',
             'data' => $opdVisit,
         ]);
+    }
+
+    /**
+     * Get consultation record for an OPD visit
+     */
+    public function getConsultationRecord(string $id)
+    {
+        $consultationRecord = \App\Models\ConsultationRecord::where('opd_id', $id)
+            ->latest()
+            ->first();
+
+        if (!$consultationRecord) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No consultation record found'
+            ], 404);
+        }
+
+        return response()->json($consultationRecord);
     }
 }

@@ -10,7 +10,7 @@ class PathoTestNote extends Model
 {
     use HasFactory, BelongsToHospital;
 
-    protected $table = 'patho_test_note';
+    protected $table = 'patho_test_notes';
     protected $primaryKey = 'note_id';
 
     protected $fillable = [

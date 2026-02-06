@@ -22,11 +22,8 @@
                     <div class="col-md-2">
                         <select class="form-select form-select-sm" v-model="filters.analyzer_type" @change="loadAnalyzers">
                             <option value="">All Types</option>
-                            <option value="hematology">Hematology</option>
-                            <option value="biochemistry">Biochemistry</option>
-                            <option value="immunology">Immunology</option>
-                            <option value="microbiology">Microbiology</option>
-                            <option value="other">Other</option>
+                            <option value="on_demand">On Demand</option>
+                            <option value="pre_database">Pre-Database</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -74,7 +71,7 @@
                                     No analyzers found
                                 </td>
                             </tr>
-                            <tr v-else v-for="(item, index) in analyzers" :key="item.id">
+                            <tr v-else v-for="(item, index) in analyzers" :key="item.analyzer_id">
                                 <td>{{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}</td>
                                 <td>{{ item.analyzer_name }}</td>
                                 <td>
@@ -86,7 +83,7 @@
                                         {{ item.is_bidirectional ? 'Yes' : 'No' }}
                                     </span>
                                 </td>
-                                <td>{{ item.description || '-' }}</td>
+                                <td>{{ item.remarks || '-' }}</td>
                                 <td class="text-center">
                                     <span :class="item.is_active ? 'badge bg-success' : 'badge bg-secondary'">
                                         {{ item.is_active ? 'Active' : 'Inactive' }}
@@ -99,7 +96,7 @@
                                     <button class="btn btn-sm btn-outline-info me-1" @click="manageTests(item)" title="Manage Tests">
                                         <i class="bi bi-list-check"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger" @click="deleteAnalyzer(item.id)" title="Delete">
+                                    <button class="btn btn-sm btn-outline-danger" @click="deleteAnalyzer(item.analyzer_id)" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
@@ -157,11 +154,8 @@
                                     <label class="form-label">Analyzer Type *</label>
                                     <select class="form-select" v-model="form.analyzer_type" required>
                                         <option value="">Select Type</option>
-                                        <option value="hematology">Hematology</option>
-                                        <option value="biochemistry">Biochemistry</option>
-                                        <option value="immunology">Immunology</option>
-                                        <option value="microbiology">Microbiology</option>
-                                        <option value="other">Other</option>
+                                        <option value="on_demand">On Demand</option>
+                                        <option value="pre_database">Pre-Database</option>
                                     </select>
                                 </div>
                             </div>
@@ -200,12 +194,12 @@
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Description</label>
+                                <label class="form-label">Remarks</label>
                                 <textarea
                                     class="form-control"
-                                    v-model="form.description"
+                                    v-model="form.remarks"
                                     rows="3"
-                                    placeholder="Optional description or notes"></textarea>
+                                    placeholder="Optional remarks or notes"></textarea>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -241,7 +235,7 @@
                                     <div class="list-group list-group-flush">
                                         <div
                                             v-for="test in filteredAvailableTests"
-                                            :key="test.id"
+                                            :key="test.test_id"
                                             class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
                                             style="cursor: pointer;"
                                             @click="addTestMapping(test)">
@@ -265,7 +259,7 @@
                                     <div class="list-group list-group-flush">
                                         <div
                                             v-for="test in filteredMappedTests"
-                                            :key="test.id"
+                                            :key="test.test_id"
                                             class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
                                             style="cursor: pointer;"
                                             @click="removeTestMapping(test)">
@@ -324,10 +318,11 @@ const pagination = ref({
 const editMode = ref(false);
 const form = ref({
     analyzer_name: '',
+    analyzer_code: '',
     analyzer_type: '',
-    analyzer_count: 0,
+    analyzer_count: 1,
     is_bidirectional: false,
-    description: '',
+    remarks: '',
     is_active: true,
 });
 
@@ -388,22 +383,25 @@ const loadAnalyzers = async () => {
     error.value = null;
     try {
         const response = await axios.get('/api/pathology/analyzers', { params: filters.value });
-        if (response.data.data) {
-            analyzers.value = response.data.data;
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            // Get the actual array from paginated data
+            analyzers.value = paginatedData.data || paginatedData;
             pagination.value = {
-                current_page: response.data.current_page,
-                last_page: response.data.last_page,
-                per_page: response.data.per_page,
-                total: response.data.total,
-                from: response.data.from,
-                to: response.data.to,
+                current_page: paginatedData.current_page || 1,
+                last_page: paginatedData.last_page || 1,
+                per_page: paginatedData.per_page || 20,
+                total: paginatedData.total || 0,
+                from: paginatedData.from || 0,
+                to: paginatedData.to || 0,
             };
         } else {
-            analyzers.value = response.data;
+            analyzers.value = [];
         }
     } catch (err) {
         console.error('Error loading analyzers:', err);
         error.value = 'Failed to load analyzers';
+        analyzers.value = [];
     } finally {
         loading.value = false;
     }
@@ -421,10 +419,11 @@ const openAddModal = () => {
     error.value = null;
     form.value = {
         analyzer_name: '',
+        analyzer_code: '',
         analyzer_type: '',
-        analyzer_count: 0,
+        analyzer_count: 1,
         is_bidirectional: false,
-        description: '',
+        remarks: '',
         is_active: true,
     };
     if (analyzerModal) {
@@ -436,12 +435,13 @@ const editAnalyzer = (item) => {
     editMode.value = true;
     error.value = null;
     form.value = {
-        id: item.id,
+        analyzer_id: item.analyzer_id,
         analyzer_name: item.analyzer_name,
+        analyzer_code: item.analyzer_code,
         analyzer_type: item.analyzer_type,
         analyzer_count: item.analyzer_count,
         is_bidirectional: item.is_bidirectional,
-        description: item.description,
+        remarks: item.remarks,
         is_active: item.is_active,
     };
     if (analyzerModal) {
@@ -454,7 +454,7 @@ const saveAnalyzer = async () => {
     error.value = null;
     try {
         if (editMode.value) {
-            await axios.put(`/api/pathology/analyzers/${form.value.id}`, form.value);
+            await axios.put(`/api/pathology/analyzers/${form.value.analyzer_id}`, form.value);
         } else {
             await axios.post('/api/pathology/analyzers', form.value);
         }
@@ -489,16 +489,24 @@ const manageTests = async (analyzer) => {
 
     try {
         const [availableResponse, mappedResponse] = await Promise.all([
-            axios.get('/api/pathology/test-masters'),
-            axios.get(`/api/pathology/analyzers/${analyzer.id}/tests`)
+            axios.get('/api/pathology/tests', { params: { is_active: 1, per_page: 1000 } }),
+            axios.get(`/api/pathology/analyzers/${analyzer.analyzer_id}/tests`)
         ]);
 
-        availableTests.value = availableResponse.data.data || availableResponse.data;
-        mappedTests.value = mappedResponse.data.data || mappedResponse.data;
+        // Handle pagination for available tests
+        let allTests = availableResponse.data.data;
+        if (allTests && allTests.data) {
+            allTests = allTests.data;
+        }
+        availableTests.value = Array.isArray(allTests) ? allTests : [];
+
+        // Handle mapped tests response
+        let mapped = mappedResponse.data.data;
+        mappedTests.value = Array.isArray(mapped) ? mapped : [];
 
         // Filter out already mapped tests from available
-        const mappedIds = mappedTests.value.map(t => t.id);
-        availableTests.value = availableTests.value.filter(t => !mappedIds.includes(t.id));
+        const mappedIds = mappedTests.value.map(t => t.test_id);
+        availableTests.value = availableTests.value.filter(t => !mappedIds.includes(t.test_id));
 
         if (testMappingModal) {
             testMappingModal.show();
@@ -510,13 +518,18 @@ const manageTests = async (analyzer) => {
 };
 
 const addTestMapping = async (test) => {
+    if (!selectedAnalyzer.value || !selectedAnalyzer.value.analyzer_id) {
+        console.error('No analyzer selected');
+        return;
+    }
+
     try {
-        await axios.post(`/api/pathology/analyzers/${selectedAnalyzer.value.id}/tests`, {
-            test_id: test.id
+        await axios.post(`/api/pathology/analyzers/${selectedAnalyzer.value.analyzer_id}/tests`, {
+            test_id: test.test_id
         });
 
         // Move test from available to mapped
-        availableTests.value = availableTests.value.filter(t => t.id !== test.id);
+        availableTests.value = availableTests.value.filter(t => t.test_id !== test.test_id);
         mappedTests.value.push(test);
     } catch (err) {
         console.error('Error adding test mapping:', err);
@@ -525,11 +538,16 @@ const addTestMapping = async (test) => {
 };
 
 const removeTestMapping = async (test) => {
+    if (!selectedAnalyzer.value || !selectedAnalyzer.value.analyzer_id) {
+        console.error('No analyzer selected');
+        return;
+    }
+
     try {
-        await axios.delete(`/api/pathology/analyzers/${selectedAnalyzer.value.id}/tests/${test.id}`);
+        await axios.delete(`/api/pathology/analyzers/${selectedAnalyzer.value.analyzer_id}/tests/${test.test_id}`);
 
         // Move test from mapped to available
-        mappedTests.value = mappedTests.value.filter(t => t.id !== test.id);
+        mappedTests.value = mappedTests.value.filter(t => t.test_id !== test.test_id);
         availableTests.value.push(test);
     } catch (err) {
         console.error('Error removing test mapping:', err);

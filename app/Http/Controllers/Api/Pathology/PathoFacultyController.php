@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Pathology;
 
 use App\Http\Controllers\Controller;
-use App\Models\PathoFaculty;
+use App\Models\Pathology\PathoFaculty;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -63,7 +63,7 @@ class PathoFacultyController extends Controller
             $validator = Validator::make($request->all(), [
                 'faculty_name' => 'required|string|max:100',
                 'faculty_code' => 'nullable|string|max:50',
-                'description' => 'nullable|string',
+                'remarks' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -78,7 +78,7 @@ class PathoFacultyController extends Controller
                 'hospital_id' => Auth::user()->hospital_id,
                 'faculty_name' => $request->faculty_name,
                 'faculty_code' => $request->faculty_code,
-                'description' => $request->description,
+                'remarks' => $request->remarks,
                 'is_active' => $request->is_active ?? true,
             ]);
 
@@ -128,7 +128,7 @@ class PathoFacultyController extends Controller
             $validator = Validator::make($request->all(), [
                 'faculty_name' => 'required|string|max:100',
                 'faculty_code' => 'nullable|string|max:50',
-                'description' => 'nullable|string',
+                'remarks' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -142,7 +142,7 @@ class PathoFacultyController extends Controller
             $faculty->update([
                 'faculty_name' => $request->faculty_name,
                 'faculty_code' => $request->faculty_code,
-                'description' => $request->description,
+                'remarks' => $request->remarks,
                 'is_active' => $request->is_active ?? $faculty->is_active,
             ]);
 

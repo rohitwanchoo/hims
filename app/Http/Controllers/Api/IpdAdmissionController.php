@@ -140,8 +140,7 @@ class IpdAdmissionController extends Controller
                 ->whereDate('admission_date', $today)->count(),
             'today_discharges' => IpdAdmission::where('hospital_id', $hospitalId)
                 ->whereDate('discharge_date', $today)->count(),
-            'pending_discharge' => IpdAdmission::where('hospital_id', $hospitalId)
-                ->where('status', 'discharge_initiated')->count(),
+            'pending_discharge' => 0, // Deprecated: discharge_initiated status removed
             'mlc_cases' => IpdAdmission::where('hospital_id', $hospitalId)
                 ->where('status', 'admitted')
                 ->where('mlc_case', true)->count(),
@@ -668,7 +667,7 @@ class IpdAdmissionController extends Controller
 
         $admission = IpdAdmission::where('hospital_id', $hospitalId)
             ->where('ipd_id', $id)
-            ->whereIn('status', ['admitted', 'discharge_initiated'])
+            ->where('status', 'admitted')
             ->first();
 
         if (!$admission) {
@@ -1008,7 +1007,7 @@ class IpdAdmissionController extends Controller
 
         $admission = IpdAdmission::where('hospital_id', $hospitalId)
             ->where('ipd_id', $id)
-            ->whereIn('status', ['admitted', 'discharge_initiated'])
+            ->where('status', 'admitted')
             ->first();
 
         if (!$admission) {
@@ -1286,21 +1285,91 @@ class IpdAdmissionController extends Controller
         $admission = IpdAdmission::where('hospital_id', $hospitalId)
             ->where('ipd_id', $id)
             ->where('status', 'admitted')
+            ->with(['patient', 'bed', 'ward'])
             ->first();
 
         if (!$admission) {
             return response()->json(['message' => 'Active IPD admission not found'], 404);
         }
 
+        // Update admission and mark as discharged
         $admission->update([
-            'status' => 'discharge_initiated',
+            'status' => 'discharged',
+            'discharge_date' => now()->toDateString(),
+            'discharge_time' => now()->format('H:i:s'),
             'discharge_type' => $request->discharge_type ?? 'normal',
-            'condition_at_discharge' => $request->condition_at_discharge,
+            'condition_at_discharge' => $request->condition_at_discharge ?? 'Stable',
+            'discharged_by' => Auth::id(),
         ]);
 
+        // Release bed
+        if ($admission->bed) {
+            $admission->bed->update([
+                'is_available' => true,
+                'current_patient_id' => null,
+                'current_ipd_id' => null,
+            ]);
+        }
+
+        // Get final bill details
+        $services = IpdService::where('ipd_id', $id)
+            ->orderBy('service_date', 'desc')
+            ->get()
+            ->groupBy('service_type');
+
+        // Calculate bed charges
+        $losDays = $admission->los_days ?? 0;
+        $bedChargesPerDay = optional($admission->bed)->charges_per_day ?? 0;
+        $bedCharges = $losDays * $bedChargesPerDay;
+
+        // Services by type
+        $servicesSummary = [];
+        foreach ($services as $type => $items) {
+            $servicesSummary[$type] = [
+                'count' => $items->count(),
+                'total' => $items->sum('net_amount'),
+            ];
+        }
+
+        // Calculate totals
+        $servicesAmount = IpdService::where('ipd_id', $id)->sum('amount');
+        $servicesDiscount = IpdService::where('ipd_id', $id)->sum('discount');
+        $servicesTotal = IpdService::where('ipd_id', $id)->sum('net_amount');
+        $grossTotal = $bedCharges + $servicesAmount;
+        $discount = ($admission->discount_amount ?? 0) + $servicesDiscount;
+        $netTotal = $grossTotal - $discount;
+        $advancePaid = $admission->advance_amount ?? 0;
+        $balanceDue = $netTotal - $advancePaid;
+
         return response()->json([
-            'message' => 'Discharge process initiated',
-            'admission' => $admission,
+            'message' => 'Patient discharged successfully',
+            'admission' => $admission->fresh(),
+            'final_bill' => [
+                'patient' => [
+                    'name' => $admission->patient->full_name,
+                    'ipd_number' => $admission->ipd_number,
+                    'admission_date' => $admission->admission_date,
+                    'los_days' => $losDays,
+                ],
+                'bed_details' => [
+                    'ward' => $admission->ward->ward_name ?? null,
+                    'bed' => $admission->bed->bed_number ?? null,
+                    'charges_per_day' => $bedChargesPerDay,
+                    'total_days' => $losDays,
+                    'total_charges' => $bedCharges,
+                ],
+                'services_summary' => $servicesSummary,
+                'services' => $services,
+                'billing' => [
+                    'bed_charges' => $bedCharges,
+                    'services_total' => $servicesTotal,
+                    'gross_total' => $grossTotal,
+                    'discount' => $discount,
+                    'net_total' => $netTotal,
+                    'advance_paid' => $advancePaid,
+                    'balance_due' => $balanceDue,
+                ],
+            ],
         ]);
     }
 
@@ -1330,7 +1399,7 @@ class IpdAdmissionController extends Controller
 
         $admission = IpdAdmission::where('hospital_id', $hospitalId)
             ->where('ipd_id', $id)
-            ->whereIn('status', ['admitted', 'discharge_initiated'])
+            ->where('status', 'admitted')
             ->first();
 
         if (!$admission) {
@@ -1396,15 +1465,43 @@ class IpdAdmissionController extends Controller
 
             DB::commit();
 
+            // Generate discharge receipt URL
+            $dischargeReceiptUrl = url('/print/ipd-discharge-receipt/' . $admission->ipd_id);
+
             return response()->json([
                 'message' => 'Patient discharged successfully',
                 'admission' => $admission->fresh(['patient', 'treatingDoctor']),
+                'discharge_receipt_url' => $dischargeReceiptUrl,
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Discharge failed: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Get discharge receipt URL
+     */
+    public function getDischargeReceiptUrl(string $id)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+
+        $admission = IpdAdmission::where('hospital_id', $hospitalId)
+            ->where('ipd_id', $id)
+            ->first();
+
+        if (!$admission) {
+            return response()->json(['message' => 'IPD admission not found'], 404);
+        }
+
+        $dischargeReceiptUrl = url('/print/ipd-discharge-receipt/' . $admission->ipd_id);
+
+        return response()->json([
+            'discharge_receipt_url' => $dischargeReceiptUrl,
+            'is_discharged' => $admission->status === 'discharged',
+            'discharge_date' => $admission->discharge_date,
+        ]);
     }
 
     /**

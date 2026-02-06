@@ -79,6 +79,11 @@ class Bill extends Model
         return $this->hasMany(Payment::class, 'bill_id', 'bill_id');
     }
 
+    public function history()
+    {
+        return $this->hasMany(BillHistory::class, 'bill_id', 'bill_id');
+    }
+
     public function insuranceClaim()
     {
         return $this->belongsTo(InsuranceClaim::class, 'insurance_claim_id', 'claim_id');

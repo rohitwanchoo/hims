@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\Api\Pathology;
 
 use App\Http\Controllers\Controller;
-use App\Models\PathologistDoctorMap;
+use App\Models\Pathology\PathologistDoctorMap;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class PathologistDoctorMapController extends Controller
@@ -16,11 +17,24 @@ class PathologistDoctorMapController extends Controller
             $hospitalId = Auth::user()->hospital_id;
 
             $query = PathologistDoctorMap::where('hospital_id', $hospitalId)
-                ->with(['doctor']);
+                ->with(['doctor', 'faculty']);
+
+            // Faculty filter
+            if ($request->filled('faculty_id')) {
+                $query->where('faculty_id', $request->faculty_id);
+            }
 
             // Doctor filter
             if ($request->filled('doctor_id')) {
                 $query->where('doctor_id', $request->doctor_id);
+            }
+
+            // Search filter
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->whereHas('doctor', function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%");
+                });
             }
 
             // Active filter
@@ -58,9 +72,10 @@ class PathologistDoctorMapController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
+                'faculty_id' => 'required|exists:patho_faculties,faculty_id',
                 'doctor_id' => 'required|exists:doctors,doctor_id',
-                'signature_path' => 'nullable|string|max:255',
-                'is_default' => 'boolean',
+                'skill_set_id' => 'nullable|integer',
+                'signature' => 'nullable|image|max:2048',
                 'is_active' => 'boolean',
             ]);
 
@@ -71,26 +86,32 @@ class PathologistDoctorMapController extends Controller
                 ], 422);
             }
 
-            // If this is default, unset other defaults
-            if ($request->is_default) {
-                PathologistDoctorMap::where('hospital_id', Auth::user()->hospital_id)
-                    ->update(['is_default' => false]);
+            $signaturePath = null;
+            if ($request->hasFile('signature')) {
+                $file = $request->file('signature');
+                $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $signaturePath = $file->storeAs('pathologist_signatures', $filename, 'public');
             }
 
             $mapping = PathologistDoctorMap::create([
                 'hospital_id' => Auth::user()->hospital_id,
+                'faculty_id' => $request->faculty_id,
                 'doctor_id' => $request->doctor_id,
-                'signature_path' => $request->signature_path,
-                'is_default' => $request->is_default ?? false,
+                'skill_set_id' => $request->skill_set_id,
+                'signature_path' => $signaturePath,
                 'is_active' => $request->is_active ?? true,
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Pathologist mapping created successfully',
-                'data' => $mapping->load('doctor')
+                'data' => $mapping->load(['doctor', 'faculty'])
             ], 201);
         } catch (\Exception $e) {
+            \Log::error('Failed to create pathologist mapping: ' . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create pathologist mapping',
@@ -105,7 +126,7 @@ class PathologistDoctorMapController extends Controller
             $hospitalId = Auth::user()->hospital_id;
             $mapping = PathologistDoctorMap::where('hospital_id', $hospitalId)
                 ->where('map_id', $id)
-                ->with(['doctor'])
+                ->with(['doctor', 'faculty'])
                 ->firstOrFail();
 
             return response()->json([
@@ -130,9 +151,10 @@ class PathologistDoctorMapController extends Controller
                 ->firstOrFail();
 
             $validator = Validator::make($request->all(), [
+                'faculty_id' => 'required|exists:patho_faculties,faculty_id',
                 'doctor_id' => 'required|exists:doctors,doctor_id',
-                'signature_path' => 'nullable|string|max:255',
-                'is_default' => 'boolean',
+                'skill_set_id' => 'nullable|integer',
+                'signature' => 'nullable|image|max:2048',
                 'is_active' => 'boolean',
             ]);
 
@@ -143,24 +165,30 @@ class PathologistDoctorMapController extends Controller
                 ], 422);
             }
 
-            // If this is being set as default, unset other defaults
-            if ($request->is_default && !$mapping->is_default) {
-                PathologistDoctorMap::where('hospital_id', $hospitalId)
-                    ->where('map_id', '!=', $id)
-                    ->update(['is_default' => false]);
+            $updateData = [
+                'faculty_id' => $request->faculty_id,
+                'doctor_id' => $request->doctor_id,
+                'skill_set_id' => $request->skill_set_id,
+                'is_active' => $request->is_active ?? $mapping->is_active,
+            ];
+
+            if ($request->hasFile('signature')) {
+                // Delete old signature if exists
+                if ($mapping->signature_path && Storage::disk('public')->exists($mapping->signature_path)) {
+                    Storage::disk('public')->delete($mapping->signature_path);
+                }
+
+                $file = $request->file('signature');
+                $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $updateData['signature_path'] = $file->storeAs('pathologist_signatures', $filename, 'public');
             }
 
-            $mapping->update([
-                'doctor_id' => $request->doctor_id,
-                'signature_path' => $request->signature_path,
-                'is_default' => $request->is_default ?? $mapping->is_default,
-                'is_active' => $request->is_active ?? $mapping->is_active,
-            ]);
+            $mapping->update($updateData);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Pathologist mapping updated successfully',
-                'data' => $mapping->load('doctor')
+                'data' => $mapping->load(['doctor', 'faculty'])
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -194,62 +222,4 @@ class PathologistDoctorMapController extends Controller
         }
     }
 
-    public function getDefaultPathologist()
-    {
-        try {
-            $hospitalId = Auth::user()->hospital_id;
-            $mapping = PathologistDoctorMap::where('hospital_id', $hospitalId)
-                ->where('is_default', true)
-                ->where('is_active', true)
-                ->with(['doctor'])
-                ->first();
-
-            if (!$mapping) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No default pathologist found'
-                ], 404);
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => $mapping
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch default pathologist',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function setDefault($id)
-    {
-        try {
-            $hospitalId = Auth::user()->hospital_id;
-            $mapping = PathologistDoctorMap::where('hospital_id', $hospitalId)
-                ->where('map_id', $id)
-                ->firstOrFail();
-
-            // Unset all defaults
-            PathologistDoctorMap::where('hospital_id', $hospitalId)
-                ->update(['is_default' => false]);
-
-            // Set this as default
-            $mapping->update(['is_default' => true]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Default pathologist set successfully',
-                'data' => $mapping->load('doctor')
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to set default pathologist',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
 }

@@ -10,7 +10,7 @@ class Race extends Model
 {
     use HasFactory, BelongsToHospital;
 
-    protected $table = 'race';
+    protected $table = 'races';
     protected $primaryKey = 'race_id';
 
     protected $fillable = [

@@ -127,6 +127,29 @@ class PaymentController extends Controller
 
             $bill->save();
 
+            // Create bill history record for payment
+            \App\Models\BillHistory::create([
+                'bill_id' => $bill->bill_id,
+                'action' => 'payment_received',
+                'subtotal' => $bill->subtotal,
+                'discount_amount' => $bill->discount_amount,
+                'discount_percent' => $bill->discount_percent,
+                'tax_amount' => $bill->tax_amount,
+                'adjustment' => $bill->adjustment,
+                'total_amount' => $bill->total_amount,
+                'paid_amount' => $bill->paid_amount,
+                'due_amount' => $bill->due_amount,
+                'payment_mode' => $validated['payment_mode'],
+                'payment_status' => $bill->payment_status,
+                'changed_by' => Auth::id(),
+                'changes' => [
+                    'payment_number' => $paymentNumber,
+                    'payment_amount' => $validated['amount'],
+                    'payment_mode' => $validated['payment_mode'],
+                    'reference_number' => $validated['reference_number'] ?? null,
+                ],
+            ]);
+
             return response()->json($payment->load(['bill.patient', 'receivedByUser']), 201);
         });
     }

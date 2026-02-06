@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Pathology;
 
 use App\Http\Controllers\Controller;
-use App\Models\Race;
+use App\Models\Pathology\Race;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -21,7 +21,7 @@ class RaceController extends Controller
             if ($request->filled('search')) {
                 $search = $request->search;
                 $query->where(function($q) use ($search) {
-                    $q->where('race_name', 'like', "%{$search}%")
+                    $q->where('race_description', 'like', "%{$search}%")
                       ->orWhere('race_code', 'like', "%{$search}%");
                 });
             }
@@ -32,7 +32,7 @@ class RaceController extends Controller
             }
 
             // Sorting
-            $sortBy = $request->get('sort_by', 'race_name');
+            $sortBy = $request->get('sort_by', 'race_description');
             $sortOrder = $request->get('sort_order', 'asc');
             $query->orderBy($sortBy, $sortOrder);
 
@@ -61,9 +61,8 @@ class RaceController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'race_name' => 'required|string|max:100',
+                'race_description' => 'required|string|max:100',
                 'race_code' => 'nullable|string|max:50',
-                'description' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -76,9 +75,8 @@ class RaceController extends Controller
 
             $race = Race::create([
                 'hospital_id' => Auth::user()->hospital_id,
-                'race_name' => $request->race_name,
+                'race_description' => $request->race_description,
                 'race_code' => $request->race_code,
-                'description' => $request->description,
                 'is_active' => $request->is_active ?? true,
             ]);
 
@@ -126,9 +124,8 @@ class RaceController extends Controller
                 ->firstOrFail();
 
             $validator = Validator::make($request->all(), [
-                'race_name' => 'required|string|max:100',
+                'race_description' => 'required|string|max:100',
                 'race_code' => 'nullable|string|max:50',
-                'description' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -140,9 +137,8 @@ class RaceController extends Controller
             }
 
             $race->update([
-                'race_name' => $request->race_name,
+                'race_description' => $request->race_description,
                 'race_code' => $request->race_code,
-                'description' => $request->description,
                 'is_active' => $request->is_active ?? $race->is_active,
             ]);
 

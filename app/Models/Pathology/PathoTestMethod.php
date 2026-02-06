@@ -10,7 +10,7 @@ class PathoTestMethod extends Model
 {
     use HasFactory, BelongsToHospital;
 
-    protected $table = 'patho_test_method';
+    protected $table = 'patho_test_methods';
     protected $primaryKey = 'method_id';
 
     protected $fillable = [

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Pathology;
 
 use App\Http\Controllers\Controller;
-use App\Models\PathoSensitivity;
+use App\Models\Pathology\PathoSensitivity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -20,10 +20,7 @@ class PathoSensitivityController extends Controller
             // Search filter
             if ($request->filled('search')) {
                 $search = $request->search;
-                $query->where(function($q) use ($search) {
-                    $q->where('sensitivity_name', 'like', "%{$search}%")
-                      ->orWhere('sensitivity_code', 'like', "%{$search}%");
-                });
+                $query->where('sensitivity_name', 'like', "%{$search}%");
             }
 
             // Active filter
@@ -62,8 +59,6 @@ class PathoSensitivityController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'sensitivity_name' => 'required|string|max:100',
-                'sensitivity_code' => 'nullable|string|max:50',
-                'description' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -77,8 +72,6 @@ class PathoSensitivityController extends Controller
             $sensitivity = PathoSensitivity::create([
                 'hospital_id' => Auth::user()->hospital_id,
                 'sensitivity_name' => $request->sensitivity_name,
-                'sensitivity_code' => $request->sensitivity_code,
-                'description' => $request->description,
                 'is_active' => $request->is_active ?? true,
             ]);
 
@@ -127,8 +120,6 @@ class PathoSensitivityController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'sensitivity_name' => 'required|string|max:100',
-                'sensitivity_code' => 'nullable|string|max:50',
-                'description' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -141,8 +132,6 @@ class PathoSensitivityController extends Controller
 
             $sensitivity->update([
                 'sensitivity_name' => $request->sensitivity_name,
-                'sensitivity_code' => $request->sensitivity_code,
-                'description' => $request->description,
                 'is_active' => $request->is_active ?? $sensitivity->is_active,
             ]);
 

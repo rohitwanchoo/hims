@@ -20,7 +20,7 @@
                             placeholder="Search by sensitivity name...">
                     </div>
                     <div class="col-md-2">
-                        <select class="form-select form-select-sm" v-model="filters.status" @change="loadSensitivities">
+                        <select class="form-select form-select-sm" v-model="filters.is_active" @change="loadSensitivities">
                             <option value="">All Status</option>
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
@@ -41,15 +41,14 @@
                         <thead class="table-light sticky-top">
                             <tr>
                                 <th style="width: 60px;">#</th>
-                                <th style="min-width: 250px;">Sensitivity Name</th>
-                                <th style="min-width: 200px;">Description</th>
+                                <th style="min-width: 350px;">Sensitivity Name</th>
                                 <th style="width: 100px;" class="text-center">Status</th>
                                 <th style="width: 120px;" class="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="loading">
-                                <td colspan="5" class="text-center py-3">
+                                <td colspan="4" class="text-center py-3">
                                     <div class="spinner-border spinner-border-sm" role="status">
                                         <span class="visually-hidden">Loading...</span>
                                     </div>
@@ -57,14 +56,13 @@
                                 </td>
                             </tr>
                             <tr v-else-if="sensitivities.length === 0">
-                                <td colspan="5" class="text-center text-muted py-3">
+                                <td colspan="4" class="text-center text-muted py-3">
                                     No sensitivities found
                                 </td>
                             </tr>
-                            <tr v-else v-for="(item, index) in sensitivities" :key="item.id">
+                            <tr v-else v-for="(item, index) in sensitivities" :key="item.sensitivity_id">
                                 <td>{{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}</td>
                                 <td>{{ item.sensitivity_name }}</td>
-                                <td>{{ item.description || '-' }}</td>
                                 <td class="text-center">
                                     <span :class="item.is_active ? 'badge bg-success' : 'badge bg-secondary'">
                                         {{ item.is_active ? 'Active' : 'Inactive' }}
@@ -74,7 +72,7 @@
                                     <button class="btn btn-sm btn-outline-primary me-1" @click="editSensitivity(item)" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger" @click="deleteSensitivity(item.id)" title="Delete">
+                                    <button class="btn btn-sm btn-outline-danger" @click="deleteSensitivity(item.sensitivity_id)" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
@@ -127,14 +125,6 @@
                                     placeholder="e.g., Penicillin, Amoxicillin"
                                     required>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Description</label>
-                                <textarea
-                                    class="form-control"
-                                    v-model="form.description"
-                                    rows="3"
-                                    placeholder="Optional description"></textarea>
-                            </div>
                             <div class="form-check">
                                 <input
                                     type="checkbox"
@@ -171,7 +161,7 @@ const error = ref(null);
 const sensitivities = ref([]);
 const filters = ref({
     search: '',
-    status: '',
+    is_active: '',
     per_page: 20,
     page: 1,
 });
@@ -188,7 +178,6 @@ const pagination = ref({
 const editMode = ref(false);
 const form = ref({
     sensitivity_name: '',
-    description: '',
     is_active: true,
 });
 
@@ -223,18 +212,24 @@ const loadSensitivities = async () => {
     error.value = null;
     try {
         const response = await axios.get('/api/pathology/sensitivities', { params: filters.value });
-        if (response.data.data) {
-            sensitivities.value = response.data.data;
+                if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            sensitivities.value = paginatedData.data || paginatedData;
             pagination.value = {
-                current_page: response.data.current_page,
-                last_page: response.data.last_page,
-                per_page: response.data.per_page,
-                total: response.data.total,
-                from: response.data.from,
-                to: response.data.to,
+                current_page: paginatedData.current_page || 1,
+                last_page: paginatedData.last_page || 1,
+                per_page: paginatedData.per_page || 20,
+                total: paginatedData.total || 0,
+                from: paginatedData.from || 0,
+                to: paginatedData.to || 0,
             };
         } else {
-            sensitivities.value = response.data;
+            sensitivities.value = response.data.data || response.data;
+        }
+
+        // Ensure array
+        if (!Array.isArray(sensitivities.value)) {
+            sensitivities.value = [];
         }
     } catch (err) {
         console.error('Error loading sensitivities:', err);
@@ -256,7 +251,6 @@ const openAddModal = () => {
     error.value = null;
     form.value = {
         sensitivity_name: '',
-        description: '',
         is_active: true,
     };
     if (sensitivityModal) {
@@ -268,9 +262,8 @@ const editSensitivity = (item) => {
     editMode.value = true;
     error.value = null;
     form.value = {
-        id: item.id,
+        sensitivity_id: item.sensitivity_id,
         sensitivity_name: item.sensitivity_name,
-        description: item.description,
         is_active: item.is_active,
     };
     if (sensitivityModal) {
@@ -283,7 +276,7 @@ const saveSensitivity = async () => {
     error.value = null;
     try {
         if (editMode.value) {
-            await axios.put(`/api/pathology/sensitivities/${form.value.id}`, form.value);
+            await axios.put(`/api/pathology/sensitivities/${form.value.sensitivity_id}`, form.value);
         } else {
             await axios.post('/api/pathology/sensitivities', form.value);
         }

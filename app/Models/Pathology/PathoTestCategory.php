@@ -10,7 +10,7 @@ class PathoTestCategory extends Model
 {
     use HasFactory, BelongsToHospital;
 
-    protected $table = 'patho_test_category';
+    protected $table = 'patho_test_categories';
     protected $primaryKey = 'category_id';
 
     protected $fillable = [
@@ -36,6 +36,14 @@ class PathoTestCategory extends Model
     public function parentCategory()
     {
         return $this->belongsTo(PathoTestCategory::class, 'parent_category_id', 'category_id');
+    }
+
+    /**
+     * Alias for parentCategory relationship.
+     */
+    public function parent()
+    {
+        return $this->parentCategory();
     }
 
     /**

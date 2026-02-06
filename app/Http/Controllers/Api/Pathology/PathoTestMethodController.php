@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Pathology;
 
 use App\Http\Controllers\Controller;
-use App\Models\PathoTestMethod;
+use App\Models\Pathology\PathoTestMethod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -63,7 +63,8 @@ class PathoTestMethodController extends Controller
             $validator = Validator::make($request->all(), [
                 'method_name' => 'required|string|max:100',
                 'method_code' => 'nullable|string|max:50',
-                'description' => 'nullable|string',
+                'use_for_blood_bank' => 'boolean',
+                'remarks' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -78,7 +79,8 @@ class PathoTestMethodController extends Controller
                 'hospital_id' => Auth::user()->hospital_id,
                 'method_name' => $request->method_name,
                 'method_code' => $request->method_code,
-                'description' => $request->description,
+                'use_for_blood_bank' => $request->use_for_blood_bank ?? false,
+                'remarks' => $request->remarks,
                 'is_active' => $request->is_active ?? true,
             ]);
 
@@ -128,7 +130,8 @@ class PathoTestMethodController extends Controller
             $validator = Validator::make($request->all(), [
                 'method_name' => 'required|string|max:100',
                 'method_code' => 'nullable|string|max:50',
-                'description' => 'nullable|string',
+                'use_for_blood_bank' => 'boolean',
+                'remarks' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -142,7 +145,8 @@ class PathoTestMethodController extends Controller
             $method->update([
                 'method_name' => $request->method_name,
                 'method_code' => $request->method_code,
-                'description' => $request->description,
+                'use_for_blood_bank' => $request->use_for_blood_bank ?? $method->use_for_blood_bank,
+                'remarks' => $request->remarks,
                 'is_active' => $request->is_active ?? $method->is_active,
             ]);
 

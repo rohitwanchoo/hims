@@ -1,11 +1,10 @@
 <template>
   <div class="doctor-workbench">
-    <div class="container-fluid py-4">
+    <div class="container-fluid">
       <!-- Header -->
-      <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-0">
         <div>
-          <h2 class="mb-1 fw-bold">Doctor Workbench Dashboard</h2>
-          <p class="text-muted mb-0 small">Manage patient consultations and appointments</p>
+          <h4 class="mb-0 fw-bold">Doctor Workbench Dashboard</h4>
         </div>
         <div class="d-flex gap-2">
           <!-- Date Filter -->
@@ -36,50 +35,37 @@
           <!-- Refresh Button -->
           <button class="modern-btn modern-btn-outline" @click="fetchData">
             <i class="bi bi-arrow-clockwise"></i>
-            <span>Refresh</span>
           </button>
         </div>
       </div>
 
       <!-- Statistics Cards -->
-      <div class="row g-3 mb-4">
-        <div class="col-xl-3 col-lg-6 col-md-6">
-          <div class="stat-card stat-card-gradient-primary">
-            <div class="stat-content-full">
-              <div class="stat-label-top">Total Visits</div>
-              <div class="stat-value-large">{{ stats.total_visits }}</div>
-              <div class="stat-description">Today's appointments</div>
-            </div>
+      <div class="row g-2 mb-1">
+        <div class="col-3">
+          <div class="stat-card-compact stat-card-gradient-primary">
+            <div class="stat-label-compact">Total Visits</div>
+            <div class="stat-value-compact">{{ stats.total_visits }}</div>
           </div>
         </div>
 
-        <div class="col-xl-3 col-lg-6 col-md-6">
-          <div class="stat-card stat-card-gradient-warning">
-            <div class="stat-content-full">
-              <div class="stat-label-top">Waiting</div>
-              <div class="stat-value-large">{{ stats.waiting }}</div>
-              <div class="stat-description">In queue for consultation</div>
-            </div>
+        <div class="col-3">
+          <div class="stat-card-compact stat-card-gradient-warning">
+            <div class="stat-label-compact">Waiting</div>
+            <div class="stat-value-compact">{{ stats.waiting }}</div>
           </div>
         </div>
 
-        <div class="col-xl-3 col-lg-6 col-md-6">
-          <div class="stat-card stat-card-gradient-info">
-            <div class="stat-content-full">
-              <div class="stat-label-top">In Consultation</div>
-              <div class="stat-value-large">{{ stats.in_consultation }}</div>
-              <div class="stat-description">Currently consulting</div>
-            </div>
+        <div class="col-3">
+          <div class="stat-card-compact stat-card-gradient-info">
+            <div class="stat-label-compact">In Consultation</div>
+            <div class="stat-value-compact">{{ stats.in_consultation }}</div>
           </div>
         </div>
 
-        <div class="col-xl-3 col-lg-6 col-md-6">
-          <div class="stat-card stat-card-gradient-success">
-            <div class="stat-content-full">
-              <div class="stat-label-top">Completed</div>
-              <div class="stat-value-large">{{ stats.completed }}</div>
-              <div class="stat-description">Finished consultations</div>
-            </div>
+        <div class="col-3">
+          <div class="stat-card-compact stat-card-gradient-success">
+            <div class="stat-label-compact">Completed</div>
+            <div class="stat-value-compact">{{ stats.completed }}</div>
           </div>
         </div>
       </div>
@@ -144,7 +130,7 @@
                 <p class="mt-2">No OPD visits for selected date</p>
               </div>
               <div v-else class="table-responsive">
-                <table class="table table-hover mb-0 modern-table">
+                <table class="table table-sm table-hover mb-0 modern-table">
                   <thead>
                     <tr>
                       <th>Token</th>
@@ -248,7 +234,7 @@
                 <p class="mt-2">No patients found</p>
               </div>
               <div v-else class="table-responsive">
-                <table class="table table-hover mb-0 modern-table">
+                <table class="table table-sm table-hover mb-0 modern-table">
                   <thead>
                     <tr>
                       <th>Patient ID</th>
@@ -374,7 +360,7 @@
                 No OPD visits found for this patient
               </div>
               <div v-else class="table-responsive">
-                <table class="table table-bordered">
+                <table class="table table-sm table-bordered">
                   <thead class="table-light">
                     <tr>
                       <th>Visit Date</th>
@@ -385,7 +371,13 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="visit in patientOpdVisits" :key="visit.opd_id">
+                    <tr
+                      v-for="visit in patientOpdVisits"
+                      :key="visit.opd_id"
+                      @click="viewVisitDetails(visit)"
+                      style="cursor: pointer;"
+                      class="history-row"
+                    >
                       <td>{{ formatDate(visit.visit_date) }}</td>
                       <td>{{ visit.token_number }}</td>
                       <td>{{ visit.doctor?.full_name || 'N/A' }}</td>
@@ -416,6 +408,128 @@
             >
               Close
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Visit Details Modal -->
+    <div class="modal fade" id="visitDetailsModal" tabindex="-1" ref="visitDetailsModal">
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="bi bi-file-medical me-2"></i>
+              Visit Details - {{ selectedVisit ? formatDate(selectedVisit.visit_date) : '' }}
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div v-if="loadingVisitDetails" class="text-center py-4">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+            <div v-else-if="selectedVisit">
+              <!-- Consultation Details -->
+              <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                  <h6 class="mb-0"><i class="bi bi-clipboard2-pulse me-2"></i>Consultation Details</h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <strong>Chief Complaints:</strong>
+                      <p>{{ selectedVisit.chief_complaints || 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <strong>History of Illness:</strong>
+                      <p>{{ selectedVisit.history_of_illness || 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <strong>Examination Notes:</strong>
+                      <p>{{ selectedVisit.examination_notes || 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <strong>Diagnosis:</strong>
+                      <p>{{ selectedVisit.diagnosis || 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <strong>Advice:</strong>
+                      <p>{{ selectedVisit.advice || 'N/A' }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <strong>Follow-up Date:</strong>
+                      <p>{{ selectedVisit.followup_date ? formatDate(selectedVisit.followup_date) : 'N/A' }}</p>
+                    </div>
+                  </div>
+
+                  <!-- Vitals -->
+                  <div v-if="hasVitals(selectedVisit)" class="mt-3">
+                    <h6><i class="bi bi-heart-pulse me-2"></i>Vitals</h6>
+                    <div class="row">
+                      <div class="col-md-3" v-if="selectedVisit.vitals_bp_systolic">
+                        <strong>BP:</strong> {{ selectedVisit.vitals_bp_systolic }}/{{ selectedVisit.vitals_bp_diastolic }} mmHg
+                      </div>
+                      <div class="col-md-3" v-if="selectedVisit.vitals_pulse">
+                        <strong>Pulse:</strong> {{ selectedVisit.vitals_pulse }} bpm
+                      </div>
+                      <div class="col-md-3" v-if="selectedVisit.vitals_temperature">
+                        <strong>Temp:</strong> {{ selectedVisit.vitals_temperature }}°F
+                      </div>
+                      <div class="col-md-3" v-if="selectedVisit.vitals_spo2">
+                        <strong>SpO2:</strong> {{ selectedVisit.vitals_spo2 }}%
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Prescription -->
+              <div class="card" v-if="visitPrescription">
+                <div class="card-header bg-success text-white">
+                  <h6 class="mb-0"><i class="bi bi-capsule me-2"></i>Prescription</h6>
+                </div>
+                <div class="card-body">
+                  <div v-if="visitPrescription.drugs && visitPrescription.drugs.length > 0">
+                    <table class="table table-sm table-bordered">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Drug Name</th>
+                          <th>Dose & Advice</th>
+                          <th>Days</th>
+                          <th>Qty</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(drug, index) in visitPrescription.drugs" :key="index">
+                          <td>{{ index + 1 }}</td>
+                          <td>{{ drug.drug_name }}</td>
+                          <td>{{ drug.dose_advice || 'N/A' }}</td>
+                          <td>{{ drug.days || 'N/A' }}</td>
+                          <td>{{ drug.qty || 'N/A' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <div v-if="visitPrescription.advice" class="mt-3">
+                      <strong>Additional Advice:</strong>
+                      <p>{{ visitPrescription.advice }}</p>
+                    </div>
+                    <div v-if="visitPrescription.investigations" class="mt-2">
+                      <strong>Investigations:</strong>
+                      <p>{{ visitPrescription.investigations }}</p>
+                    </div>
+                  </div>
+                  <div v-else class="alert alert-info">
+                    No prescription available for this visit
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
           </div>
         </div>
       </div>
@@ -460,6 +574,13 @@ const selectedPatient = ref(null);
 const patientOpdVisits = ref([]);
 const historyModal = ref(null);
 let historyModalInstance = null;
+
+// Visit details
+const selectedVisit = ref(null);
+const visitPrescription = ref(null);
+const loadingVisitDetails = ref(false);
+const visitDetailsModal = ref(null);
+let visitDetailsModalInstance = null;
 
 // Methods
 const fetchData = async () => {
@@ -590,6 +711,76 @@ const formatStatus = (status) => {
   return statusMap[status] || status;
 };
 
+const viewVisitDetails = async (visit) => {
+  selectedVisit.value = visit;
+  visitPrescription.value = null;
+  loadingVisitDetails.value = true;
+
+  // Show modal
+  if (!visitDetailsModalInstance) {
+    visitDetailsModalInstance = new Modal(visitDetailsModal.value);
+  }
+  visitDetailsModalInstance.show();
+
+  try {
+    // Fetch consultation record (contains form_data with all consultation details)
+    try {
+      const consultationResponse = await axios.get(`/api/opd-visits/${visit.opd_id}/consultation-record`);
+      if (consultationResponse.data && consultationResponse.data.form_data) {
+        const formData = consultationResponse.data.form_data;
+
+        // Map form_data fields to visit object for display
+        selectedVisit.value = {
+          ...visit,
+          chief_complaints: formData.chief_complaint || formData.chief_complaints || null,
+          history_of_illness: formData.history_present_illness || formData.history_of_illness || null,
+          examination_notes: formData.general_appearance || formData.examination_notes || null,
+          diagnosis: formData.provisional_diagnosis || formData.diagnosis || null,
+          advice: formData.advice || null,
+          followup_date: formData.followup_date || null,
+          vitals_bp_systolic: formData.blood_pressure ? formData.blood_pressure.split('/')[0] : null,
+          vitals_bp_diastolic: formData.blood_pressure ? formData.blood_pressure.split('/')[1] : null,
+          vitals_pulse: formData.pulse_rate || null,
+          vitals_temperature: formData.temperature || null,
+          vitals_spo2: formData.spo2 || null,
+          vitals_weight: formData.weight || null,
+          vitals_height: formData.height || null,
+        };
+      } else {
+        // No consultation record found, use visit data as is
+        selectedVisit.value = visit;
+      }
+    } catch (error) {
+      console.log('No consultation record found, using visit data');
+      selectedVisit.value = visit;
+    }
+
+    // Fetch prescription if exists
+    try {
+      const prescriptionResponse = await axios.get(`/api/prescriptions/opd-visit/${visit.opd_id}`);
+      if (prescriptionResponse.data) {
+        visitPrescription.value = prescriptionResponse.data;
+      }
+    } catch (error) {
+      console.log('No prescription found for this visit');
+    }
+  } catch (error) {
+    console.error('Error loading visit details:', error);
+    alert('Error loading visit details');
+  } finally {
+    loadingVisitDetails.value = false;
+  }
+};
+
+const hasVitals = (visit) => {
+  return visit.vitals_bp_systolic ||
+         visit.vitals_pulse ||
+         visit.vitals_temperature ||
+         visit.vitals_spo2 ||
+         visit.vitals_weight ||
+         visit.vitals_height;
+};
+
 // Lifecycle
 onMounted(() => {
   fetchData();
@@ -600,7 +791,7 @@ onMounted(() => {
 .doctor-workbench {
   min-height: 100vh;
   background-color: #f8f9fa;
-  padding: 1.5rem;
+  padding: 0.5rem;
 }
 
 /* Modern Buttons */
@@ -838,5 +1029,79 @@ onMounted(() => {
 .btn-sm {
   padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
+}
+
+/* History Row Hover */
+.history-row:hover {
+  background-color: #f0f8ff;
+  transition: background-color 0.2s ease;
+}
+
+/* Compact Stat Cards */
+.stat-card-compact {
+  border-radius: 16px;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 70px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card-compact:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.stat-label-compact {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.9;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value-compact {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Responsive Styles for Small Screens */
+@media (max-width: 1600px) {
+  h2, h4 {
+    font-size: 1.5rem !important;
+  }
+
+  .stat-value-compact {
+    font-size: 1.1rem !important;
+  }
+
+  .stat-card-compact {
+    padding: 0.65rem 0.85rem !important;
+    min-height: 65px !important;
+  }
+
+  .modern-table {
+    font-size: 0.813rem;
+  }
+
+  .modern-table thead th,
+  .modern-table tbody td {
+    padding: 0.5rem 0.4rem;
+  }
+
+  .modern-card-header {
+    padding: 1rem 1.25rem;
+  }
+
+  .modern-card-body {
+    padding: 1.25rem;
+  }
 }
 </style>

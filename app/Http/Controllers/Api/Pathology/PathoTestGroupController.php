@@ -3,8 +3,7 @@
 namespace App\Http\Controllers\Api\Pathology;
 
 use App\Http\Controllers\Controller;
-use App\Models\PathoTestGroup;
-use App\Models\PathoTestGroupMap;
+use App\Models\Pathology\PathoTestGroup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -18,7 +17,7 @@ class PathoTestGroupController extends Controller
             $hospitalId = Auth::user()->hospital_id;
 
             $query = PathoTestGroup::where('hospital_id', $hospitalId)
-                ->with(['category', 'tests']);
+                ->withCount('pathoTests');
 
             // Search filter
             if ($request->filled('search')) {
@@ -27,11 +26,6 @@ class PathoTestGroupController extends Controller
                     $q->where('group_name', 'like', "%{$search}%")
                       ->orWhere('group_code', 'like', "%{$search}%");
                 });
-            }
-
-            // Category filter
-            if ($request->filled('category_id')) {
-                $query->where('category_id', $request->category_id);
             }
 
             // Active filter
@@ -71,13 +65,9 @@ class PathoTestGroupController extends Controller
             $validator = Validator::make($request->all(), [
                 'group_name' => 'required|string|max:200',
                 'group_code' => 'nullable|string|max:50',
-                'category_id' => 'nullable|exists:patho_test_categories,category_id',
-                'description' => 'nullable|string',
-                'display_order' => 'nullable|integer',
-                'price' => 'nullable|numeric|min:0',
+                'is_default_group' => 'boolean',
+                'remarks' => 'nullable|string',
                 'is_active' => 'boolean',
-                'tests' => 'nullable|array',
-                'tests.*' => 'exists:patho_tests,test_id',
             ]);
 
             if ($validator->fails()) {
@@ -87,38 +77,21 @@ class PathoTestGroupController extends Controller
                 ], 422);
             }
 
-            DB::beginTransaction();
-
             $group = PathoTestGroup::create([
                 'hospital_id' => Auth::user()->hospital_id,
                 'group_name' => $request->group_name,
                 'group_code' => $request->group_code,
-                'category_id' => $request->category_id,
-                'description' => $request->description,
-                'display_order' => $request->display_order ?? 0,
-                'price' => $request->price ?? 0,
+                'is_default_group' => $request->is_default_group ?? false,
+                'remarks' => $request->remarks,
                 'is_active' => $request->is_active ?? true,
             ]);
-
-            // Map tests to group
-            if ($request->filled('tests')) {
-                foreach ($request->tests as $testId) {
-                    PathoTestGroupMap::create([
-                        'group_id' => $group->group_id,
-                        'test_id' => $testId,
-                    ]);
-                }
-            }
-
-            DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Test group created successfully',
-                'data' => $group->load(['category', 'tests'])
+                'data' => $group
             ], 201);
         } catch (\Exception $e) {
-            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create test group',
@@ -133,7 +106,7 @@ class PathoTestGroupController extends Controller
             $hospitalId = Auth::user()->hospital_id;
             $group = PathoTestGroup::where('hospital_id', $hospitalId)
                 ->where('group_id', $id)
-                ->with(['category', 'tests'])
+                ->withCount('pathoTests')
                 ->firstOrFail();
 
             return response()->json([
@@ -160,13 +133,9 @@ class PathoTestGroupController extends Controller
             $validator = Validator::make($request->all(), [
                 'group_name' => 'required|string|max:200',
                 'group_code' => 'nullable|string|max:50',
-                'category_id' => 'nullable|exists:patho_test_categories,category_id',
-                'description' => 'nullable|string',
-                'display_order' => 'nullable|integer',
-                'price' => 'nullable|numeric|min:0',
+                'is_default_group' => 'boolean',
+                'remarks' => 'nullable|string',
                 'is_active' => 'boolean',
-                'tests' => 'nullable|array',
-                'tests.*' => 'exists:patho_tests,test_id',
             ]);
 
             if ($validator->fails()) {
@@ -176,43 +145,20 @@ class PathoTestGroupController extends Controller
                 ], 422);
             }
 
-            DB::beginTransaction();
-
             $group->update([
                 'group_name' => $request->group_name,
                 'group_code' => $request->group_code,
-                'category_id' => $request->category_id,
-                'description' => $request->description,
-                'display_order' => $request->display_order ?? $group->display_order,
-                'price' => $request->price ?? $group->price,
+                'is_default_group' => $request->is_default_group ?? $group->is_default_group,
+                'remarks' => $request->remarks,
                 'is_active' => $request->is_active ?? $group->is_active,
             ]);
-
-            // Update test mappings
-            if ($request->has('tests')) {
-                // Delete existing mappings
-                PathoTestGroupMap::where('group_id', $group->group_id)->delete();
-
-                // Create new mappings
-                if (is_array($request->tests)) {
-                    foreach ($request->tests as $testId) {
-                        PathoTestGroupMap::create([
-                            'group_id' => $group->group_id,
-                            'test_id' => $testId,
-                        ]);
-                    }
-                }
-            }
-
-            DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Test group updated successfully',
-                'data' => $group->load(['category', 'tests'])
+                'data' => $group
             ]);
         } catch (\Exception $e) {
-            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update test group',
@@ -229,22 +175,18 @@ class PathoTestGroupController extends Controller
                 ->where('group_id', $id)
                 ->firstOrFail();
 
-            DB::beginTransaction();
+            // Delete test mappings if relationship exists
+            if (method_exists($group, 'pathoTests')) {
+                $group->pathoTests()->delete();
+            }
 
-            // Delete test mappings
-            PathoTestGroupMap::where('group_id', $group->group_id)->delete();
-
-            // Delete group
             $group->delete();
-
-            DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Test group deleted successfully'
             ]);
         } catch (\Exception $e) {
-            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete test group',
@@ -253,7 +195,31 @@ class PathoTestGroupController extends Controller
         }
     }
 
-    public function mapTests(Request $request, $id)
+    public function getGroupTests($id)
+    {
+        try {
+            $hospitalId = Auth::user()->hospital_id;
+            $group = PathoTestGroup::where('hospital_id', $hospitalId)
+                ->where('group_id', $id)
+                ->firstOrFail();
+
+            // Load tests if relationship exists
+            $tests = method_exists($group, 'pathoTests') ? $group->pathoTests : [];
+
+            return response()->json([
+                'success' => true,
+                'data' => $tests
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch group tests',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function addTestToGroup(Request $request, $id)
     {
         try {
             $hospitalId = Auth::user()->hospital_id;
@@ -262,8 +228,7 @@ class PathoTestGroupController extends Controller
                 ->firstOrFail();
 
             $validator = Validator::make($request->all(), [
-                'tests' => 'required|array',
-                'tests.*' => 'exists:patho_tests,test_id',
+                'test_id' => 'required|exists:patho_tests,test_id',
             ]);
 
             if ($validator->fails()) {
@@ -273,31 +238,45 @@ class PathoTestGroupController extends Controller
                 ], 422);
             }
 
-            DB::beginTransaction();
-
-            // Delete existing mappings
-            PathoTestGroupMap::where('group_id', $group->group_id)->delete();
-
-            // Create new mappings
-            foreach ($request->tests as $testId) {
-                PathoTestGroupMap::create([
-                    'group_id' => $group->group_id,
-                    'test_id' => $testId,
-                ]);
+            if (method_exists($group, 'pathoTests')) {
+                // Since pathoTests is hasMany, we need to update the test's group_id
+                \App\Models\Pathology\PathoTest::where('test_id', $request->test_id)->update(['group_id' => $group->group_id]);
             }
-
-            DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Tests mapped successfully',
-                'data' => $group->load('tests')
+                'message' => 'Test added to group successfully'
             ]);
         } catch (\Exception $e) {
-            DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to map tests',
+                'message' => 'Failed to add test to group',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function removeTestFromGroup($groupId, $testId)
+    {
+        try {
+            $hospitalId = Auth::user()->hospital_id;
+            $group = PathoTestGroup::where('hospital_id', $hospitalId)
+                ->where('group_id', $groupId)
+                ->firstOrFail();
+
+            if (method_exists($group, 'pathoTests')) {
+                // Since pathoTests is hasMany, we need to set the test's group_id to null
+                \App\Models\Pathology\PathoTest::where('test_id', $testId)->where('group_id', $group->group_id)->update(['group_id' => null]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Test removed from group successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to remove test from group',
                 'error' => $e->getMessage()
             ], 500);
         }

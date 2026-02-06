@@ -20,7 +20,7 @@
                             placeholder="Search by faculty name...">
                     </div>
                     <div class="col-md-2">
-                        <select class="form-select form-select-sm" v-model="filters.status" @change="loadFaculties">
+                        <select class="form-select form-select-sm" v-model="filters.is_active" @change="loadFaculties">
                             <option value="">All Status</option>
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
@@ -41,15 +41,16 @@
                         <thead class="table-light sticky-top">
                             <tr>
                                 <th style="width: 60px;">#</th>
-                                <th style="min-width: 250px;">Faculty Name</th>
-                                <th style="min-width: 200px;">Description</th>
+                                <th style="min-width: 200px;">Faculty Name</th>
+                                <th style="min-width: 150px;">Faculty Code</th>
+                                <th style="min-width: 200px;">Remarks</th>
                                 <th style="width: 100px;" class="text-center">Status</th>
                                 <th style="width: 120px;" class="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="loading">
-                                <td colspan="5" class="text-center py-3">
+                                <td colspan="6" class="text-center py-3">
                                     <div class="spinner-border spinner-border-sm" role="status">
                                         <span class="visually-hidden">Loading...</span>
                                     </div>
@@ -57,14 +58,15 @@
                                 </td>
                             </tr>
                             <tr v-else-if="faculties.length === 0">
-                                <td colspan="5" class="text-center text-muted py-3">
+                                <td colspan="6" class="text-center text-muted py-3">
                                     No faculties found
                                 </td>
                             </tr>
-                            <tr v-else v-for="(item, index) in faculties" :key="item.id">
+                            <tr v-else v-for="(item, index) in faculties" :key="item.faculty_id">
                                 <td>{{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}</td>
                                 <td>{{ item.faculty_name }}</td>
-                                <td>{{ item.description || '-' }}</td>
+                                <td>{{ item.faculty_code || '-' }}</td>
+                                <td>{{ item.remarks || '-' }}</td>
                                 <td class="text-center">
                                     <span :class="item.is_active ? 'badge bg-success' : 'badge bg-secondary'">
                                         {{ item.is_active ? 'Active' : 'Inactive' }}
@@ -74,7 +76,7 @@
                                     <button class="btn btn-sm btn-outline-primary me-1" @click="editFaculty(item)" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger" @click="deleteFaculty(item.id)" title="Delete">
+                                    <button class="btn btn-sm btn-outline-danger" @click="deleteFaculty(item.faculty_id)" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
@@ -128,10 +130,18 @@
                                     required>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Description</label>
+                                <label class="form-label">Faculty Code</label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    v-model="form.faculty_code"
+                                    placeholder="e.g., HEM, BIO">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Remarks</label>
                                 <textarea
                                     class="form-control"
-                                    v-model="form.description"
+                                    v-model="form.remarks"
                                     rows="3"
                                     placeholder="Optional description"></textarea>
                             </div>
@@ -171,7 +181,7 @@ const error = ref(null);
 const faculties = ref([]);
 const filters = ref({
     search: '',
-    status: '',
+    is_active: '',
     per_page: 20,
     page: 1,
 });
@@ -188,7 +198,8 @@ const pagination = ref({
 const editMode = ref(false);
 const form = ref({
     faculty_name: '',
-    description: '',
+    faculty_code: '',
+    remarks: '',
     is_active: true,
 });
 
@@ -223,18 +234,24 @@ const loadFaculties = async () => {
     error.value = null;
     try {
         const response = await axios.get('/api/pathology/faculties', { params: filters.value });
-        if (response.data.data) {
-            faculties.value = response.data.data;
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            faculties.value = paginatedData.data || paginatedData;
             pagination.value = {
-                current_page: response.data.current_page,
-                last_page: response.data.last_page,
-                per_page: response.data.per_page,
-                total: response.data.total,
-                from: response.data.from,
-                to: response.data.to,
+                current_page: paginatedData.current_page || 1,
+                last_page: paginatedData.last_page || 1,
+                per_page: paginatedData.per_page || 20,
+                total: paginatedData.total || 0,
+                from: paginatedData.from || 0,
+                to: paginatedData.to || 0,
             };
         } else {
-            faculties.value = response.data;
+            faculties.value = response.data.data || response.data;
+        }
+
+        // Ensure faculties is always an array
+        if (!Array.isArray(faculties.value)) {
+            faculties.value = [];
         }
     } catch (err) {
         console.error('Error loading faculties:', err);
@@ -256,7 +273,8 @@ const openAddModal = () => {
     error.value = null;
     form.value = {
         faculty_name: '',
-        description: '',
+        faculty_code: '',
+        remarks: '',
         is_active: true,
     };
     if (facultyModal) {
@@ -268,9 +286,10 @@ const editFaculty = (item) => {
     editMode.value = true;
     error.value = null;
     form.value = {
-        id: item.id,
+        faculty_id: item.faculty_id,
         faculty_name: item.faculty_name,
-        description: item.description,
+        faculty_code: item.faculty_code,
+        remarks: item.remarks,
         is_active: item.is_active,
     };
     if (facultyModal) {
@@ -283,7 +302,7 @@ const saveFaculty = async () => {
     error.value = null;
     try {
         if (editMode.value) {
-            await axios.put(`/api/pathology/faculties/${form.value.id}`, form.value);
+            await axios.put(`/api/pathology/faculties/${form.value.faculty_id}`, form.value);
         } else {
             await axios.post('/api/pathology/faculties', form.value);
         }

@@ -149,6 +149,24 @@ class BillController extends Controller
                 ]);
             }
 
+            // Create initial history record
+            BillHistory::create([
+                'bill_id' => $bill->bill_id,
+                'action' => 'created',
+                'subtotal' => $bill->subtotal,
+                'discount_amount' => $bill->discount_amount,
+                'discount_percent' => $bill->discount_percent,
+                'tax_amount' => $bill->tax_amount,
+                'adjustment' => $bill->adjustment,
+                'total_amount' => $bill->total_amount,
+                'paid_amount' => $bill->paid_amount,
+                'due_amount' => $bill->due_amount,
+                'payment_mode' => $bill->payment_mode,
+                'payment_status' => $bill->payment_status,
+                'changed_by' => auth()->id(),
+                'changes' => $validated,
+            ]);
+
             return response()->json($bill->load('details'), 201);
         });
     }

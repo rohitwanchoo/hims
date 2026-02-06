@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Pathology;
 
 use App\Http\Controllers\Controller;
-use App\Models\PathoInstruction;
+use App\Models\Pathology\PathoInstruction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -20,10 +20,12 @@ class PathoInstructionController extends Controller
             // Search filter
             if ($request->filled('search')) {
                 $search = $request->search;
-                $query->where(function($q) use ($search) {
-                    $q->where('instruction_name', 'like', "%{$search}%")
-                      ->orWhere('instruction_text', 'like', "%{$search}%");
-                });
+                $query->where('instruction_text', 'like', "%{$search}%");
+            }
+
+            // Instruction type filter
+            if ($request->filled('instruction_type')) {
+                $query->where('instruction_type', $request->instruction_type);
             }
 
             // Active filter
@@ -32,7 +34,7 @@ class PathoInstructionController extends Controller
             }
 
             // Sorting
-            $sortBy = $request->get('sort_by', 'instruction_name');
+            $sortBy = $request->get('sort_by', 'instruction_type');
             $sortOrder = $request->get('sort_order', 'asc');
             $query->orderBy($sortBy, $sortOrder);
 
@@ -61,9 +63,8 @@ class PathoInstructionController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'instruction_name' => 'required|string|max:100',
+                'instruction_type' => 'required|in:pathology,procedure',
                 'instruction_text' => 'required|string',
-                'description' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -76,9 +77,8 @@ class PathoInstructionController extends Controller
 
             $instruction = PathoInstruction::create([
                 'hospital_id' => Auth::user()->hospital_id,
-                'instruction_name' => $request->instruction_name,
+                'instruction_type' => $request->instruction_type,
                 'instruction_text' => $request->instruction_text,
-                'description' => $request->description,
                 'is_active' => $request->is_active ?? true,
             ]);
 
@@ -126,9 +126,8 @@ class PathoInstructionController extends Controller
                 ->firstOrFail();
 
             $validator = Validator::make($request->all(), [
-                'instruction_name' => 'required|string|max:100',
+                'instruction_type' => 'required|in:pathology,procedure',
                 'instruction_text' => 'required|string',
-                'description' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -140,9 +139,8 @@ class PathoInstructionController extends Controller
             }
 
             $instruction->update([
-                'instruction_name' => $request->instruction_name,
+                'instruction_type' => $request->instruction_type,
                 'instruction_text' => $request->instruction_text,
-                'description' => $request->description,
                 'is_active' => $request->is_active ?? $instruction->is_active,
             ]);
 

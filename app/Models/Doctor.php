@@ -33,6 +33,16 @@ class Doctor extends Model
         'is_active' => 'boolean',
     ];
 
+    protected $appends = ['name'];
+
+    /**
+     * Get the doctor's name (alias for full_name).
+     */
+    public function getNameAttribute()
+    {
+        return $this->full_name;
+    }
+
     public function department()
     {
         return $this->belongsTo(Department::class, 'department_id', 'department_id');

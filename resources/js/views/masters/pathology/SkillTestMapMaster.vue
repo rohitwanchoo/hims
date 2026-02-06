@@ -10,23 +10,23 @@
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <label class="form-label fw-bold">Select Skill/Department</label>
-                        <select class="form-select" v-model="selectedSkillId" @change="loadMappings">
-                            <option value="">-- Select Skill --</option>
-                            <option v-for="skill in skills" :key="skill.id" :value="skill.id">
-                                {{ skill.skill_name }}
+                        <select class="form-select" v-model="selectedDepartmentId" @change="loadMappings">
+                            <option value="">-- Select Department --</option>
+                            <option v-for="department in departments" :key="department.department_id" :value="department.department_id">
+                                {{ department.department_name }}
                             </option>
                         </select>
                     </div>
                     <div class="col-md-6 d-flex align-items-end">
-                        <div class="alert alert-info mb-0 w-100" v-if="selectedSkillId">
+                        <div class="alert alert-info mb-0 w-100" v-if="selectedDepartmentId">
                             <i class="bi bi-info-circle"></i>
-                            Click on tests to map/unmap them for the selected skill
+                            Click on tests to map/unmap them for the selected department
                         </div>
                     </div>
                 </div>
 
                 <!-- Two Panel Mapping Interface -->
-                <div v-if="selectedSkillId" class="row">
+                <div v-if="selectedDepartmentId" class="row">
                     <!-- Available Tests Panel -->
                     <div class="col-md-6">
                         <div class="card border-primary">
@@ -58,7 +58,7 @@
                                     <div v-else class="list-group list-group-flush">
                                         <div
                                             v-for="test in filteredAvailableTests"
-                                            :key="test.id"
+                                            :key="test.test_id"
                                             class="list-group-item list-group-item-action d-flex justify-content-between align-items-start py-3"
                                             style="cursor: pointer;"
                                             @click="addMapping(test)">
@@ -113,7 +113,7 @@
                                     <div v-else class="list-group list-group-flush">
                                         <div
                                             v-for="test in filteredMappedTests"
-                                            :key="test.id"
+                                            :key="test.test_id"
                                             class="list-group-item list-group-item-action d-flex justify-content-between align-items-start py-3"
                                             style="cursor: pointer;"
                                             @click="removeMapping(test)">
@@ -137,12 +137,12 @@
                     </div>
                 </div>
 
-                <!-- No Skill Selected -->
+                <!-- No Department Selected -->
                 <div v-else class="text-center py-5">
                     <i class="bi bi-arrow-up-circle fs-1 text-muted"></i>
                     <div class="mt-3 text-muted">
-                        <h5>Please select a skill to manage test mappings</h5>
-                        <p>Choose a skill from the dropdown above to view and manage its pathology test mappings</p>
+                        <h5>Please select a department to manage test mappings</h5>
+                        <p>Choose a department from the dropdown above to view and manage its pathology test mappings</p>
                     </div>
                 </div>
             </div>
@@ -156,8 +156,8 @@ import axios from 'axios';
 
 const loadingAvailable = ref(false);
 const loadingMapped = ref(false);
-const selectedSkillId = ref('');
-const skills = ref([]);
+const selectedDepartmentId = ref('');
+const departments = ref([]);
 const availableTests = ref([]);
 const mappedTests = ref([]);
 const searchAvailable = ref('');
@@ -182,21 +182,32 @@ const filteredMappedTests = computed(() => {
 });
 
 onMounted(() => {
-    loadSkills();
+    loadDepartments();
 });
 
-const loadSkills = async () => {
+const loadDepartments = async () => {
     try {
-        const response = await axios.get('/api/skills', { params: { status: 1 } });
-        skills.value = response.data.data || response.data;
+        const response = await axios.get('/api/departments', { params: { is_active: 1, per_page: 100 } });
+
+        // Handle paginated response
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            departments.value = paginatedData.data || paginatedData;
+        } else {
+            departments.value = response.data.data || response.data;
+        }
+
+        if (!Array.isArray(departments.value)) {
+            departments.value = [];
+        }
     } catch (err) {
-        console.error('Error loading skills:', err);
-        alert('Failed to load skills');
+        console.error('Error loading departments:', err);
+        alert('Failed to load departments');
     }
 };
 
 const loadMappings = async () => {
-    if (!selectedSkillId.value) {
+    if (!selectedDepartmentId.value) {
         availableTests.value = [];
         mappedTests.value = [];
         return;
@@ -210,16 +221,31 @@ const loadMappings = async () => {
     try {
         // Load all tests and mapped tests in parallel
         const [allTestsResponse, mappedResponse] = await Promise.all([
-            axios.get('/api/pathology/test-masters', { params: { status: 1, all: true } }),
-            axios.get(`/api/pathology/skill-test-mappings/${selectedSkillId.value}`)
+            axios.get('/api/pathology/tests', { params: { is_active: 1, per_page: 100 } }),
+            axios.get(`/api/pathology/skill-test-maps/by-department/${selectedDepartmentId.value}`)
         ]);
 
-        const allTests = allTestsResponse.data.data || allTestsResponse.data;
+        // Handle paginated response for all tests
+        let allTests = [];
+        if (allTestsResponse.data.success && allTestsResponse.data.data) {
+            const paginatedData = allTestsResponse.data.data;
+            allTests = paginatedData.data || paginatedData;
+        } else {
+            allTests = allTestsResponse.data.data || allTestsResponse.data;
+        }
+
         mappedTests.value = mappedResponse.data.data || mappedResponse.data;
 
+        if (!Array.isArray(allTests)) {
+            allTests = [];
+        }
+        if (!Array.isArray(mappedTests.value)) {
+            mappedTests.value = [];
+        }
+
         // Filter out already mapped tests from available
-        const mappedIds = mappedTests.value.map(t => t.id);
-        availableTests.value = allTests.filter(t => !mappedIds.includes(t.id));
+        const mappedIds = mappedTests.value.map(t => t.test_id);
+        availableTests.value = allTests.filter(t => !mappedIds.includes(t.test_id));
     } catch (err) {
         console.error('Error loading mappings:', err);
         alert('Failed to load test mappings');
@@ -230,16 +256,16 @@ const loadMappings = async () => {
 };
 
 const addMapping = async (test) => {
-    if (!selectedSkillId.value) return;
+    if (!selectedDepartmentId.value) return;
 
     try {
-        await axios.post('/api/pathology/skill-test-mappings', {
-            skill_id: selectedSkillId.value,
-            test_id: test.id
+        await axios.post('/api/pathology/skill-test-maps', {
+            department_id: selectedDepartmentId.value,
+            test_id: test.test_id
         });
 
         // Move test from available to mapped
-        availableTests.value = availableTests.value.filter(t => t.id !== test.id);
+        availableTests.value = availableTests.value.filter(t => t.test_id !== test.test_id);
         mappedTests.value.push(test);
 
         // Sort mapped tests by name
@@ -251,17 +277,17 @@ const addMapping = async (test) => {
 };
 
 const removeMapping = async (test) => {
-    if (!selectedSkillId.value) return;
+    if (!selectedDepartmentId.value) return;
 
-    if (!confirm(`Remove "${test.test_name}" from this skill?`)) {
+    if (!confirm(`Remove "${test.test_name}" from this department?`)) {
         return;
     }
 
     try {
-        await axios.delete(`/api/pathology/skill-test-mappings/${selectedSkillId.value}/${test.id}`);
+        await axios.delete(`/api/pathology/skill-test-maps/${selectedDepartmentId.value}/${test.test_id}`);
 
         // Move test from mapped to available
-        mappedTests.value = mappedTests.value.filter(t => t.id !== test.id);
+        mappedTests.value = mappedTests.value.filter(t => t.test_id !== test.test_id);
         availableTests.value.push(test);
 
         // Sort available tests by name

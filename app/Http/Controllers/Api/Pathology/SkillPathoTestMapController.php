@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Pathology;
 
 use App\Http\Controllers\Controller;
-use App\Models\SkillPathoTestMap;
+use App\Models\Pathology\SkillPathoTestMap;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -17,11 +17,11 @@ class SkillPathoTestMapController extends Controller
             $hospitalId = Auth::user()->hospital_id;
 
             $query = SkillPathoTestMap::where('hospital_id', $hospitalId)
-                ->with(['user', 'test']);
+                ->with(['department', 'test']);
 
-            // User filter
-            if ($request->filled('user_id')) {
-                $query->where('user_id', $request->user_id);
+            // Department filter
+            if ($request->filled('department_id')) {
+                $query->where('department_id', $request->department_id);
             }
 
             // Test filter
@@ -64,7 +64,7 @@ class SkillPathoTestMapController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'user_id' => 'required|exists:users,user_id',
+                'department_id' => 'required|exists:departments,department_id',
                 'test_id' => 'required|exists:patho_tests,test_id',
                 'is_active' => 'boolean',
             ]);
@@ -78,7 +78,7 @@ class SkillPathoTestMapController extends Controller
 
             // Check if mapping already exists
             $existingMapping = SkillPathoTestMap::where('hospital_id', Auth::user()->hospital_id)
-                ->where('user_id', $request->user_id)
+                ->where('department_id', $request->department_id)
                 ->where('test_id', $request->test_id)
                 ->first();
 
@@ -91,15 +91,15 @@ class SkillPathoTestMapController extends Controller
 
             $mapping = SkillPathoTestMap::create([
                 'hospital_id' => Auth::user()->hospital_id,
-                'user_id' => $request->user_id,
+                'department_id' => $request->department_id,
                 'test_id' => $request->test_id,
                 'is_active' => $request->is_active ?? true,
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Skill test mapping created successfully',
-                'data' => $mapping->load(['user', 'test'])
+                'message' => 'Department test mapping created successfully',
+                'data' => $mapping->load(['department', 'test'])
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
@@ -116,7 +116,7 @@ class SkillPathoTestMapController extends Controller
             $hospitalId = Auth::user()->hospital_id;
             $mapping = SkillPathoTestMap::where('hospital_id', $hospitalId)
                 ->where('map_id', $id)
-                ->with(['user', 'test'])
+                ->with(['department', 'test'])
                 ->firstOrFail();
 
             return response()->json([
@@ -141,7 +141,7 @@ class SkillPathoTestMapController extends Controller
                 ->firstOrFail();
 
             $validator = Validator::make($request->all(), [
-                'user_id' => 'required|exists:users,user_id',
+                'department_id' => 'required|exists:departments,department_id',
                 'test_id' => 'required|exists:patho_tests,test_id',
                 'is_active' => 'boolean',
             ]);
@@ -155,7 +155,7 @@ class SkillPathoTestMapController extends Controller
 
             // Check if mapping already exists (excluding current mapping)
             $existingMapping = SkillPathoTestMap::where('hospital_id', $hospitalId)
-                ->where('user_id', $request->user_id)
+                ->where('department_id', $request->department_id)
                 ->where('test_id', $request->test_id)
                 ->where('map_id', '!=', $id)
                 ->first();
@@ -168,15 +168,15 @@ class SkillPathoTestMapController extends Controller
             }
 
             $mapping->update([
-                'user_id' => $request->user_id,
+                'department_id' => $request->department_id,
                 'test_id' => $request->test_id,
                 'is_active' => $request->is_active ?? $mapping->is_active,
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Skill test mapping updated successfully',
-                'data' => $mapping->load(['user', 'test'])
+                'message' => 'Department test mapping updated successfully',
+                'data' => $mapping->load(['department', 'test'])
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -210,97 +210,83 @@ class SkillPathoTestMapController extends Controller
         }
     }
 
-    public function getTestsByUser($userId)
+    public function getTestsByDepartment($departmentId)
     {
         try {
             $hospitalId = Auth::user()->hospital_id;
+
+            // Get tests mapped to this department
             $mappings = SkillPathoTestMap::where('hospital_id', $hospitalId)
-                ->where('user_id', $userId)
+                ->where('department_id', $departmentId)
                 ->where('is_active', true)
                 ->with(['test'])
                 ->get();
 
+            // Extract just the tests
+            $tests = $mappings->map(function ($mapping) {
+                return $mapping->test;
+            });
+
             return response()->json([
                 'success' => true,
-                'data' => $mappings
+                'data' => $tests
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to fetch tests for user',
+                'message' => 'Failed to fetch tests for department',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
 
-    public function getUsersByTest($testId)
+    public function getDepartmentsByTest($testId)
     {
         try {
             $hospitalId = Auth::user()->hospital_id;
             $mappings = SkillPathoTestMap::where('hospital_id', $hospitalId)
                 ->where('test_id', $testId)
                 ->where('is_active', true)
-                ->with(['user'])
+                ->with(['department'])
                 ->get();
+
+            // Extract just the departments
+            $departments = $mappings->map(function ($mapping) {
+                return $mapping->department;
+            });
 
             return response()->json([
                 'success' => true,
-                'data' => $mappings
+                'data' => $departments
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to fetch users for test',
+                'message' => 'Failed to fetch departments for test',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
 
-    public function bulkMapTests(Request $request, $userId)
+    public function destroyByDepartmentAndTest($departmentId, $testId)
     {
         try {
             $hospitalId = Auth::user()->hospital_id;
+            $mapping = SkillPathoTestMap::where('hospital_id', $hospitalId)
+                ->where('department_id', $departmentId)
+                ->where('test_id', $testId)
+                ->firstOrFail();
 
-            $validator = Validator::make($request->all(), [
-                'test_ids' => 'required|array',
-                'test_ids.*' => 'exists:patho_tests,test_id',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
-            DB::beginTransaction();
-
-            // Delete existing mappings for this user
-            SkillPathoTestMap::where('hospital_id', $hospitalId)
-                ->where('user_id', $userId)
-                ->delete();
-
-            // Create new mappings
-            foreach ($request->test_ids as $testId) {
-                SkillPathoTestMap::create([
-                    'hospital_id' => $hospitalId,
-                    'user_id' => $userId,
-                    'test_id' => $testId,
-                    'is_active' => true,
-                ]);
-            }
-
-            DB::commit();
+            $mapping->delete();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Tests mapped successfully'
+                'message' => 'Department test mapping deleted successfully'
             ]);
         } catch (\Exception $e) {
-            DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to map tests',
+                'message' => 'Failed to delete department test mapping',
                 'error' => $e->getMessage()
             ], 500);
         }

@@ -20,13 +20,31 @@ class DoctorController extends Controller
             $query->where('department_id', $request->department_id);
         }
 
-        if ($request->active_only) {
+        if ($request->active_only || $request->filled('is_active')) {
             $query->where('is_active', true);
         }
 
-        $doctors = $query->orderBy('full_name')->get();
+        $query->orderBy('full_name');
 
-        return response()->json($doctors);
+        // Support pagination
+        if ($request->filled('per_page')) {
+            $perPage = $request->get('per_page', 100);
+            if (!in_array($perPage, [20, 50, 100, 200])) {
+                $perPage = 100;
+            }
+            $doctors = $query->paginate($perPage);
+
+            return response()->json([
+                'success' => true,
+                'data' => $doctors
+            ]);
+        }
+
+        $doctors = $query->get();
+        return response()->json([
+            'success' => true,
+            'data' => $doctors
+        ]);
     }
 
     public function store(Request $request)

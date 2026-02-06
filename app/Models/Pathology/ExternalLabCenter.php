@@ -10,7 +10,7 @@ class ExternalLabCenter extends Model
 {
     use HasFactory, BelongsToHospital;
 
-    protected $table = 'external_lab_center';
+    protected $table = 'external_lab_centers';
     protected $primaryKey = 'lab_id';
 
     protected $fillable = [
@@ -22,15 +22,16 @@ class ExternalLabCenter extends Model
         'contact_person',
         'address',
         'city',
+        'district',
         'state',
         'country',
         'pincode',
-        'phone',
+        'fax',
+        'telephone',
         'mobile',
         'email',
         'website',
         'is_active',
-        'remarks',
     ];
 
     protected $casts = [

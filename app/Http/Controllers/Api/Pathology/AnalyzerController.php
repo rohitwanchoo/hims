@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\Pathology;
 
 use App\Http\Controllers\Controller;
-use App\Models\Analyzer;
-use App\Models\AnalyzerTestMap;
+use App\Models\Pathology\Analyzer;
+use App\Models\Pathology\AnalyzerTestMap;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -26,13 +26,13 @@ class AnalyzerController extends Controller
                 $query->where(function($q) use ($search) {
                     $q->where('analyzer_name', 'like', "%{$search}%")
                       ->orWhere('analyzer_code', 'like', "%{$search}%")
-                      ->orWhere('manufacturer', 'like', "%{$search}%");
+                      ->orWhere('remarks', 'like', "%{$search}%");
                 });
             }
 
-            // Manufacturer filter
-            if ($request->filled('manufacturer')) {
-                $query->where('manufacturer', 'like', "%{$request->manufacturer}%");
+            // Analyzer type filter
+            if ($request->filled('analyzer_type')) {
+                $query->where('analyzer_type', $request->analyzer_type);
             }
 
             // Active filter
@@ -70,12 +70,12 @@ class AnalyzerController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'analyzer_name' => 'required|string|max:100',
-                'analyzer_code' => 'nullable|string|max:50',
-                'manufacturer' => 'nullable|string|max:100',
-                'model' => 'nullable|string|max:100',
-                'serial_number' => 'nullable|string|max:100',
-                'description' => 'nullable|string',
+                'analyzer_name' => 'required|string|max:255',
+                'analyzer_code' => 'nullable|string|max:255',
+                'analyzer_type' => 'required|in:on_demand,pre_database',
+                'is_bidirectional' => 'boolean',
+                'analyzer_count' => 'integer|min:0',
+                'remarks' => 'nullable|string',
                 'is_active' => 'boolean',
                 'tests' => 'nullable|array',
                 'tests.*' => 'exists:patho_tests,test_id',
@@ -94,10 +94,10 @@ class AnalyzerController extends Controller
                 'hospital_id' => Auth::user()->hospital_id,
                 'analyzer_name' => $request->analyzer_name,
                 'analyzer_code' => $request->analyzer_code,
-                'manufacturer' => $request->manufacturer,
-                'model' => $request->model,
-                'serial_number' => $request->serial_number,
-                'description' => $request->description,
+                'analyzer_type' => $request->analyzer_type,
+                'is_bidirectional' => $request->is_bidirectional ?? false,
+                'analyzer_count' => $request->analyzer_count ?? 1,
+                'remarks' => $request->remarks,
                 'is_active' => $request->is_active ?? true,
             ]);
 
@@ -159,12 +159,12 @@ class AnalyzerController extends Controller
                 ->firstOrFail();
 
             $validator = Validator::make($request->all(), [
-                'analyzer_name' => 'required|string|max:100',
-                'analyzer_code' => 'nullable|string|max:50',
-                'manufacturer' => 'nullable|string|max:100',
-                'model' => 'nullable|string|max:100',
-                'serial_number' => 'nullable|string|max:100',
-                'description' => 'nullable|string',
+                'analyzer_name' => 'required|string|max:255',
+                'analyzer_code' => 'nullable|string|max:255',
+                'analyzer_type' => 'required|in:on_demand,pre_database',
+                'is_bidirectional' => 'boolean',
+                'analyzer_count' => 'integer|min:0',
+                'remarks' => 'nullable|string',
                 'is_active' => 'boolean',
                 'tests' => 'nullable|array',
                 'tests.*' => 'exists:patho_tests,test_id',
@@ -182,10 +182,10 @@ class AnalyzerController extends Controller
             $analyzer->update([
                 'analyzer_name' => $request->analyzer_name,
                 'analyzer_code' => $request->analyzer_code,
-                'manufacturer' => $request->manufacturer,
-                'model' => $request->model,
-                'serial_number' => $request->serial_number,
-                'description' => $request->description,
+                'analyzer_type' => $request->analyzer_type,
+                'is_bidirectional' => $request->is_bidirectional ?? $analyzer->is_bidirectional,
+                'analyzer_count' => $request->analyzer_count ?? $analyzer->analyzer_count,
+                'remarks' => $request->remarks,
                 'is_active' => $request->is_active ?? $analyzer->is_active,
             ]);
 
@@ -299,6 +299,105 @@ class AnalyzerController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to map tests',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getTests($id)
+    {
+        try {
+            $hospitalId = Auth::user()->hospital_id;
+            $analyzer = Analyzer::where('hospital_id', $hospitalId)
+                ->where('analyzer_id', $id)
+                ->firstOrFail();
+
+            $tests = $analyzer->tests;
+
+            return response()->json([
+                'success' => true,
+                'data' => $tests
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch tests',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function addTest(Request $request, $id)
+    {
+        try {
+            $hospitalId = Auth::user()->hospital_id;
+            $analyzer = Analyzer::where('hospital_id', $hospitalId)
+                ->where('analyzer_id', $id)
+                ->firstOrFail();
+
+            $validator = Validator::make($request->all(), [
+                'test_id' => 'required|exists:patho_tests,test_id',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Check if mapping already exists
+            $existingMapping = AnalyzerTestMap::where('analyzer_id', $analyzer->analyzer_id)
+                ->where('test_id', $request->test_id)
+                ->first();
+
+            if ($existingMapping) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Test already mapped to this analyzer'
+                ], 422);
+            }
+
+            AnalyzerTestMap::create([
+                'analyzer_id' => $analyzer->analyzer_id,
+                'test_id' => $request->test_id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Test added successfully'
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to add test',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function removeTest($id, $testId)
+    {
+        try {
+            $hospitalId = Auth::user()->hospital_id;
+            $analyzer = Analyzer::where('hospital_id', $hospitalId)
+                ->where('analyzer_id', $id)
+                ->firstOrFail();
+
+            $mapping = AnalyzerTestMap::where('analyzer_id', $analyzer->analyzer_id)
+                ->where('test_id', $testId)
+                ->firstOrFail();
+
+            $mapping->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Test removed successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to remove test',
                 'error' => $e->getMessage()
             ], 500);
         }

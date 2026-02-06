@@ -560,7 +560,28 @@ const addInvestigation = async () => {
 const saveConsultation = async () => {
     saving.value = true;
     try {
-        await axios.put(`/api/opd-visits/${route.params.id}`, form);
+        // Explicitly create payload object to ensure data is sent correctly
+        const payload = {
+            chief_complaints: form.chief_complaints,
+            history_of_illness: form.history_of_illness,
+            examination_notes: form.examination_notes,
+            diagnosis: form.diagnosis,
+            advice: form.advice,
+            followup_date: form.followup_date,
+            followup_instructions: form.followup_instructions,
+            vitals_bp_systolic: form.vitals_bp_systolic,
+            vitals_bp_diastolic: form.vitals_bp_diastolic,
+            vitals_pulse: form.vitals_pulse,
+            vitals_temperature: form.vitals_temperature,
+            vitals_spo2: form.vitals_spo2,
+            vitals_weight: form.vitals_weight,
+            vitals_height: form.vitals_height,
+            status: 'completed' // Mark as completed when saving
+        };
+
+        console.log('Saving consultation with data:', payload);
+        const response = await axios.put(`/api/opd-visits/${route.params.id}`, payload);
+        console.log('Consultation saved:', response.data);
 
         // Save prescription if items exist
         if (prescriptionItems.value.length > 0) {
@@ -569,6 +590,7 @@ const saveConsultation = async () => {
 
         alert('Consultation saved successfully');
     } catch (error) {
+        console.error('Error saving consultation:', error);
         alert(error.response?.data?.message || 'Error saving consultation');
     }
     saving.value = false;

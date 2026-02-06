@@ -61,10 +61,10 @@
                                     No test units found
                                 </td>
                             </tr>
-                            <tr v-else v-for="(item, index) in testUnits" :key="item.id">
+                            <tr v-else v-for="(item, index) in testUnits" :key="item.unit_id">
                                 <td>{{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}</td>
-                                <td>{{ item.test_unit_name }}</td>
-                                <td>{{ item.description || '-' }}</td>
+                                <td>{{ item.unit_name }}</td>
+                                <td>{{ item.remarks || '-' }}</td>
                                 <td class="text-center">
                                     <span :class="item.is_active ? 'badge bg-success' : 'badge bg-secondary'">
                                         {{ item.is_active ? 'Active' : 'Inactive' }}
@@ -74,7 +74,7 @@
                                     <button class="btn btn-sm btn-outline-primary me-1" @click="editTestUnit(item)" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger" @click="deleteTestUnit(item.id)" title="Delete">
+                                    <button class="btn btn-sm btn-outline-danger" @click="deleteTestUnit(item.unit_id)" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
@@ -123,17 +123,27 @@
                                 <input
                                     type="text"
                                     class="form-control"
-                                    v-model="form.test_unit_name"
+                                    v-model="form.unit_name"
                                     placeholder="e.g., mg/dL, mmol/L, g/dL"
                                     required>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Description</label>
+                                <label class="form-label">Decimal Places</label>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    v-model.number="form.decimal_places"
+                                    min="0"
+                                    max="10"
+                                    placeholder="Number of decimal places">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Remarks</label>
                                 <textarea
                                     class="form-control"
-                                    v-model="form.description"
+                                    v-model="form.remarks"
                                     rows="3"
-                                    placeholder="Optional description"></textarea>
+                                    placeholder="Optional remarks"></textarea>
                             </div>
                             <div class="form-check">
                                 <input
@@ -187,8 +197,9 @@ const pagination = ref({
 
 const editMode = ref(false);
 const form = ref({
-    test_unit_name: '',
-    description: '',
+    unit_name: '',
+    decimal_places: 2,
+    remarks: '',
     is_active: true,
 });
 
@@ -223,18 +234,24 @@ const loadTestUnits = async () => {
     error.value = null;
     try {
         const response = await axios.get('/api/pathology/test-units', { params: filters.value });
-        if (response.data.data) {
-            testUnits.value = response.data.data;
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            testUnits.value = paginatedData.data || paginatedData;
             pagination.value = {
-                current_page: response.data.current_page,
-                last_page: response.data.last_page,
-                per_page: response.data.per_page,
-                total: response.data.total,
-                from: response.data.from,
-                to: response.data.to,
+                current_page: paginatedData.current_page || 1,
+                last_page: paginatedData.last_page || 1,
+                per_page: paginatedData.per_page || 20,
+                total: paginatedData.total || 0,
+                from: paginatedData.from || 0,
+                to: paginatedData.to || 0,
             };
         } else {
-            testUnits.value = response.data;
+            testUnits.value = response.data.data || response.data;
+        }
+
+        // Ensure testUnits is always an array
+        if (!Array.isArray(testUnits.value)) {
+            testUnits.value = [];
         }
     } catch (err) {
         console.error('Error loading test units:', err);
@@ -255,8 +272,9 @@ const openAddModal = () => {
     editMode.value = false;
     error.value = null;
     form.value = {
-        test_unit_name: '',
-        description: '',
+        unit_name: '',
+        decimal_places: 2,
+        remarks: '',
         is_active: true,
     };
     if (testUnitModal) {
@@ -268,9 +286,10 @@ const editTestUnit = (item) => {
     editMode.value = true;
     error.value = null;
     form.value = {
-        id: item.id,
-        test_unit_name: item.test_unit_name,
-        description: item.description,
+        unit_id: item.unit_id,
+        unit_name: item.unit_name,
+        decimal_places: item.decimal_places,
+        remarks: item.remarks,
         is_active: item.is_active,
     };
     if (testUnitModal) {
@@ -283,7 +302,7 @@ const saveTestUnit = async () => {
     error.value = null;
     try {
         if (editMode.value) {
-            await axios.put(`/api/pathology/test-units/${form.value.id}`, form.value);
+            await axios.put(`/api/pathology/test-units/${form.value.unit_id}`, form.value);
         } else {
             await axios.post('/api/pathology/test-units', form.value);
         }

@@ -1,15 +1,13 @@
 <template>
     <div class="opd-list">
         <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-1">
             <div>
-                <h2 class="mb-1 fw-bold">OPD Dashboard</h2>
-                <p class="text-muted mb-0 small">Manage outpatient registrations and consultations</p>
+                <h4 class="mb-0 fw-bold">OPD Dashboard</h4>
             </div>
             <div class="d-flex gap-2">
                 <button class="modern-btn modern-btn-outline" @click="refreshData">
                     <i class="bi bi-arrow-clockwise"></i>
-                    <span>Refresh</span>
                 </button>
                 <router-link to="/opd/create" class="modern-btn modern-btn-primary">
                     <i class="bi bi-plus-lg"></i>
@@ -19,65 +17,47 @@
         </div>
 
         <!-- Summary Cards -->
-        <div class="row g-3 mb-4">
-            <div class="col-xl-2 col-lg-4 col-md-6">
-                <div class="stat-card stat-card-gradient-primary">
-                    <div class="stat-content-full">
-                        <div class="stat-label-top">Total Visits</div>
-                        <div class="stat-value-large">{{ summary.total }}</div>
-                        <div class="stat-description">Today's registrations</div>
-                    </div>
+        <div class="row g-2 mb-1">
+            <div class="col-2">
+                <div class="stat-card-compact stat-card-gradient-primary">
+                    <div class="stat-label-compact">Total Visits</div>
+                    <div class="stat-value-compact">{{ summary.total }}</div>
                 </div>
             </div>
-            <div class="col-xl-2 col-lg-4 col-md-6">
-                <div class="stat-card stat-card-gradient-warning">
-                    <div class="stat-content-full">
-                        <div class="stat-label-top">Waiting</div>
-                        <div class="stat-value-large">{{ summary.waiting }}</div>
-                        <div class="stat-description">In queue for consultation</div>
-                    </div>
+            <div class="col-2">
+                <div class="stat-card-compact stat-card-gradient-warning">
+                    <div class="stat-label-compact">Waiting</div>
+                    <div class="stat-value-compact">{{ summary.waiting }}</div>
                 </div>
             </div>
-            <div class="col-xl-2 col-lg-4 col-md-6">
-                <div class="stat-card stat-card-gradient-info">
-                    <div class="stat-content-full">
-                        <div class="stat-label-top">In Consultation</div>
-                        <div class="stat-value-large">{{ summary.in_consultation }}</div>
-                        <div class="stat-description">Currently with doctor</div>
-                    </div>
+            <div class="col-2">
+                <div class="stat-card-compact stat-card-gradient-info">
+                    <div class="stat-label-compact">In Consultation</div>
+                    <div class="stat-value-compact">{{ summary.in_consultation }}</div>
                 </div>
             </div>
-            <div class="col-xl-2 col-lg-4 col-md-6">
-                <div class="stat-card stat-card-gradient-success">
-                    <div class="stat-content-full">
-                        <div class="stat-label-top">Completed</div>
-                        <div class="stat-value-large">{{ summary.completed }}</div>
-                        <div class="stat-description">Finished consultations</div>
-                    </div>
+            <div class="col-2">
+                <div class="stat-card-compact stat-card-gradient-success">
+                    <div class="stat-label-compact">Completed</div>
+                    <div class="stat-value-compact">{{ summary.completed }}</div>
                 </div>
             </div>
-            <div class="col-xl-2 col-lg-4 col-md-6">
-                <div class="stat-card stat-card-gradient-danger">
-                    <div class="stat-content-full">
-                        <div class="stat-label-top">Cancelled</div>
-                        <div class="stat-value-large">{{ summary.cancelled }}</div>
-                        <div class="stat-description">Cancelled appointments</div>
-                    </div>
+            <div class="col-2">
+                <div class="stat-card-compact stat-card-gradient-danger">
+                    <div class="stat-label-compact">Cancelled</div>
+                    <div class="stat-value-compact">{{ summary.cancelled }}</div>
                 </div>
             </div>
-            <div class="col-xl-2 col-lg-4 col-md-6">
-                <div class="stat-card stat-card-gradient-secondary">
-                    <div class="stat-content-full">
-                        <div class="stat-label-top">Avg Wait Time</div>
-                        <div class="stat-value-large">{{ avgWaitTime }}</div>
-                        <div class="stat-description">Average waiting period</div>
-                    </div>
+            <div class="col-2">
+                <div class="stat-card-compact stat-card-gradient-secondary">
+                    <div class="stat-label-compact">Avg Wait Time</div>
+                    <div class="stat-value-compact">{{ avgWaitTime }}</div>
                 </div>
             </div>
         </div>
 
         <!-- Filters -->
-        <div class="modern-card mb-4">
+        <div class="modern-card mb-1">
             <div class="modern-card-header clickable" @click="showFilters = !showFilters">
                 <div class="d-flex justify-content-between align-items-center w-100">
                     <h6 class="mb-0">
@@ -164,17 +144,17 @@
             </div>
             <div class="modern-card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0 modern-table">
+                    <table class="table table-hover table-sm mb-0 modern-table">
                     <thead>
                         <tr>
-                            <th style="width: 60px;">Token</th>
+                            <th>Token</th>
                             <th>OPD No.</th>
                             <th>Patient</th>
                             <th>Doctor / Dept</th>
                             <th>Type</th>
                             <th>Status</th>
                             <th>Amount</th>
-                            <th style="width: 150px;">Actions</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -222,10 +202,10 @@
                                 </span>
                             </td>
                             <td>
-                                <div v-if="visit.net_amount > 0">
-                                    <span class="fw-semibold">{{ formatCurrency(visit.net_amount) }}</span>
+                                <div v-if="visit.total_amount > 0">
+                                    <span class="fw-semibold">{{ formatCurrency(visit.total_amount) }}</span>
                                     <div class="small" :class="visit.payment_status === 'paid' ? 'text-success' : 'text-danger'">
-                                        {{ visit.payment_status }}
+                                        {{ visit.payment_status }} - {{ formatCurrency(visit.paid_amount || 0) }}
                                     </div>
                                     <div v-if="visit.bill" class="small text-muted">
                                         Bill: {{ visit.bill.bill_number }}
@@ -917,6 +897,58 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Responsive optimization for 13-14" screens */
+@media (max-width: 1600px) {
+    h2, h4 {
+        font-size: 1.5rem !important;
+    }
+
+    .stat-value-compact {
+        font-size: 1.1rem !important;
+    }
+
+    .stat-card-compact {
+        padding: 0.65rem 0.85rem !important;
+        min-height: 65px !important;
+    }
+
+    .stat-label-compact {
+        font-size: 0.65rem !important;
+    }
+
+    .modern-table {
+        font-size: 0.813rem;
+    }
+
+    .modern-table thead th,
+    .modern-table tbody td {
+        padding: 0.5rem 0.4rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.35rem;
+        font-size: 0.75rem;
+    }
+
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .modern-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.813rem;
+    }
+
+    .modern-card-header {
+        padding: 0.5rem 0.75rem;
+    }
+
+    .modern-card-body {
+        padding: 0.75rem;
+    }
+}
+
 /* Modern Dashboard Styles */
 .opd-list {
     background: #f8f9fa;
@@ -961,6 +993,43 @@ onUnmounted(() => {
     background: #f8f9fa;
     border-color: #667eea;
     color: #667eea;
+}
+
+/* Compact Stat Cards */
+.stat-card-compact {
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    height: 100%;
+    min-height: 70px;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card-compact:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.stat-label-compact {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    opacity: 0.9;
+    color: white;
+}
+
+.stat-value-compact {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+    color: white;
 }
 
 /* Modern Stat Cards with Gradients */
@@ -1048,11 +1117,11 @@ onUnmounted(() => {
     border-radius: 16px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     border: 1px solid rgba(0, 0, 0, 0.05);
-    overflow: hidden;
+    overflow: visible;
 }
 
 .modern-card-header {
-    padding: 1.25rem 1.5rem;
+    padding: 0.75rem 1rem;
     border-bottom: 1px solid #f0f0f0;
     background: #fafafa;
 }
@@ -1065,12 +1134,16 @@ onUnmounted(() => {
 }
 
 .modern-card-body {
-    padding: 1.5rem;
+    padding: 1rem;
 }
 
 /* Modern Table */
 .modern-table {
     font-size: 0.875rem;
+}
+
+.table-responsive {
+    min-height: 400px;
 }
 
 .modern-table thead th {

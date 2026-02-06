@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Pathology;
 
 use App\Http\Controllers\Controller;
-use App\Models\ExternalLabCenter;
+use App\Models\Pathology\ExternalLabCenter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -22,9 +22,9 @@ class ExternalLabCenterController extends Controller
                 $search = $request->search;
                 $query->where(function($q) use ($search) {
                     $q->where('lab_name', 'like', "%{$search}%")
-                      ->orWhere('lab_code', 'like', "%{$search}%")
                       ->orWhere('contact_person', 'like', "%{$search}%")
-                      ->orWhere('phone', 'like', "%{$search}%");
+                      ->orWhere('telephone', 'like', "%{$search}%")
+                      ->orWhere('mobile', 'like', "%{$search}%");
                 });
             }
 
@@ -68,17 +68,22 @@ class ExternalLabCenterController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'lab_name' => 'required|string|max:200',
-                'lab_code' => 'nullable|string|max:50',
-                'contact_person' => 'nullable|string|max:100',
-                'phone' => 'nullable|string|max:20',
+                'lab_name' => 'required|string|max:255',
+                'has_patho_test' => 'boolean',
+                'has_radio_test' => 'boolean',
+                'has_procedure_test' => 'boolean',
+                'contact_person' => 'nullable|string|max:255',
+                'telephone' => 'nullable|string|max:20',
                 'mobile' => 'nullable|string|max:20',
-                'email' => 'nullable|email|max:100',
+                'email' => 'nullable|email|max:255',
                 'address' => 'nullable|string',
-                'city' => 'nullable|string|max:100',
-                'state' => 'nullable|string|max:100',
+                'city' => 'nullable|string|max:255',
+                'district' => 'nullable|string|max:255',
+                'state' => 'nullable|string|max:255',
+                'country' => 'nullable|string|max:255',
                 'pincode' => 'nullable|string|max:10',
-                'description' => 'nullable|string',
+                'fax' => 'nullable|string|max:20',
+                'website' => 'nullable|string|max:255',
                 'is_active' => 'boolean',
             ]);
 
@@ -92,16 +97,21 @@ class ExternalLabCenterController extends Controller
             $labCenter = ExternalLabCenter::create([
                 'hospital_id' => Auth::user()->hospital_id,
                 'lab_name' => $request->lab_name,
-                'lab_code' => $request->lab_code,
+                'has_patho_test' => $request->has_patho_test ?? false,
+                'has_radio_test' => $request->has_radio_test ?? false,
+                'has_procedure_test' => $request->has_procedure_test ?? false,
                 'contact_person' => $request->contact_person,
-                'phone' => $request->phone,
+                'telephone' => $request->telephone,
                 'mobile' => $request->mobile,
                 'email' => $request->email,
                 'address' => $request->address,
                 'city' => $request->city,
+                'district' => $request->district,
                 'state' => $request->state,
+                'country' => $request->country,
                 'pincode' => $request->pincode,
-                'description' => $request->description,
+                'fax' => $request->fax,
+                'website' => $request->website,
                 'is_active' => $request->is_active ?? true,
             ]);
 
@@ -124,7 +134,7 @@ class ExternalLabCenterController extends Controller
         try {
             $hospitalId = Auth::user()->hospital_id;
             $labCenter = ExternalLabCenter::where('hospital_id', $hospitalId)
-                ->where('lab_center_id', $id)
+                ->where('lab_id', $id)
                 ->firstOrFail();
 
             return response()->json([
@@ -145,21 +155,26 @@ class ExternalLabCenterController extends Controller
         try {
             $hospitalId = Auth::user()->hospital_id;
             $labCenter = ExternalLabCenter::where('hospital_id', $hospitalId)
-                ->where('lab_center_id', $id)
+                ->where('lab_id', $id)
                 ->firstOrFail();
 
             $validator = Validator::make($request->all(), [
-                'lab_name' => 'required|string|max:200',
-                'lab_code' => 'nullable|string|max:50',
-                'contact_person' => 'nullable|string|max:100',
-                'phone' => 'nullable|string|max:20',
+                'lab_name' => 'required|string|max:255',
+                'has_patho_test' => 'boolean',
+                'has_radio_test' => 'boolean',
+                'has_procedure_test' => 'boolean',
+                'contact_person' => 'nullable|string|max:255',
+                'telephone' => 'nullable|string|max:20',
                 'mobile' => 'nullable|string|max:20',
-                'email' => 'nullable|email|max:100',
+                'email' => 'nullable|email|max:255',
                 'address' => 'nullable|string',
-                'city' => 'nullable|string|max:100',
-                'state' => 'nullable|string|max:100',
+                'city' => 'nullable|string|max:255',
+                'district' => 'nullable|string|max:255',
+                'state' => 'nullable|string|max:255',
+                'country' => 'nullable|string|max:255',
                 'pincode' => 'nullable|string|max:10',
-                'description' => 'nullable|string',
+                'fax' => 'nullable|string|max:20',
+                'website' => 'nullable|string|max:255',
                 'is_active' => 'boolean',
             ]);
 
@@ -172,16 +187,21 @@ class ExternalLabCenterController extends Controller
 
             $labCenter->update([
                 'lab_name' => $request->lab_name,
-                'lab_code' => $request->lab_code,
+                'has_patho_test' => $request->has_patho_test ?? $labCenter->has_patho_test,
+                'has_radio_test' => $request->has_radio_test ?? $labCenter->has_radio_test,
+                'has_procedure_test' => $request->has_procedure_test ?? $labCenter->has_procedure_test,
                 'contact_person' => $request->contact_person,
-                'phone' => $request->phone,
+                'telephone' => $request->telephone,
                 'mobile' => $request->mobile,
                 'email' => $request->email,
                 'address' => $request->address,
                 'city' => $request->city,
+                'district' => $request->district,
                 'state' => $request->state,
+                'country' => $request->country,
                 'pincode' => $request->pincode,
-                'description' => $request->description,
+                'fax' => $request->fax,
+                'website' => $request->website,
                 'is_active' => $request->is_active ?? $labCenter->is_active,
             ]);
 
@@ -204,7 +224,7 @@ class ExternalLabCenterController extends Controller
         try {
             $hospitalId = Auth::user()->hospital_id;
             $labCenter = ExternalLabCenter::where('hospital_id', $hospitalId)
-                ->where('lab_center_id', $id)
+                ->where('lab_id', $id)
                 ->firstOrFail();
 
             $labCenter->delete();

@@ -10,13 +10,13 @@ class SkillPathoTestMap extends Model
 {
     use HasFactory, BelongsToHospital;
 
-    protected $table = 'skill_patho_test_map';
+    protected $table = 'skill_patho_test_maps';
     protected $primaryKey = 'map_id';
 
     protected $fillable = [
         'hospital_id',
-        'skill_id',
-        'test_report_id',
+        'department_id',
+        'test_id',
         'is_active',
     ];
 
@@ -25,10 +25,18 @@ class SkillPathoTestMap extends Model
     ];
 
     /**
-     * Get the pathology test report this mapping belongs to.
+     * Get the department this mapping belongs to.
      */
-    public function pathoTestReport()
+    public function department()
     {
-        return $this->belongsTo(PathoTestReport::class, 'test_report_id', 'report_id');
+        return $this->belongsTo(\App\Models\Department::class, 'department_id', 'department_id');
+    }
+
+    /**
+     * Get the pathology test this mapping belongs to.
+     */
+    public function test()
+    {
+        return $this->belongsTo(\App\Models\Pathology\PathoTest::class, 'test_id', 'test_id');
     }
 }

@@ -20,7 +20,7 @@
                             placeholder="Search by lab name, city...">
                     </div>
                     <div class="col-md-2">
-                        <select class="form-select form-select-sm" v-model="filters.status" @change="loadLabs">
+                        <select class="form-select form-select-sm" v-model="filters.is_active" @change="loadLabs">
                             <option value="">All Status</option>
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
@@ -42,10 +42,10 @@
                             <tr>
                                 <th style="width: 60px;">#</th>
                                 <th style="min-width: 200px;">Lab Name</th>
-                                <th style="min-width: 200px;">Contact Person</th>
-                                <th style="min-width: 150px;">Phone</th>
-                                <th style="min-width: 150px;">City</th>
-                                <th style="min-width: 150px;">State</th>
+                                <th style="min-width: 150px;">Contact Person</th>
+                                <th style="min-width: 130px;">Phone</th>
+                                <th style="min-width: 120px;">City</th>
+                                <th style="min-width: 100px;" class="text-center">Test Types</th>
                                 <th style="width: 100px;" class="text-center">Status</th>
                                 <th style="width: 120px;" class="text-center">Actions</th>
                             </tr>
@@ -64,13 +64,18 @@
                                     No external labs found
                                 </td>
                             </tr>
-                            <tr v-else v-for="(item, index) in labs" :key="item.id">
+                            <tr v-else v-for="(item, index) in labs" :key="item.lab_id">
                                 <td>{{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}</td>
                                 <td>{{ item.lab_name }}</td>
                                 <td>{{ item.contact_person || '-' }}</td>
-                                <td>{{ item.phone || '-' }}</td>
+                                <td>{{ item.telephone || item.mobile || '-' }}</td>
                                 <td>{{ item.city || '-' }}</td>
-                                <td>{{ item.state || '-' }}</td>
+                                <td class="text-center">
+                                    <span v-if="item.has_patho_test" class="badge bg-primary me-1" title="Pathology">P</span>
+                                    <span v-if="item.has_radio_test" class="badge bg-info me-1" title="Radiology">R</span>
+                                    <span v-if="item.has_procedure_test" class="badge bg-success" title="Procedure">Pr</span>
+                                    <span v-if="!item.has_patho_test && !item.has_radio_test && !item.has_procedure_test">-</span>
+                                </td>
                                 <td class="text-center">
                                     <span :class="item.is_active ? 'badge bg-success' : 'badge bg-secondary'">
                                         {{ item.is_active ? 'Active' : 'Inactive' }}
@@ -80,7 +85,7 @@
                                     <button class="btn btn-sm btn-outline-primary me-1" @click="editLab(item)" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger" @click="deleteLab(item.id)" title="Delete">
+                                    <button class="btn btn-sm btn-outline-danger" @click="deleteLab(item.lab_id)" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
@@ -120,7 +125,7 @@
                         <button type="button" class="btn-close" @click="closeModal"></button>
                     </div>
                     <form @submit.prevent="saveLab">
-                        <div class="modal-body">
+                        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
                             <div class="alert alert-danger" v-if="error">
                                 {{ error }}
                             </div>
@@ -128,7 +133,7 @@
                             <!-- Basic Information -->
                             <h6 class="border-bottom pb-2 mb-3">Basic Information</h6>
                             <div class="row">
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-8 mb-3">
                                     <label class="form-label">Lab Name *</label>
                                     <input
                                         type="text"
@@ -137,13 +142,38 @@
                                         placeholder="e.g., ABC Diagnostic Center"
                                         required>
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Lab Code</label>
-                                    <input
-                                        type="text"
-                                        class="form-control"
-                                        v-model="form.lab_code"
-                                        placeholder="e.g., EXT-001">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label d-block">Test Types</label>
+                                    <div class="form-check form-check-inline">
+                                        <input
+                                            type="checkbox"
+                                            class="form-check-input"
+                                            id="hasPathoTest"
+                                            v-model="form.has_patho_test">
+                                        <label class="form-check-label" for="hasPathoTest">
+                                            Pathology
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input
+                                            type="checkbox"
+                                            class="form-check-input"
+                                            id="hasRadioTest"
+                                            v-model="form.has_radio_test">
+                                        <label class="form-check-label" for="hasRadioTest">
+                                            Radiology
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input
+                                            type="checkbox"
+                                            class="form-check-input"
+                                            id="hasProcedureTest"
+                                            v-model="form.has_procedure_test">
+                                        <label class="form-check-label" for="hasProcedureTest">
+                                            Procedure
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
 
@@ -159,24 +189,24 @@
                                         placeholder="Contact person name">
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Designation</label>
+                                    <label class="form-label">Email</label>
                                     <input
-                                        type="text"
+                                        type="email"
                                         class="form-control"
-                                        v-model="form.designation"
-                                        placeholder="e.g., Manager, Lab Incharge">
+                                        v-model="form.email"
+                                        placeholder="Email address">
                                 </div>
                             </div>
                             <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">Phone</label>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Telephone</label>
                                     <input
                                         type="text"
                                         class="form-control"
-                                        v-model="form.phone"
-                                        placeholder="Contact number">
+                                        v-model="form.telephone"
+                                        placeholder="Landline number">
                                 </div>
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-3 mb-3">
                                     <label class="form-label">Mobile</label>
                                     <input
                                         type="text"
@@ -184,13 +214,21 @@
                                         v-model="form.mobile"
                                         placeholder="Mobile number">
                                 </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">Email</label>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Fax</label>
                                     <input
-                                        type="email"
+                                        type="text"
                                         class="form-control"
-                                        v-model="form.email"
-                                        placeholder="Email address">
+                                        v-model="form.fax"
+                                        placeholder="Fax number">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Website</label>
+                                    <input
+                                        type="text"
+                                        class="form-control"
+                                        v-model="form.website"
+                                        placeholder="Website URL">
                                 </div>
                             </div>
 
@@ -205,7 +243,7 @@
                                     placeholder="Street address"></textarea>
                             </div>
                             <div class="row">
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-3 mb-3">
                                     <label class="form-label">City</label>
                                     <input
                                         type="text"
@@ -213,7 +251,7 @@
                                         v-model="form.city"
                                         placeholder="City">
                                 </div>
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-3 mb-3">
                                     <label class="form-label">District</label>
                                     <input
                                         type="text"
@@ -221,13 +259,21 @@
                                         v-model="form.district"
                                         placeholder="District">
                                 </div>
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-3 mb-3">
                                     <label class="form-label">State</label>
                                     <input
                                         type="text"
                                         class="form-control"
                                         v-model="form.state"
                                         placeholder="State">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Pincode</label>
+                                    <input
+                                        type="text"
+                                        class="form-control"
+                                        v-model="form.pincode"
+                                        placeholder="Postal code">
                                 </div>
                             </div>
                             <div class="row">
@@ -240,34 +286,17 @@
                                         placeholder="Country">
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Pincode</label>
-                                    <input
-                                        type="text"
-                                        class="form-control"
-                                        v-model="form.pincode"
-                                        placeholder="Postal code">
+                                    <div class="form-check mt-4">
+                                        <input
+                                            type="checkbox"
+                                            class="form-check-input"
+                                            id="isActive"
+                                            v-model="form.is_active">
+                                        <label class="form-check-label" for="isActive">
+                                            Active
+                                        </label>
+                                    </div>
                                 </div>
-                            </div>
-
-                            <!-- Additional Information -->
-                            <h6 class="border-bottom pb-2 mb-3 mt-4">Additional Information</h6>
-                            <div class="mb-3">
-                                <label class="form-label">Description</label>
-                                <textarea
-                                    class="form-control"
-                                    v-model="form.description"
-                                    rows="2"
-                                    placeholder="Optional notes or description"></textarea>
-                            </div>
-                            <div class="form-check">
-                                <input
-                                    type="checkbox"
-                                    class="form-check-input"
-                                    id="isActive"
-                                    v-model="form.is_active">
-                                <label class="form-check-label" for="isActive">
-                                    Active
-                                </label>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -295,7 +324,7 @@ const error = ref(null);
 const labs = ref([]);
 const filters = ref({
     search: '',
-    status: '',
+    is_active: '',
     per_page: 20,
     page: 1,
 });
@@ -312,19 +341,21 @@ const pagination = ref({
 const editMode = ref(false);
 const form = ref({
     lab_name: '',
-    lab_code: '',
+    has_patho_test: false,
+    has_radio_test: false,
+    has_procedure_test: false,
     contact_person: '',
-    designation: '',
-    phone: '',
+    telephone: '',
     mobile: '',
+    fax: '',
     email: '',
+    website: '',
     address: '',
     city: '',
     district: '',
     state: '',
     country: '',
     pincode: '',
-    description: '',
     is_active: true,
 });
 
@@ -359,18 +390,23 @@ const loadLabs = async () => {
     error.value = null;
     try {
         const response = await axios.get('/api/pathology/external-labs', { params: filters.value });
-        if (response.data.data) {
-            labs.value = response.data.data;
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            labs.value = paginatedData.data || paginatedData;
             pagination.value = {
-                current_page: response.data.current_page,
-                last_page: response.data.last_page,
-                per_page: response.data.per_page,
-                total: response.data.total,
-                from: response.data.from,
-                to: response.data.to,
+                current_page: paginatedData.current_page || 1,
+                last_page: paginatedData.last_page || 1,
+                per_page: paginatedData.per_page || 20,
+                total: paginatedData.total || 0,
+                from: paginatedData.from || 0,
+                to: paginatedData.to || 0,
             };
         } else {
-            labs.value = response.data;
+            labs.value = response.data.data || response.data;
+        }
+
+        if (!Array.isArray(labs.value)) {
+            labs.value = [];
         }
     } catch (err) {
         console.error('Error loading labs:', err);
@@ -392,19 +428,21 @@ const openAddModal = () => {
     error.value = null;
     form.value = {
         lab_name: '',
-        lab_code: '',
+        has_patho_test: false,
+        has_radio_test: false,
+        has_procedure_test: false,
         contact_person: '',
-        designation: '',
-        phone: '',
+        telephone: '',
         mobile: '',
+        fax: '',
         email: '',
+        website: '',
         address: '',
         city: '',
         district: '',
         state: '',
         country: '',
         pincode: '',
-        description: '',
         is_active: true,
     };
     if (labModal) {
@@ -416,21 +454,23 @@ const editLab = (item) => {
     editMode.value = true;
     error.value = null;
     form.value = {
-        id: item.id,
+        lab_id: item.lab_id,
         lab_name: item.lab_name,
-        lab_code: item.lab_code,
+        has_patho_test: item.has_patho_test,
+        has_radio_test: item.has_radio_test,
+        has_procedure_test: item.has_procedure_test,
         contact_person: item.contact_person,
-        designation: item.designation,
-        phone: item.phone,
+        telephone: item.telephone,
         mobile: item.mobile,
+        fax: item.fax,
         email: item.email,
+        website: item.website,
         address: item.address,
         city: item.city,
         district: item.district,
         state: item.state,
         country: item.country,
         pincode: item.pincode,
-        description: item.description,
         is_active: item.is_active,
     };
     if (labModal) {
@@ -443,7 +483,7 @@ const saveLab = async () => {
     error.value = null;
     try {
         if (editMode.value) {
-            await axios.put(`/api/pathology/external-labs/${form.value.id}`, form.value);
+            await axios.put(`/api/pathology/external-labs/${form.value.lab_id}`, form.value);
         } else {
             await axios.post('/api/pathology/external-labs', form.value);
         }

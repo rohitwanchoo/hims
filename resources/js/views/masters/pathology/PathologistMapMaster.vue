@@ -22,7 +22,7 @@
                     <div class="col-md-2">
                         <select class="form-select form-select-sm" v-model="filters.faculty_id" @change="loadMappings">
                             <option value="">All Faculties</option>
-                            <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
+                            <option v-for="faculty in faculties" :key="faculty.faculty_id" :value="faculty.faculty_id">
                                 {{ faculty.faculty_name }}
                             </option>
                         </select>
@@ -71,11 +71,11 @@
                                     No pathologist mappings found
                                 </td>
                             </tr>
-                            <tr v-else v-for="(item, index) in mappings" :key="item.id">
+                            <tr v-else v-for="(item, index) in mappings" :key="item.map_id">
                                 <td>{{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}</td>
                                 <td>{{ item.doctor?.name || '-' }}</td>
                                 <td>{{ item.faculty?.faculty_name || '-' }}</td>
-                                <td>{{ item.qualification || '-' }}</td>
+                                <td>{{ item.doctor?.specialization || '-' }}</td>
                                 <td class="text-center">
                                     <span v-if="item.signature_path" class="badge bg-success">
                                         <i class="bi bi-check-circle"></i> Yes
@@ -91,7 +91,7 @@
                                     <button class="btn btn-sm btn-outline-primary me-1" @click="editMapping(item)" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger" @click="deleteMapping(item.id)" title="Delete">
+                                    <button class="btn btn-sm btn-outline-danger" @click="deleteMapping(item.map_id)" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
@@ -140,7 +140,7 @@
                                     <label class="form-label">Faculty *</label>
                                     <select class="form-select" v-model="form.faculty_id" required>
                                         <option value="">Select Faculty</option>
-                                        <option v-for="faculty in faculties" :key="faculty.id" :value="faculty.id">
+                                        <option v-for="faculty in faculties" :key="faculty.faculty_id" :value="faculty.faculty_id">
                                             {{ faculty.faculty_name }}
                                         </option>
                                     </select>
@@ -149,19 +149,11 @@
                                     <label class="form-label">Doctor *</label>
                                     <select class="form-select" v-model="form.doctor_id" required>
                                         <option value="">Select Doctor</option>
-                                        <option v-for="doctor in doctors" :key="doctor.id" :value="doctor.id">
+                                        <option v-for="doctor in doctors" :key="doctor.doctor_id" :value="doctor.doctor_id">
                                             {{ doctor.name }} - {{ doctor.specialization || 'N/A' }}
                                         </option>
                                     </select>
                                 </div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Qualification</label>
-                                <input
-                                    type="text"
-                                    class="form-control"
-                                    v-model="form.qualification"
-                                    placeholder="e.g., MD Pathology, MBBS">
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Signature Upload</label>
@@ -187,14 +179,6 @@
                                         <i class="bi bi-x"></i> Remove
                                     </button>
                                 </div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Notes</label>
-                                <textarea
-                                    class="form-control"
-                                    v-model="form.notes"
-                                    rows="2"
-                                    placeholder="Optional notes"></textarea>
                             </div>
                             <div class="form-check">
                                 <input
@@ -258,8 +242,6 @@ const editMode = ref(false);
 const form = ref({
     faculty_id: '',
     doctor_id: '',
-    qualification: '',
-    notes: '',
     is_active: true,
 });
 
@@ -296,18 +278,24 @@ const loadMappings = async () => {
     error.value = null;
     try {
         const response = await axios.get('/api/pathology/pathologist-mappings', { params: filters.value });
-        if (response.data.data) {
-            mappings.value = response.data.data;
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            mappings.value = paginatedData.data || paginatedData;
             pagination.value = {
-                current_page: response.data.current_page,
-                last_page: response.data.last_page,
-                per_page: response.data.per_page,
-                total: response.data.total,
-                from: response.data.from,
-                to: response.data.to,
+                current_page: paginatedData.current_page || 1,
+                last_page: paginatedData.last_page || 1,
+                per_page: paginatedData.per_page || 20,
+                total: paginatedData.total || 0,
+                from: paginatedData.from || 0,
+                to: paginatedData.to || 0,
             };
         } else {
-            mappings.value = response.data;
+            mappings.value = response.data.data || response.data;
+        }
+
+        // Ensure array
+        if (!Array.isArray(mappings.value)) {
+            mappings.value = [];
         }
     } catch (err) {
         console.error('Error loading mappings:', err);
@@ -319,8 +307,16 @@ const loadMappings = async () => {
 
 const loadFaculties = async () => {
     try {
-        const response = await axios.get('/api/pathology/faculties', { params: { status: 1 } });
-        faculties.value = response.data.data || response.data;
+        const response = await axios.get('/api/pathology/faculties', { params: { is_active: 1, per_page: 100 } });
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            faculties.value = paginatedData.data || paginatedData;
+        } else {
+            faculties.value = response.data.data || response.data;
+        }
+        if (!Array.isArray(faculties.value)) {
+            faculties.value = [];
+        }
     } catch (err) {
         console.error('Error loading faculties:', err);
     }
@@ -328,8 +324,16 @@ const loadFaculties = async () => {
 
 const loadDoctors = async () => {
     try {
-        const response = await axios.get('/api/doctors', { params: { status: 1 } });
-        doctors.value = response.data.data || response.data;
+        const response = await axios.get('/api/doctors', { params: { is_active: 1, per_page: 100 } });
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            doctors.value = paginatedData.data || paginatedData;
+        } else {
+            doctors.value = response.data.data || response.data;
+        }
+        if (!Array.isArray(doctors.value)) {
+            doctors.value = [];
+        }
     } catch (err) {
         console.error('Error loading doctors:', err);
     }
@@ -384,8 +388,6 @@ const openAddModal = () => {
     form.value = {
         faculty_id: '',
         doctor_id: '',
-        qualification: '',
-        notes: '',
         is_active: true,
     };
     clearSignature();
@@ -399,11 +401,9 @@ const editMapping = (item) => {
     editMode.value = true;
     error.value = null;
     form.value = {
-        id: item.id,
+        map_id: item.map_id,
         faculty_id: item.faculty_id,
         doctor_id: item.doctor_id,
-        qualification: item.qualification,
-        notes: item.notes,
         is_active: item.is_active,
     };
     clearSignature();
@@ -420,8 +420,6 @@ const saveMapping = async () => {
         const formData = new FormData();
         formData.append('faculty_id', form.value.faculty_id);
         formData.append('doctor_id', form.value.doctor_id);
-        formData.append('qualification', form.value.qualification || '');
-        formData.append('notes', form.value.notes || '');
         formData.append('is_active', form.value.is_active ? 1 : 0);
 
         if (signatureFile.value) {
@@ -430,7 +428,7 @@ const saveMapping = async () => {
 
         if (editMode.value) {
             formData.append('_method', 'PUT');
-            await axios.post(`/api/pathology/pathologist-mappings/${form.value.id}`, formData, {
+            await axios.post(`/api/pathology/pathologist-mappings/${form.value.map_id}`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },

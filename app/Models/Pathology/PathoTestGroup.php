@@ -10,7 +10,7 @@ class PathoTestGroup extends Model
 {
     use HasFactory, BelongsToHospital;
 
-    protected $table = 'patho_test_group';
+    protected $table = 'patho_test_groups';
     protected $primaryKey = 'group_id';
 
     protected $fillable = [

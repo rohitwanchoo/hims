@@ -10,7 +10,7 @@ class Analyzer extends Model
 {
     use HasFactory, BelongsToHospital;
 
-    protected $table = 'analyzer';
+    protected $table = 'analyzers';
     protected $primaryKey = 'analyzer_id';
 
     protected $fillable = [
@@ -36,5 +36,20 @@ class Analyzer extends Model
     public function pathoTests()
     {
         return $this->hasMany(PathoTest::class, 'analyzer_id', 'analyzer_id');
+    }
+
+    /**
+     * Get mapped tests through analyzer_test_maps pivot table.
+     */
+    public function tests()
+    {
+        return $this->belongsToMany(
+            PathoTest::class,
+            'analyzer_test_maps',
+            'analyzer_id',
+            'test_id',
+            'analyzer_id',
+            'test_id'
+        );
     }
 }

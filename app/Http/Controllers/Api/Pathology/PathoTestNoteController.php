@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Pathology;
 
 use App\Http\Controllers\Controller;
-use App\Models\PathoTestNote;
+use App\Models\Pathology\PathoTestNote;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -16,15 +16,17 @@ class PathoTestNoteController extends Controller
             $hospitalId = Auth::user()->hospital_id;
 
             $query = PathoTestNote::where('hospital_id', $hospitalId)
-                ->with(['test']);
+                ->with(['pathoTest', 'pathoTestReport']);
 
             // Search filter
             if ($request->filled('search')) {
                 $search = $request->search;
-                $query->where(function($q) use ($search) {
-                    $q->where('note_title', 'like', "%{$search}%")
-                      ->orWhere('note_text', 'like', "%{$search}%");
-                });
+                $query->where('note_text', 'like', "%{$search}%");
+            }
+
+            // Note for filter
+            if ($request->filled('note_for')) {
+                $query->where('note_for', $request->note_for);
             }
 
             // Test filter
@@ -38,8 +40,8 @@ class PathoTestNoteController extends Controller
             }
 
             // Sorting
-            $sortBy = $request->get('sort_by', 'note_title');
-            $sortOrder = $request->get('sort_order', 'asc');
+            $sortBy = $request->get('sort_by', 'created_at');
+            $sortOrder = $request->get('sort_order', 'desc');
             $query->orderBy($sortBy, $sortOrder);
 
             // Pagination
@@ -67,10 +69,14 @@ class PathoTestNoteController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'test_id' => 'nullable|exists:patho_tests,test_id',
-                'note_title' => 'required|string|max:200',
-                'note_text' => 'required|string',
-                'display_order' => 'nullable|integer',
+                'note_for' => 'required|in:test_master,test_report',
+                'test_master_id' => 'required_if:note_for,test_master|nullable|exists:patho_tests,test_id',
+                'test_report_id' => 'required_if:note_for,test_report|nullable|exists:patho_test_reports,report_id',
+                'note_content' => 'required|string',
+                'age_group' => 'nullable|string|max:50',
+                'test_remark' => 'nullable|string',
+                'is_default' => 'boolean',
+                'is_abnormal' => 'boolean',
                 'is_active' => 'boolean',
             ]);
 
@@ -83,17 +89,21 @@ class PathoTestNoteController extends Controller
 
             $note = PathoTestNote::create([
                 'hospital_id' => Auth::user()->hospital_id,
-                'test_id' => $request->test_id,
-                'note_title' => $request->note_title,
-                'note_text' => $request->note_text,
-                'display_order' => $request->display_order ?? 0,
+                'note_for' => $request->note_for,
+                'test_id' => $request->note_for === 'test_master' ? $request->test_master_id : null,
+                'report_id' => $request->note_for === 'test_report' ? $request->test_report_id : null,
+                'note_text' => $request->note_content,
+                'age_group' => $request->age_group,
+                'test_remark' => $request->test_remark,
+                'is_default' => $request->is_default ?? false,
+                'is_abnormal' => $request->is_abnormal ?? false,
                 'is_active' => $request->is_active ?? true,
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Test note created successfully',
-                'data' => $note->load('test')
+                'data' => $note->load(['pathoTest', 'pathoTestReport'])
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
@@ -110,7 +120,7 @@ class PathoTestNoteController extends Controller
             $hospitalId = Auth::user()->hospital_id;
             $note = PathoTestNote::where('hospital_id', $hospitalId)
                 ->where('note_id', $id)
-                ->with(['test'])
+                ->with(['testMaster', 'testReport'])
                 ->firstOrFail();
 
             return response()->json([
@@ -135,10 +145,14 @@ class PathoTestNoteController extends Controller
                 ->firstOrFail();
 
             $validator = Validator::make($request->all(), [
-                'test_id' => 'nullable|exists:patho_tests,test_id',
-                'note_title' => 'required|string|max:200',
-                'note_text' => 'required|string',
-                'display_order' => 'nullable|integer',
+                'note_for' => 'required|in:test_master,test_report',
+                'test_master_id' => 'required_if:note_for,test_master|nullable|exists:patho_tests,test_id',
+                'test_report_id' => 'required_if:note_for,test_report|nullable|exists:patho_test_reports,report_id',
+                'note_content' => 'required|string',
+                'age_group' => 'nullable|string|max:50',
+                'test_remark' => 'nullable|string',
+                'is_default' => 'boolean',
+                'is_abnormal' => 'boolean',
                 'is_active' => 'boolean',
             ]);
 
@@ -150,17 +164,21 @@ class PathoTestNoteController extends Controller
             }
 
             $note->update([
-                'test_id' => $request->test_id,
-                'note_title' => $request->note_title,
-                'note_text' => $request->note_text,
-                'display_order' => $request->display_order ?? $note->display_order,
+                'note_for' => $request->note_for,
+                'test_id' => $request->note_for === 'test_master' ? $request->test_master_id : null,
+                'report_id' => $request->note_for === 'test_report' ? $request->test_report_id : null,
+                'note_text' => $request->note_content,
+                'age_group' => $request->age_group,
+                'test_remark' => $request->test_remark,
+                'is_default' => $request->is_default ?? $note->is_default,
+                'is_abnormal' => $request->is_abnormal ?? $note->is_abnormal,
                 'is_active' => $request->is_active ?? $note->is_active,
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Test note updated successfully',
-                'data' => $note->load('test')
+                'data' => $note->load(['pathoTest', 'pathoTestReport'])
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -201,8 +219,7 @@ class PathoTestNoteController extends Controller
             $notes = PathoTestNote::where('hospital_id', $hospitalId)
                 ->where('test_id', $testId)
                 ->where('is_active', true)
-                ->orderBy('display_order')
-                ->orderBy('note_title')
+                ->orderBy('created_at', 'desc')
                 ->get();
 
             return response()->json([

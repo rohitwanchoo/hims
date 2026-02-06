@@ -10,7 +10,7 @@ class PathoSampleType extends Model
 {
     use HasFactory, BelongsToHospital;
 
-    protected $table = 'patho_sample_type';
+    protected $table = 'patho_sample_types';
     protected $primaryKey = 'sample_type_id';
 
     protected $fillable = [

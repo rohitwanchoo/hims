@@ -10,7 +10,7 @@ class PathoSensitivity extends Model
 {
     use HasFactory, BelongsToHospital;
 
-    protected $table = 'patho_sensitivity';
+    protected $table = 'patho_sensitivities';
     protected $primaryKey = 'sensitivity_id';
 
     protected $fillable = [

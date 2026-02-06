@@ -16,6 +16,10 @@
                         <i class="bi bi-printer"></i> Print
                     </button>
                     <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" @click.prevent="printDischargeReceipt">
+                            <i class="bi bi-receipt"></i> Discharge Receipt (Bill)
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="#" @click.prevent="printDischargeSummary">
                             <i class="bi bi-file-text"></i> Discharge Summary
                         </a></li>
@@ -1906,7 +1910,8 @@ export default {
             try {
                 const response = await axios.post('/api/ipd-admissions', form.value);
                 alert('Patient admitted successfully!');
-                router.push(`/ipd/${response.data.admission.ipd_id}`);
+                // Use window.location to force full page reload and show view mode properly
+                window.location.href = `/ipd/${response.data.admission.ipd_id}`;
             } catch (error) {
                 alert('Failed to create admission: ' + (error.response?.data?.message || error.message));
             } finally {
@@ -2035,17 +2040,31 @@ export default {
         };
 
         const finalDischarge = async () => {
-            if (!confirm('Are you sure you want to discharge this patient? This will mark the patient as discharged.')) return;
+            if (!confirm('Are you sure you want to discharge this patient?\n\nThis will:\n- Finalize the IPD bill\n- Mark patient as discharged\n- Open discharge receipt for printing')) return;
+
             try {
-                // Simple discharge - just update status to discharged
-                await axios.patch(`/api/ipd-admissions/${route.params.id}`, {
-                    status: 'discharged',
-                    discharge_date: new Date().toISOString()
+                // Call initiate discharge to get final bill and discharge
+                const response = await axios.post(`/api/ipd-admissions/${route.params.id}/initiate-discharge`, {
+                    discharge_type: 'normal',
+                    condition_at_discharge: 'Stable'
                 });
-                alert('Patient discharged successfully!');
+
+                console.log('Discharge response:', response.data);
+
+                // Automatically open discharge receipt
+                const url = `/print/ipd-discharge-receipt/${route.params.id}`;
+                window.open(url, '_blank');
+
+                // Reload admission data
                 await loadAdmission();
+
+                // Show success message
+                alert('Patient discharge initiated successfully!\n\nThe discharge receipt has been opened in a new window.\nYou can reprint it anytime from the Print menu.');
+
             } catch (error) {
-                alert('Failed to discharge: ' + (error.response?.data?.message || error.message));
+                console.error('Discharge error:', error);
+                const errorMsg = error.response?.data?.message || error.message;
+                alert('Failed to discharge patient:\n\n' + errorMsg);
             }
         };
 
@@ -2460,6 +2479,11 @@ export default {
             window.open(url, '_blank');
         };
 
+        const printDischargeReceipt = () => {
+            const url = `/print/ipd-discharge-receipt/${route.params.id}`;
+            window.open(url, '_blank');
+        };
+
         onMounted(() => {
             loadMasterData();
             loadIpdCostHeads();
@@ -2560,6 +2584,7 @@ export default {
             getMedicationStatusBadge,
             printDischargeSummary,
             printCaseSheet,
+            printDischargeReceipt,
         };
     },
 };

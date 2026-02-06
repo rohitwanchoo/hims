@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Pathology;
 
 use App\Http\Controllers\Controller;
-use App\Models\PathoSampleType;
+use App\Models\Pathology\PathoSampleType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -15,21 +15,12 @@ class PathoSampleTypeController extends Controller
         try {
             $hospitalId = Auth::user()->hospital_id;
 
-            $query = PathoSampleType::where('hospital_id', $hospitalId)
-                ->with(['container']);
+            $query = PathoSampleType::where('hospital_id', $hospitalId);
 
             // Search filter
             if ($request->filled('search')) {
                 $search = $request->search;
-                $query->where(function($q) use ($search) {
-                    $q->where('sample_type_name', 'like', "%{$search}%")
-                      ->orWhere('sample_type_code', 'like', "%{$search}%");
-                });
-            }
-
-            // Container filter
-            if ($request->filled('container_id')) {
-                $query->where('container_id', $request->container_id);
+                $query->where('sample_type_name', 'like', "%{$search}%");
             }
 
             // Active filter
@@ -68,9 +59,6 @@ class PathoSampleTypeController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'sample_type_name' => 'required|string|max:100',
-                'sample_type_code' => 'nullable|string|max:50',
-                'container_id' => 'nullable|exists:patho_containers,container_id',
-                'description' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -84,16 +72,13 @@ class PathoSampleTypeController extends Controller
             $sampleType = PathoSampleType::create([
                 'hospital_id' => Auth::user()->hospital_id,
                 'sample_type_name' => $request->sample_type_name,
-                'sample_type_code' => $request->sample_type_code,
-                'container_id' => $request->container_id,
-                'description' => $request->description,
                 'is_active' => $request->is_active ?? true,
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Sample type created successfully',
-                'data' => $sampleType->load('container')
+                'data' => $sampleType
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
@@ -110,7 +95,6 @@ class PathoSampleTypeController extends Controller
             $hospitalId = Auth::user()->hospital_id;
             $sampleType = PathoSampleType::where('hospital_id', $hospitalId)
                 ->where('sample_type_id', $id)
-                ->with(['container'])
                 ->firstOrFail();
 
             return response()->json([
@@ -136,9 +120,6 @@ class PathoSampleTypeController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'sample_type_name' => 'required|string|max:100',
-                'sample_type_code' => 'nullable|string|max:50',
-                'container_id' => 'nullable|exists:patho_containers,container_id',
-                'description' => 'nullable|string',
                 'is_active' => 'boolean',
             ]);
 
@@ -151,16 +132,13 @@ class PathoSampleTypeController extends Controller
 
             $sampleType->update([
                 'sample_type_name' => $request->sample_type_name,
-                'sample_type_code' => $request->sample_type_code,
-                'container_id' => $request->container_id,
-                'description' => $request->description,
                 'is_active' => $request->is_active ?? $sampleType->is_active,
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Sample type updated successfully',
-                'data' => $sampleType->load('container')
+                'data' => $sampleType
             ]);
         } catch (\Exception $e) {
             return response()->json([

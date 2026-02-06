@@ -1,15 +1,13 @@
 <template>
     <div class="ipd-list">
         <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-1">
             <div>
-                <h2 class="mb-1 fw-bold">IPD Dashboard</h2>
-                <p class="text-muted mb-0 small">Manage and monitor in-patient admissions</p>
+                <h4 class="mb-0 fw-bold">IPD Dashboard</h4>
             </div>
             <div class="d-flex gap-2">
                 <button class="modern-btn modern-btn-outline" @click="showBedMap = true">
                     <i class="bi bi-grid-3x3"></i>
-                    <span>Bed Map</span>
                 </button>
                 <router-link to="/ipd/create" class="modern-btn modern-btn-primary">
                     <i class="bi bi-plus-lg"></i>
@@ -19,65 +17,47 @@
         </div>
 
         <!-- Summary Cards -->
-        <div class="row g-3 mb-4">
-            <div class="col-xl-2 col-lg-4 col-md-6">
-                <div class="stat-card stat-card-gradient-primary">
-                    <div class="stat-content-full">
-                        <div class="stat-label-top">Total Admitted</div>
-                        <div class="stat-value-large">{{ summary.total_admitted || 0 }}</div>
-                        <div class="stat-description">Currently in hospital</div>
-                    </div>
+        <div class="row g-2 mb-1">
+            <div class="col-2">
+                <div class="stat-card-compact stat-card-gradient-primary">
+                    <div class="stat-label-compact">Total Admitted</div>
+                    <div class="stat-value-compact">{{ summary.total_admitted || 0 }}</div>
                 </div>
             </div>
-            <div class="col-xl-2 col-lg-4 col-md-6">
-                <div class="stat-card stat-card-gradient-success">
-                    <div class="stat-content-full">
-                        <div class="stat-label-top">Today Admissions</div>
-                        <div class="stat-value-large">{{ summary.today_admissions || 0 }}</div>
-                        <div class="stat-description">New admissions today</div>
-                    </div>
+            <div class="col-2">
+                <div class="stat-card-compact stat-card-gradient-success">
+                    <div class="stat-label-compact">Today Admissions</div>
+                    <div class="stat-value-compact">{{ summary.today_admissions || 0 }}</div>
                 </div>
             </div>
-            <div class="col-xl-2 col-lg-4 col-md-6">
-                <div class="stat-card stat-card-gradient-info">
-                    <div class="stat-content-full">
-                        <div class="stat-label-top">Today Discharges</div>
-                        <div class="stat-value-large">{{ summary.today_discharges || 0 }}</div>
-                        <div class="stat-description">Discharged patients today</div>
-                    </div>
+            <div class="col-2">
+                <div class="stat-card-compact stat-card-gradient-info">
+                    <div class="stat-label-compact">Today Discharges</div>
+                    <div class="stat-value-compact">{{ summary.today_discharges || 0 }}</div>
                 </div>
             </div>
-            <div class="col-xl-2 col-lg-4 col-md-6">
-                <div class="stat-card stat-card-gradient-warning">
-                    <div class="stat-content-full">
-                        <div class="stat-label-top">Pending Discharge</div>
-                        <div class="stat-value-large">{{ summary.pending_discharge || 0 }}</div>
-                        <div class="stat-description">Awaiting discharge process</div>
-                    </div>
+            <div class="col-2">
+                <div class="stat-card-compact stat-card-gradient-warning">
+                    <div class="stat-label-compact">Pending Discharge</div>
+                    <div class="stat-value-compact">{{ summary.pending_discharge || 0 }}</div>
                 </div>
             </div>
-            <div class="col-xl-2 col-lg-4 col-md-6">
-                <div class="stat-card stat-card-gradient-danger">
-                    <div class="stat-content-full">
-                        <div class="stat-label-top">MLC Cases</div>
-                        <div class="stat-value-large">{{ summary.mlc_cases || 0 }}</div>
-                        <div class="stat-description">Medico-legal cases</div>
-                    </div>
+            <div class="col-2">
+                <div class="stat-card-compact stat-card-gradient-danger">
+                    <div class="stat-label-compact">MLC Cases</div>
+                    <div class="stat-value-compact">{{ summary.mlc_cases || 0 }}</div>
                 </div>
             </div>
-            <div class="col-xl-2 col-lg-4 col-md-6">
-                <div class="stat-card stat-card-gradient-secondary">
-                    <div class="stat-content-full">
-                        <div class="stat-label-top">Insurance</div>
-                        <div class="stat-value-large">{{ summary.insurance_cases || 0 }}</div>
-                        <div class="stat-description">Insurance covered cases</div>
-                    </div>
+            <div class="col-2">
+                <div class="stat-card-compact stat-card-gradient-secondary">
+                    <div class="stat-label-compact">Insurance</div>
+                    <div class="stat-value-compact">{{ summary.insurance_cases || 0 }}</div>
                 </div>
             </div>
         </div>
 
         <!-- Filters -->
-        <div class="modern-card mb-4">
+        <div class="modern-card mb-1">
             <div class="modern-card-header clickable" @click="showFilters = !showFilters">
                 <div class="d-flex justify-content-between align-items-center w-100">
                     <h6 class="mb-0">
@@ -167,7 +147,7 @@
             </div>
             <div class="modern-card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0 modern-table">
+                    <table class="table table-hover table-sm mb-0 modern-table">
                         <thead class="table-light">
                             <tr>
                                 <th>IPD No</th>
@@ -178,7 +158,7 @@
                                 <th>LOS</th>
                                 <th>Status</th>
                                 <th>Flags</th>
-                                <th width="120">Actions</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -232,15 +212,15 @@
                                 </td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <router-link :to="`/ipd/${admission.ipd_id}`" class="btn btn-outline-primary" title="View">
+                                        <router-link :to="`/ipd/${admission.ipd_id}`" class="btn btn-outline-primary" title="View Details">
                                             <i class="bi bi-eye"></i>
                                         </router-link>
                                         <button v-if="admission.status === 'admitted'" class="btn btn-outline-success"
-                                                @click="initiateDischarge(admission)" title="Discharge">
+                                                @click="initiateDischarge(admission)" title="Discharge & Print Receipt">
                                             <i class="bi bi-box-arrow-right"></i>
                                         </button>
-                                        <button class="btn btn-outline-secondary" @click="printCaseSheet(admission)" title="Print">
-                                            <i class="bi bi-printer"></i>
+                                        <button class="btn btn-outline-secondary" @click="printCaseSheet(admission)" title="Print Discharge Receipt">
+                                            <i class="bi bi-receipt"></i>
                                         </button>
                                     </div>
                                 </td>
@@ -591,18 +571,32 @@ export default {
         };
 
         const initiateDischarge = async (admission) => {
-            if (!confirm('Initiate discharge for this patient?')) return;
+            if (!confirm('Discharge this patient?\n\nThis will:\n- Mark patient as discharged\n- Release the bed\n- Finalize the IPD bill\n- Open discharge receipt for printing')) return;
             try {
-                await axios.post(`/api/ipd-admissions/${admission.ipd_id}/initiate-discharge`);
-                loadAdmissions(pagination.value.current_page);
-                loadSummary();
+                const response = await axios.post(`/api/ipd-admissions/${admission.ipd_id}/initiate-discharge`, {
+                    discharge_type: 'normal',
+                    condition_at_discharge: 'Stable'
+                });
+
+                // Open discharge receipt automatically
+                const url = `/print/ipd-discharge-receipt/${admission.ipd_id}`;
+                window.open(url, '_blank');
+
+                // Reload the list to show updated status
+                await loadAdmissions(pagination.value.current_page);
+                await loadSummary();
+
+                alert('Patient discharged successfully!\n\nStatus: Discharged\nBed: Released\n\nThe discharge receipt has been opened.\nYou can reprint it anytime from the print button.');
             } catch (error) {
-                alert('Failed to initiate discharge: ' + (error.response?.data?.message || error.message));
+                console.error('Discharge error:', error);
+                alert('Failed to discharge patient: ' + (error.response?.data?.message || error.message));
             }
         };
 
         const printCaseSheet = (admission) => {
-            window.open(`/ipd/${admission.ipd_id}/print`, '_blank');
+            // Open discharge receipt (billing receipt)
+            const url = `/print/ipd-discharge-receipt/${admission.ipd_id}`;
+            window.open(url, '_blank');
         };
 
         // Bed map helper functions
@@ -734,6 +728,58 @@ export default {
 </script>
 
 <style scoped>
+/* Responsive optimization for 13-14" screens */
+@media (max-width: 1600px) {
+    h2, h4 {
+        font-size: 1.5rem !important;
+    }
+
+    .stat-value-compact {
+        font-size: 1.1rem !important;
+    }
+
+    .stat-card-compact {
+        padding: 0.65rem 0.85rem !important;
+        min-height: 65px !important;
+    }
+
+    .stat-label-compact {
+        font-size: 0.65rem !important;
+    }
+
+    .modern-table {
+        font-size: 0.813rem;
+    }
+
+    .modern-table thead th,
+    .modern-table tbody td {
+        padding: 0.5rem 0.4rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.35rem;
+        font-size: 0.75rem;
+    }
+
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .modern-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.813rem;
+    }
+
+    .modern-card-header {
+        padding: 0.5rem 0.75rem;
+    }
+
+    .modern-card-body {
+        padding: 0.75rem;
+    }
+}
+
 /* Modern Dashboard Styles */
 .ipd-list {
     background: #f8f9fa;
@@ -778,6 +824,43 @@ export default {
     background: #f8f9fa;
     border-color: #667eea;
     color: #667eea;
+}
+
+/* Compact Stat Cards */
+.stat-card-compact {
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    height: 100%;
+    min-height: 70px;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card-compact:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.stat-label-compact {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    opacity: 0.9;
+    color: white;
+}
+
+.stat-value-compact {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+    color: white;
 }
 
 /* Modern Stat Cards with Gradients */
@@ -869,7 +952,7 @@ export default {
 }
 
 .modern-card-header {
-    padding: 1.25rem 1.5rem;
+    padding: 0.75rem 1rem;
     border-bottom: 1px solid #f0f0f0;
     background: #fafafa;
 }
@@ -882,7 +965,7 @@ export default {
 }
 
 .modern-card-body {
-    padding: 1.5rem;
+    padding: 1rem;
 }
 
 /* Modern Table */
@@ -2131,23 +2214,27 @@ export default {
 }
 
 /* Column widths */
-.ipd-list .table th:nth-child(1), .ipd-list .table td:nth-child(1) { width: 10%; min-width: 100px; }
-.ipd-list .table th:nth-child(2), .ipd-list .table td:nth-child(2) { width: 15%; min-width: 150px; }
-.ipd-list .table th:nth-child(3), .ipd-list .table td:nth-child(3) { width: 12%; min-width: 120px; }
-.ipd-list .table th:nth-child(4), .ipd-list .table td:nth-child(4) { width: 15%; min-width: 150px; }
-.ipd-list .table th:nth-child(5), .ipd-list .table td:nth-child(5) { width: 10%; min-width: 100px; }
-.ipd-list .table th:nth-child(6), .ipd-list .table td:nth-child(6) { width: 8%; min-width: 80px; text-align: center; }
-.ipd-list .table th:nth-child(7), .ipd-list .table td:nth-child(7) { width: 10%; min-width: 100px; text-align: center; }
-.ipd-list .table th:nth-child(8), .ipd-list .table td:nth-child(8) { width: 10%; min-width: 100px; text-align: center; }
-.ipd-list .table th:nth-child(9), .ipd-list .table td:nth-child(9) { width: 10%; min-width: 120px; text-align: center; }
+.ipd-list .table th:nth-child(1), .ipd-list .table td:nth-child(1) { width: 10%; }
+.ipd-list .table th:nth-child(2), .ipd-list .table td:nth-child(2) { width: 15%; }
+.ipd-list .table th:nth-child(3), .ipd-list .table td:nth-child(3) { width: 12%; }
+.ipd-list .table th:nth-child(4), .ipd-list .table td:nth-child(4) { width: 15%; }
+.ipd-list .table th:nth-child(5), .ipd-list .table td:nth-child(5) { width: 10%; }
+.ipd-list .table th:nth-child(6), .ipd-list .table td:nth-child(6) { width: 8%; text-align: center; }
+.ipd-list .table th:nth-child(7), .ipd-list .table td:nth-child(7) { width: 10%; text-align: center; }
+.ipd-list .table th:nth-child(8), .ipd-list .table td:nth-child(8) { width: 10%; text-align: center; }
+.ipd-list .table th:nth-child(9), .ipd-list .table td:nth-child(9) { width: 10%; text-align: center; }
 
 /* Text wrapping */
-.ipd-list .table td > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.ipd-list .table td > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ipd-list .table td small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* Responsive table */
-@media (max-width: 1200px) {
-    .ipd-list .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .ipd-list .table { min-width: 1000px; }
+/* Responsive table - no horizontal scroll */
+.ipd-list .table-responsive {
+    overflow-x: hidden;
+}
+
+.ipd-list .table {
+    width: 100%;
+    table-layout: auto;
 }
 </style>

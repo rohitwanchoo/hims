@@ -211,30 +211,6 @@
 
                             <!-- Reference Ranges (Only for Numeric) -->
                             <div v-if="form.value_type === 'numeric'">
-                                <h6 class="border-bottom pb-2 mb-3 mt-4">Reference Ranges</h6>
-
-                                <!-- Normal Range -->
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Min Value</label>
-                                        <input
-                                            type="number"
-                                            step="any"
-                                            class="form-control"
-                                            v-model.number="form.min_value"
-                                            placeholder="e.g., 13.0">
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Max Value</label>
-                                        <input
-                                            type="number"
-                                            step="any"
-                                            class="form-control"
-                                            v-model.number="form.max_value"
-                                            placeholder="e.g., 17.0">
-                                    </div>
-                                </div>
-
                                 <!-- Gender, Age Group & Race Specific Ranges -->
                                 <div class="mb-3">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -252,9 +228,11 @@
                                         <table class="table table-sm table-bordered">
                                             <thead class="table-light">
                                                 <tr>
-                                                    <th style="width: 25%;">Gender</th>
-                                                    <th style="width: 40%;">Age Group</th>
-                                                    <th style="width: 25%;">Race</th>
+                                                    <th style="width: 18%;">Gender</th>
+                                                    <th style="width: 28%;">Age Group</th>
+                                                    <th style="width: 18%;">Race</th>
+                                                    <th style="width: 13%;">Min Value</th>
+                                                    <th style="width: 13%;">Max Value</th>
                                                     <th style="width: 10%;" class="text-center">Action</th>
                                                 </tr>
                                             </thead>
@@ -283,6 +261,22 @@
                                                                 {{ race.race_description }}
                                                             </option>
                                                         </select>
+                                                    </td>
+                                                    <td>
+                                                        <input
+                                                            type="number"
+                                                            class="form-control form-control-sm"
+                                                            v-model="range.min_value"
+                                                            placeholder="Min"
+                                                            step="0.01">
+                                                    </td>
+                                                    <td>
+                                                        <input
+                                                            type="number"
+                                                            class="form-control form-control-sm"
+                                                            v-model="range.max_value"
+                                                            placeholder="Max"
+                                                            step="0.01">
                                                     </td>
                                                     <td class="text-center">
                                                         <button
@@ -578,6 +572,8 @@ const addReferenceRange = () => {
         gender_id: null,
         age_group_id: null,
         race_id: null,
+        min_value: null,
+        max_value: null,
     });
 };
 
@@ -636,6 +632,8 @@ const editTest = (item) => {
             gender_id: r.gender_id,
             age_group_id: r.age_group_id,
             race_id: r.race_id,
+            min_value: r.min_value,
+            max_value: r.max_value,
         })) : [],
     };
     if (testModal) {

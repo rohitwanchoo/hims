@@ -20,7 +20,7 @@
                             placeholder="Search by race name...">
                     </div>
                     <div class="col-md-2">
-                        <select class="form-select form-select-sm" v-model="filters.status" @change="loadRaces">
+                        <select class="form-select form-select-sm" v-model="filters.is_active" @change="loadRaces">
                             <option value="">All Status</option>
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
@@ -42,7 +42,7 @@
                             <tr>
                                 <th style="width: 60px;">#</th>
                                 <th style="min-width: 250px;">Race Name</th>
-                                <th style="min-width: 200px;">Description</th>
+                                <th style="min-width: 150px;">Race Code</th>
                                 <th style="width: 100px;" class="text-center">Status</th>
                                 <th style="width: 120px;" class="text-center">Actions</th>
                             </tr>
@@ -61,10 +61,10 @@
                                     No races found
                                 </td>
                             </tr>
-                            <tr v-else v-for="(item, index) in races" :key="item.id">
+                            <tr v-else v-for="(item, index) in races" :key="item.race_id">
                                 <td>{{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}</td>
-                                <td>{{ item.race_name }}</td>
-                                <td>{{ item.description || '-' }}</td>
+                                <td>{{ item.race_description }}</td>
+                                <td>{{ item.race_code || '-' }}</td>
                                 <td class="text-center">
                                     <span :class="item.is_active ? 'badge bg-success' : 'badge bg-secondary'">
                                         {{ item.is_active ? 'Active' : 'Inactive' }}
@@ -74,7 +74,7 @@
                                     <button class="btn btn-sm btn-outline-primary me-1" @click="editRace(item)" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger" @click="deleteRace(item.id)" title="Delete">
+                                    <button class="btn btn-sm btn-outline-danger" @click="deleteRace(item.race_id)" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
@@ -123,17 +123,17 @@
                                 <input
                                     type="text"
                                     class="form-control"
-                                    v-model="form.race_name"
+                                    v-model="form.race_description"
                                     placeholder="e.g., Asian, Caucasian, African"
                                     required>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Description</label>
-                                <textarea
+                                <label class="form-label">Race Code</label>
+                                <input
+                                    type="text"
                                     class="form-control"
-                                    v-model="form.description"
-                                    rows="3"
-                                    placeholder="Optional description"></textarea>
+                                    v-model="form.race_code"
+                                    placeholder="e.g., ASN, CAU, AFR">
                             </div>
                             <div class="form-check">
                                 <input
@@ -171,7 +171,7 @@ const error = ref(null);
 const races = ref([]);
 const filters = ref({
     search: '',
-    status: '',
+    is_active: '',
     per_page: 20,
     page: 1,
 });
@@ -187,8 +187,8 @@ const pagination = ref({
 
 const editMode = ref(false);
 const form = ref({
-    race_name: '',
-    description: '',
+    race_description: '',
+    race_code: '',
     is_active: true,
 });
 
@@ -223,18 +223,24 @@ const loadRaces = async () => {
     error.value = null;
     try {
         const response = await axios.get('/api/pathology/races', { params: filters.value });
-        if (response.data.data) {
-            races.value = response.data.data;
+                if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            races.value = paginatedData.data || paginatedData;
             pagination.value = {
-                current_page: response.data.current_page,
-                last_page: response.data.last_page,
-                per_page: response.data.per_page,
-                total: response.data.total,
-                from: response.data.from,
-                to: response.data.to,
+                current_page: paginatedData.current_page || 1,
+                last_page: paginatedData.last_page || 1,
+                per_page: paginatedData.per_page || 20,
+                total: paginatedData.total || 0,
+                from: paginatedData.from || 0,
+                to: paginatedData.to || 0,
             };
         } else {
-            races.value = response.data;
+            races.value = response.data.data || response.data;
+        }
+
+        // Ensure array
+        if (!Array.isArray(races.value)) {
+            races.value = [];
         }
     } catch (err) {
         console.error('Error loading races:', err);
@@ -255,8 +261,8 @@ const openAddModal = () => {
     editMode.value = false;
     error.value = null;
     form.value = {
-        race_name: '',
-        description: '',
+        race_description: '',
+        race_code: '',
         is_active: true,
     };
     if (raceModal) {
@@ -268,9 +274,9 @@ const editRace = (item) => {
     editMode.value = true;
     error.value = null;
     form.value = {
-        id: item.id,
-        race_name: item.race_name,
-        description: item.description,
+        race_id: item.race_id,
+        race_description: item.race_description,
+        race_code: item.race_code,
         is_active: item.is_active,
     };
     if (raceModal) {
@@ -283,7 +289,7 @@ const saveRace = async () => {
     error.value = null;
     try {
         if (editMode.value) {
-            await axios.put(`/api/pathology/races/${form.value.id}`, form.value);
+            await axios.put(`/api/pathology/races/${form.value.race_id}`, form.value);
         } else {
             await axios.post('/api/pathology/races', form.value);
         }

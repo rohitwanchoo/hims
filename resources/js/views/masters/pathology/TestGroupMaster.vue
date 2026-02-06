@@ -20,7 +20,7 @@
                             placeholder="Search by group name...">
                     </div>
                     <div class="col-md-2">
-                        <select class="form-select form-select-sm" v-model="filters.status" @change="loadGroups">
+                        <select class="form-select form-select-sm" v-model="filters.is_active" @change="loadGroups">
                             <option value="">All Status</option>
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
@@ -63,14 +63,14 @@
                                     No test groups found
                                 </td>
                             </tr>
-                            <tr v-else v-for="(item, index) in groups" :key="item.id">
+                            <tr v-else v-for="(item, index) in groups" :key="item.group_id">
                                 <td>{{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}</td>
                                 <td>{{ item.group_name }}</td>
                                 <td>{{ item.group_code || '-' }}</td>
                                 <td class="text-center">
-                                    <span class="badge bg-info">{{ item.tests_count || 0 }}</span>
+                                    <span class="badge bg-info">{{ item.patho_tests_count || 0 }}</span>
                                 </td>
-                                <td>{{ item.description || '-' }}</td>
+                                <td>{{ item.remarks || '-' }}</td>
                                 <td class="text-center">
                                     <span :class="item.is_active ? 'badge bg-success' : 'badge bg-secondary'">
                                         {{ item.is_active ? 'Active' : 'Inactive' }}
@@ -83,7 +83,7 @@
                                     <button class="btn btn-sm btn-outline-info me-1" @click="manageTests(item)" title="Manage Tests">
                                         <i class="bi bi-list-check"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger" @click="deleteGroup(item.id)" title="Delete">
+                                    <button class="btn btn-sm btn-outline-danger" @click="deleteGroup(item.group_id)" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
@@ -145,10 +145,10 @@
                                     placeholder="e.g., LFT, RFT">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Description</label>
+                                <label class="form-label">Remarks</label>
                                 <textarea
                                     class="form-control"
-                                    v-model="form.description"
+                                    v-model="form.remarks"
                                     rows="3"
                                     placeholder="Optional description"></textarea>
                             </div>
@@ -196,7 +196,7 @@
                                     <div class="list-group list-group-flush">
                                         <div
                                             v-for="test in filteredAvailableTests"
-                                            :key="test.id"
+                                            :key="test.test_id"
                                             class="list-group-item list-group-item-action d-flex justify-content-between align-items-start"
                                             style="cursor: pointer;"
                                             @click="addTestMapping(test)">
@@ -223,7 +223,7 @@
                                     <div class="list-group list-group-flush">
                                         <div
                                             v-for="test in filteredMappedTests"
-                                            :key="test.id"
+                                            :key="test.test_id"
                                             class="list-group-item list-group-item-action d-flex justify-content-between align-items-start"
                                             style="cursor: pointer;"
                                             @click="removeTestMapping(test)">
@@ -267,7 +267,7 @@ const testSearchMapped = ref('');
 
 const filters = ref({
     search: '',
-    status: '',
+    is_active: '',
     per_page: 20,
     page: 1,
 });
@@ -285,7 +285,7 @@ const editMode = ref(false);
 const form = ref({
     group_name: '',
     group_code: '',
-    description: '',
+    remarks: '',
     is_active: true,
 });
 
@@ -343,18 +343,23 @@ const loadGroups = async () => {
     error.value = null;
     try {
         const response = await axios.get('/api/pathology/test-groups', { params: filters.value });
-        if (response.data.data) {
-            groups.value = response.data.data;
+        if (response.data.success && response.data.data) {
+            const paginatedData = response.data.data;
+            groups.value = paginatedData.data || paginatedData;
             pagination.value = {
-                current_page: response.data.current_page,
-                last_page: response.data.last_page,
-                per_page: response.data.per_page,
-                total: response.data.total,
-                from: response.data.from,
-                to: response.data.to,
+                current_page: paginatedData.current_page || 1,
+                last_page: paginatedData.last_page || 1,
+                per_page: paginatedData.per_page || 20,
+                total: paginatedData.total || 0,
+                from: paginatedData.from || 0,
+                to: paginatedData.to || 0,
             };
         } else {
-            groups.value = response.data;
+            groups.value = response.data.data || response.data;
+        }
+
+        if (!Array.isArray(groups.value)) {
+            groups.value = [];
         }
     } catch (err) {
         console.error('Error loading groups:', err);
@@ -377,7 +382,7 @@ const openAddModal = () => {
     form.value = {
         group_name: '',
         group_code: '',
-        description: '',
+        remarks: '',
         is_active: true,
     };
     if (groupModal) {
@@ -389,10 +394,10 @@ const editGroup = (item) => {
     editMode.value = true;
     error.value = null;
     form.value = {
-        id: item.id,
+        group_id: item.group_id,
         group_name: item.group_name,
         group_code: item.group_code,
-        description: item.description,
+        remarks: item.remarks,
         is_active: item.is_active,
     };
     if (groupModal) {
@@ -405,7 +410,7 @@ const saveGroup = async () => {
     error.value = null;
     try {
         if (editMode.value) {
-            await axios.put(`/api/pathology/test-groups/${form.value.id}`, form.value);
+            await axios.put(`/api/pathology/test-groups/${form.value.group_id}`, form.value);
         } else {
             await axios.post('/api/pathology/test-groups', form.value);
         }
@@ -440,16 +445,30 @@ const manageTests = async (group) => {
 
     try {
         const [availableResponse, mappedResponse] = await Promise.all([
-            axios.get('/api/pathology/test-masters'),
-            axios.get(`/api/pathology/test-groups/${group.id}/tests`)
+            axios.get('/api/pathology/tests', { params: { is_active: 1, per_page: 100 } }),
+            axios.get(`/api/pathology/test-groups/${group.group_id}/tests`)
         ]);
 
-        availableTests.value = availableResponse.data.data || availableResponse.data;
+        // Handle paginated response for available tests
+        if (availableResponse.data.success && availableResponse.data.data) {
+            const paginatedData = availableResponse.data.data;
+            availableTests.value = paginatedData.data || paginatedData;
+        } else {
+            availableTests.value = availableResponse.data.data || availableResponse.data;
+        }
+
         mappedTests.value = mappedResponse.data.data || mappedResponse.data;
 
+        if (!Array.isArray(availableTests.value)) {
+            availableTests.value = [];
+        }
+        if (!Array.isArray(mappedTests.value)) {
+            mappedTests.value = [];
+        }
+
         // Filter out already mapped tests from available
-        const mappedIds = mappedTests.value.map(t => t.id);
-        availableTests.value = availableTests.value.filter(t => !mappedIds.includes(t.id));
+        const mappedIds = mappedTests.value.map(t => t.test_id);
+        availableTests.value = availableTests.value.filter(t => !mappedIds.includes(t.test_id));
 
         if (testMappingModal) {
             testMappingModal.show();
@@ -462,12 +481,12 @@ const manageTests = async (group) => {
 
 const addTestMapping = async (test) => {
     try {
-        await axios.post(`/api/pathology/test-groups/${selectedGroup.value.id}/tests`, {
-            test_id: test.id
+        await axios.post(`/api/pathology/test-groups/${selectedGroup.value.group_id}/tests`, {
+            test_id: test.test_id
         });
 
         // Move test from available to mapped
-        availableTests.value = availableTests.value.filter(t => t.id !== test.id);
+        availableTests.value = availableTests.value.filter(t => t.test_id !== test.test_id);
         mappedTests.value.push(test);
     } catch (err) {
         console.error('Error adding test mapping:', err);
@@ -477,10 +496,10 @@ const addTestMapping = async (test) => {
 
 const removeTestMapping = async (test) => {
     try {
-        await axios.delete(`/api/pathology/test-groups/${selectedGroup.value.id}/tests/${test.id}`);
+        await axios.delete(`/api/pathology/test-groups/${selectedGroup.value.group_id}/tests/${test.test_id}`);
 
         // Move test from mapped to available
-        mappedTests.value = mappedTests.value.filter(t => t.id !== test.id);
+        mappedTests.value = mappedTests.value.filter(t => t.test_id !== test.test_id);
         availableTests.value.push(test);
     } catch (err) {
         console.error('Error removing test mapping:', err);

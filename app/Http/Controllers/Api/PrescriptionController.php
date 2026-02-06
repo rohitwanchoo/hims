@@ -154,6 +154,8 @@ class PrescriptionController extends Controller
             }),
             'advice' => $prescription->advice,
             'investigations' => $prescription->investigations,
+            'prescription_date' => $prescription->prescription_date,
+            'created_at' => $prescription->created_at,
         ]);
     }
 
@@ -167,6 +169,29 @@ class PrescriptionController extends Controller
         }
 
         $prescription->load('drugs', 'patient');
+
+        return response()->json($prescription);
+    }
+
+    /**
+     * Get prescription by OPD visit ID.
+     */
+    public function getByOpdVisit($opdId)
+    {
+        $hospitalId = Auth::user()->hospital_id;
+
+        $prescription = Prescription::with('drugs')
+            ->where('hospital_id', $hospitalId)
+            ->where('appointment_id', $opdId)
+            ->latest('prescription_date')
+            ->first();
+
+        if (!$prescription) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No prescription found for this visit'
+            ], 404);
+        }
 
         return response()->json($prescription);
     }

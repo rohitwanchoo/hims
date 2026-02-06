@@ -128,7 +128,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 import { Modal } from 'bootstrap';
@@ -511,6 +511,26 @@ onMounted(async () => {
   // Initialize prescription modal
   prescriptionModal = new Modal(prescriptionModalRef.value);
 });
+
+// Auto-calculate BMI when height or weight changes
+watch(
+  () => [formData.height, formData.weight],
+  ([height, weight]) => {
+    // Check if both height and weight have values
+    if (height && weight && parseFloat(height) > 0 && parseFloat(weight) > 0) {
+      const heightInMeters = parseFloat(height) / 100; // Convert cm to meters
+      const weightInKg = parseFloat(weight);
+      const bmi = weightInKg / (heightInMeters * heightInMeters);
+
+      // Update BMI field with 2 decimal places
+      formData.bmi = bmi.toFixed(2);
+    } else if (!height || !weight) {
+      // Clear BMI if height or weight is cleared
+      formData.bmi = '';
+    }
+  },
+  { deep: true }
+);
 </script>
 
 <style scoped>

@@ -11,7 +11,7 @@ class PathologistDoctorMap extends Model
 {
     use HasFactory, BelongsToHospital;
 
-    protected $table = 'pathologist_doctor_map';
+    protected $table = 'pathologist_doctor_maps';
     protected $primaryKey = 'map_id';
 
     protected $fillable = [
