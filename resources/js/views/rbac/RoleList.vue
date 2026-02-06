@@ -113,19 +113,44 @@
                         <button type="button" class="btn-close" @click="showPermissionsModal = false"></button>
                     </div>
                     <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
-                        <div v-for="(perms, module) in groupedPermissions" :key="module" class="mb-4">
-                            <h6 class="text-uppercase text-muted border-bottom pb-2">{{ module }}</h6>
-                            <div class="row">
-                                <div v-for="perm in perms" :key="perm.permission_id" class="col-md-6 mb-2">
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input"
-                                            :id="`perm-${perm.permission_id}`"
-                                            :value="perm.permission_id"
-                                            v-model="selectedPermissions">
-                                        <label class="form-check-label" :for="`perm-${perm.permission_id}`">
-                                            {{ perm.permission_name }}
-                                            <br><small class="text-muted">{{ perm.permission_code }}</small>
-                                        </label>
+                        <!-- Section-based Permission Organization -->
+                        <div v-for="section in permissionSections" :key="section.name" class="mb-4">
+                            <!-- Section Header -->
+                            <div class="d-flex align-items-center mb-3">
+                                <i :class="section.icon" class="me-2 text-primary"></i>
+                                <h5 class="mb-0">{{ section.name }}</h5>
+                                <button
+                                    @click="toggleSection(section.name, true)"
+                                    class="btn btn-sm btn-link ms-auto text-decoration-none"
+                                    type="button">
+                                    Select All
+                                </button>
+                                <button
+                                    @click="toggleSection(section.name, false)"
+                                    class="btn btn-sm btn-link text-decoration-none"
+                                    type="button">
+                                    Deselect All
+                                </button>
+                            </div>
+
+                            <!-- Modules within Section -->
+                            <div v-for="module in section.modules" :key="module.name" class="ms-3 mb-3">
+                                <h6 class="text-uppercase text-muted border-bottom pb-2 mb-2">
+                                    <i class="bi bi-circle-fill me-2" style="font-size: 8px;"></i>
+                                    {{ module.name }}
+                                </h6>
+                                <div class="row">
+                                    <div v-for="perm in module.permissions" :key="perm.permission_id" class="col-md-6 mb-2">
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input"
+                                                :id="`perm-${perm.permission_id}`"
+                                                :value="perm.permission_id"
+                                                v-model="selectedPermissions">
+                                            <label class="form-check-label" :for="`perm-${perm.permission_id}`">
+                                                {{ perm.permission_name }}
+                                                <br><small class="text-muted">{{ perm.permission_code }}</small>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -159,6 +184,175 @@ const roleForm = ref({
     role_name: '',
     description: ''
 });
+
+// Define sidebar sections with their modules
+const sectionDefinitions = [
+    {
+        name: 'Patient Management',
+        icon: 'bi bi-people',
+        modules: ['patient', 'appointment', 'calendar']
+    },
+    {
+        name: 'Clinical',
+        icon: 'bi bi-clipboard2-pulse',
+        modules: ['opd', 'ipd', 'discharge_summary']
+    },
+    {
+        name: 'Billing',
+        icon: 'bi bi-receipt',
+        modules: ['billing', 'payment']
+    },
+    {
+        name: 'Laboratory',
+        icon: 'bi bi-droplet',
+        modules: ['lab']
+    },
+    {
+        name: 'Radiology',
+        icon: 'bi bi-x-ray',
+        modules: ['radiology']
+    },
+    {
+        name: 'Operation Theater',
+        icon: 'bi bi-heart-pulse',
+        modules: ['ot', 'surgery']
+    },
+    {
+        name: 'Pharmacy',
+        icon: 'bi bi-capsule',
+        modules: ['pharmacy', 'drug']
+    },
+    {
+        name: 'Inventory',
+        icon: 'bi bi-box-seam',
+        modules: ['inventory', 'indent', 'purchase_order', 'supplier', 'store']
+    },
+    {
+        name: 'Medical Records',
+        icon: 'bi bi-folder2-open',
+        modules: ['mrd', 'birth', 'death']
+    },
+    {
+        name: 'Reports',
+        icon: 'bi bi-bar-chart-line',
+        modules: ['reports']
+    },
+    {
+        name: 'ABHA Integration',
+        icon: 'bi bi-shield-check',
+        modules: ['abha']
+    },
+    {
+        name: 'Configuration',
+        icon: 'bi bi-sliders',
+        modules: ['settings', 'consultation_form']
+    },
+    {
+        name: 'Masters',
+        icon: 'bi bi-database',
+        modules: ['masters', 'doctor', 'department', 'ward', 'room', 'bed', 'service', 'package']
+    },
+    {
+        name: 'System',
+        icon: 'bi bi-gear',
+        modules: ['admin', 'user', 'role', 'notification']
+    }
+];
+
+// Organize permissions by sections
+const permissionSections = computed(() => {
+    if (!allPermissions.value || Object.keys(allPermissions.value).length === 0) {
+        return [];
+    }
+
+    const sections = [];
+
+    sectionDefinitions.forEach(sectionDef => {
+        const section = {
+            name: sectionDef.name,
+            icon: sectionDef.icon,
+            modules: []
+        };
+
+        sectionDef.modules.forEach(moduleName => {
+            const permissions = allPermissions.value[moduleName] || [];
+            if (permissions.length > 0) {
+                section.modules.push({
+                    name: formatModuleName(moduleName),
+                    permissions: permissions
+                });
+            }
+        });
+
+        // Only add section if it has modules with permissions
+        if (section.modules.length > 0) {
+            sections.push(section);
+        }
+    });
+
+    return sections;
+});
+
+const formatModuleName = (module) => {
+    // Convert module code to display name
+    const names = {
+        'patient': 'Patients',
+        'appointment': 'Appointments',
+        'calendar': 'Calendar',
+        'opd': 'OPD Visits',
+        'ipd': 'IPD Admissions',
+        'discharge_summary': 'Discharge Summary',
+        'billing': 'Billing',
+        'payment': 'Payments',
+        'lab': 'Laboratory',
+        'radiology': 'Radiology',
+        'ot': 'Operation Theater',
+        'surgery': 'Surgery Types',
+        'pharmacy': 'Pharmacy',
+        'drug': 'Drug Management',
+        'inventory': 'Inventory',
+        'indent': 'Indents',
+        'purchase_order': 'Purchase Orders',
+        'supplier': 'Suppliers',
+        'store': 'Stores',
+        'mrd': 'Medical Records',
+        'birth': 'Birth Registration',
+        'death': 'Death Registration',
+        'reports': 'Reports',
+        'abha': 'ABHA',
+        'settings': 'Settings',
+        'consultation_form': 'Consultation Forms',
+        'masters': 'Master Data',
+        'doctor': 'Doctors',
+        'department': 'Departments',
+        'ward': 'Wards',
+        'room': 'Rooms',
+        'bed': 'Beds',
+        'service': 'Services',
+        'package': 'Health Packages',
+        'admin': 'Administration',
+        'user': 'User Management',
+        'role': 'Role Management',
+        'notification': 'Notifications'
+    };
+    return names[module] || module.charAt(0).toUpperCase() + module.slice(1).replace(/_/g, ' ');
+};
+
+const toggleSection = (sectionName, selectAll) => {
+    const section = permissionSections.value.find(s => s.name === sectionName);
+    if (!section) return;
+
+    section.modules.forEach(module => {
+        module.permissions.forEach(perm => {
+            const index = selectedPermissions.value.indexOf(perm.permission_id);
+            if (selectAll && index === -1) {
+                selectedPermissions.value.push(perm.permission_id);
+            } else if (!selectAll && index > -1) {
+                selectedPermissions.value.splice(index, 1);
+            }
+        });
+    });
+};
 
 const groupedPermissions = computed(() => allPermissions.value);
 
