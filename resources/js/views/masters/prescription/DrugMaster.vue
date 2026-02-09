@@ -33,11 +33,20 @@
         <div class="row mb-3">
             <div class="col-md-3">
                 <label class="form-label">Drug Name *</label>
-                <input type="text" class="form-control" v-model="form.drug_name" />
+                <input
+                    type="text"
+                    class="form-control"
+                    v-model="form.drug_name"
+                    ref="drugNameInput"
+                    id="drugNameInput"
+                />
+                <small v-if="selectedLanguage !== 'english'" class="text-muted">
+                    Type in English, it will convert to {{ selectedLanguage }}
+                </small>
             </div>
             <div class="col-md-2">
                 <label class="form-label">Language</label>
-                <select v-model="selectedLanguage" @change="fetchDoseTimes" class="form-select">
+                <select v-model="selectedLanguage" @change="changeLanguage" class="form-select">
                     <option value="english">English</option>
                     <option value="marathi">Marathi</option>
                     <option value="hindi">Hindi</option>
@@ -70,63 +79,137 @@
         </div>
 
         <!-- Drug List -->
-        <div class="border rounded p-3" style="height: 400px; overflow-y: auto;">
-            <div v-if="loading" class="text-center py-4">
-                <div class="spinner-border spinner-border-sm me-2"></div>Loading...
+        <div class="card">
+            <div class="card-header bg-light">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <label class="form-label mb-0 me-2">Show</label>
+                        <select v-model="pageSize" @change="handlePageSizeChange" class="form-select form-select-sm d-inline-block" style="width: auto;">
+                            <option :value="10">10</option>
+                            <option :value="100">100</option>
+                            <option :value="500">500</option>
+                            <option :value="1000">1000</option>
+                            <option :value="2000">2000</option>
+                            <option :value="5000">5000</option>
+                        </select>
+                        <span class="ms-2">entries</span>
+                    </div>
+                    <div class="col-md-6">
+                        <input
+                            type="text"
+                            class="form-control form-control-sm"
+                            v-model="searchQuery"
+                            @input="handleSearch"
+                            placeholder="Search drugs by name, language, or dose time..."
+                        />
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <small class="text-muted">
+                            Showing {{ displayStart }} to {{ displayEnd }} of {{ totalRecords }} entries
+                            <span v-if="isFiltered"> (filtered)</span>
+                        </small>
+                    </div>
+                </div>
             </div>
-            <div v-else-if="drugs.length === 0" class="text-center text-muted py-4">
-                No drugs found
+            <div class="card-body p-0" style="max-height: 450px; overflow-y: auto;">
+                <div v-if="loading" class="text-center py-4">
+                    <div class="spinner-border spinner-border-sm me-2"></div>Loading...
+                </div>
+                <div v-else-if="paginatedDrugs.length === 0" class="text-center text-muted py-4">
+                    {{ searchQuery ? 'No drugs found matching your search' : 'No drugs found' }}
+                </div>
+                <div v-else class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th @click="sortBy('drug_name')" class="sortable">
+                                    Drug Name
+                                    <i class="bi" :class="getSortIcon('drug_name')"></i>
+                                </th>
+                                <th @click="sortBy('language')" class="sortable">
+                                    Language
+                                    <i class="bi" :class="getSortIcon('language')"></i>
+                                </th>
+                                <th @click="sortBy('dose_time')" class="sortable">
+                                    Dose Time
+                                    <i class="bi" :class="getSortIcon('dose_time')"></i>
+                                </th>
+                                <th @click="sortBy('days')" class="sortable">
+                                    Days
+                                    <i class="bi" :class="getSortIcon('days')"></i>
+                                </th>
+                                <th @click="sortBy('quantity')" class="sortable">
+                                    Qty
+                                    <i class="bi" :class="getSortIcon('quantity')"></i>
+                                </th>
+                                <th style="width: 100px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="drug in paginatedDrugs"
+                                :key="drug.drug_master_id"
+                                class="cursor-pointer"
+                                :class="{ 'table-active': selectedDrug?.drug_master_id === drug.drug_master_id }"
+                                @click="selectDrug(drug)"
+                            >
+                                <td>{{ drug.drug_name }}</td>
+                                <td>
+                                    <span class="badge bg-info text-capitalize">
+                                        {{ drug.language }}
+                                    </span>
+                                </td>
+                                <td>{{ drug.dose_time || '-' }}</td>
+                                <td>{{ drug.days || '-' }}</td>
+                                <td>{{ drug.quantity || '-' }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button
+                                            class="btn btn-sm btn-outline-primary"
+                                            @click.stop="editDrug(drug)"
+                                            title="Edit"
+                                        >
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button
+                                            class="btn btn-sm btn-outline-danger"
+                                            @click.stop="confirmDelete(drug)"
+                                            title="Delete"
+                                        >
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div v-else class="table-responsive">
-                <table class="table table-sm table-hover">
-                    <thead>
-                        <tr>
-                            <th>Drug Name</th>
-                            <th>Language</th>
-                            <th>Dose Time</th>
-                            <th>Days</th>
-                            <th>Qty</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="drug in drugs"
-                            :key="drug.drug_master_id"
-                            class="cursor-pointer"
-                            :class="{ 'table-active': selectedDrug?.drug_master_id === drug.drug_master_id }"
-                            @click="selectDrug(drug)"
+            <div class="card-footer bg-light" v-if="totalPages > 1">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0 justify-content-center">
+                        <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                            <a class="page-link" @click.prevent="goToPage(1)" href="#">First</a>
+                        </li>
+                        <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                            <a class="page-link" @click.prevent="goToPage(currentPage - 1)" href="#">Previous</a>
+                        </li>
+                        <li
+                            v-for="page in visiblePages"
+                            :key="page"
+                            class="page-item"
+                            :class="{ active: currentPage === page }"
                         >
-                            <td>{{ drug.drug_name }}</td>
-                            <td>
-                                <span class="badge bg-info text-capitalize">
-                                    {{ drug.language }}
-                                </span>
-                            </td>
-                            <td>{{ drug.dose_time || '-' }}</td>
-                            <td>{{ drug.days || '-' }}</td>
-                            <td>{{ drug.quantity || '-' }}</td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    <button
-                                        class="btn btn-sm btn-outline-primary"
-                                        @click.stop="editDrug(drug)"
-                                        title="Edit"
-                                    >
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button
-                                        class="btn btn-sm btn-outline-danger"
-                                        @click.stop="confirmDelete(drug)"
-                                        title="Delete"
-                                    >
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                            <a class="page-link" @click.prevent="goToPage(page)" href="#">{{ page }}</a>
+                        </li>
+                        <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                            <a class="page-link" @click.prevent="goToPage(currentPage + 1)" href="#">Next</a>
+                        </li>
+                        <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                            <a class="page-link" @click.prevent="goToPage(totalPages)" href="#">Last</a>
+                        </li>
+                    </ul>
+                </nav>
             </div>
         </div>
 
@@ -222,13 +305,18 @@
                                     type="text"
                                     class="form-control"
                                     v-model="editForm.drug_name"
+                                    ref="editDrugNameInput"
+                                    id="editDrugNameInput"
                                     required
                                     maxlength="255"
                                 />
+                                <small v-if="editLanguage !== 'english'" class="text-muted">
+                                    Type in English, it will convert to {{ editLanguage }}
+                                </small>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Language</label>
-                                <select v-model="editLanguage" @change="fetchDoseTimesForEdit" class="form-select">
+                                <select v-model="editLanguage" @change="changeEditLanguage" class="form-select">
                                     <option value="english">English</option>
                                     <option value="marathi">Marathi</option>
                                     <option value="hindi">Hindi</option>
@@ -267,7 +355,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { Modal } from 'bootstrap';
 
@@ -287,9 +375,21 @@ const fileInput = ref(null);
 const addDrugTypeModalRef = ref(null);
 const editDrugModalRef = ref(null);
 const importModalRef = ref(null);
+const drugNameInput = ref(null);
+const editDrugNameInput = ref(null);
 let addDrugTypeModal = null;
 let editDrugModal = null;
 let importModal = null;
+let transliterationControl = null;
+let editTransliterationControl = null;
+
+// Search, Pagination, and Sorting refs
+const searchQuery = ref('');
+const pageSize = ref(100);
+const currentPage = ref(1);
+const sortColumn = ref('drug_name');
+const sortDirection = ref('asc');
+
 
 const form = ref({
     drug_name: '',
@@ -310,6 +410,71 @@ const editForm = ref({
     days: '',
     quantity: ''
 });
+
+
+// Computed properties for search, filter, sort, paginate
+const filteredDrugs = computed(() => {
+    if (!searchQuery.value) return drugs.value;
+    const query = searchQuery.value.toLowerCase();
+    return drugs.value.filter(drug =>
+        drug.drug_name.toLowerCase().includes(query) ||
+        drug.language.toLowerCase().includes(query) ||
+        (drug.dose_time && drug.dose_time.toLowerCase().includes(query))
+    );
+});
+
+const sortedDrugs = computed(() => {
+    const sorted = [...filteredDrugs.value];
+    sorted.sort((a, b) => {
+        let aVal = a[sortColumn.value] ?? '';
+        let bVal = b[sortColumn.value] ?? '';
+        aVal = String(aVal).toLowerCase();
+        bVal = String(bVal).toLowerCase();
+        if (aVal < bVal) return sortDirection.value === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortDirection.value === 'asc' ? 1 : -1;
+        return 0;
+    });
+    return sorted;
+});
+
+const paginatedDrugs = computed(() => {
+    const start = (currentPage.value - 1) * pageSize.value;
+    return sortedDrugs.value.slice(start, start + pageSize.value);
+});
+
+const totalRecords = computed(() => sortedDrugs.value.length);
+const totalPages = computed(() => Math.ceil(totalRecords.value / pageSize.value));
+const displayStart = computed(() => totalRecords.value === 0 ? 0 : (currentPage.value - 1) * pageSize.value + 1);
+const displayEnd = computed(() => Math.min(currentPage.value * pageSize.value, totalRecords.value));
+const isFiltered = computed(() => searchQuery.value !== '');
+
+const visiblePages = computed(() => {
+    const pages = [], maxVisible = 5;
+    let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages.value, start + maxVisible - 1);
+    if (end - start < maxVisible - 1) start = Math.max(1, end - maxVisible + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    return pages;
+});
+
+// Methods for search, sort, pagination
+const handleSearch = () => { currentPage.value = 1; };
+const handlePageSizeChange = () => { currentPage.value = 1; };
+const sortBy = (column) => {
+    if (sortColumn.value === column) {
+        sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortColumn.value = column;
+        sortDirection.value = 'asc';
+    }
+};
+const getSortIcon = (column) => {
+    if (sortColumn.value !== column) return 'bi-arrow-down-up';
+    return sortDirection.value === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down';
+};
+const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages.value) currentPage.value = page;
+};
 
 const fetchDrugTypes = async () => {
     try {
@@ -377,6 +542,13 @@ const editDrug = async (drug) => {
     // Fetch dose times for the drug's language
     await fetchDoseTimesForEdit();
     editDrugModal.show();
+
+    // Set transliteration for edit modal
+    setTimeout(() => {
+        if (editTransliterationControl) {
+            changeEditLanguage();
+        }
+    }, 100);
 };
 
 const saveDrug = async () => {
@@ -542,7 +714,7 @@ const importDrugs = async () => {
         });
 
         if (response.data.success) {
-            alert(`Successfully imported ${response.data.count} drugs`);
+            alert(`${response.data.message}`);
             importModal.hide();
             await fetchDrugs();
             importFile.value = null;
@@ -576,13 +748,127 @@ const exportDrugs = async () => {
     }
 };
 
-onMounted(() => {
+// Load Google Transliteration API
+const loadGoogleTransliterate = () => {
+    return new Promise((resolve, reject) => {
+        if (window.google && window.google.elements && window.google.elements.transliteration) {
+            resolve();
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://www.google.com/jsapi';
+        script.onload = () => {
+            window.google.load('elements', '1', {
+                packages: 'transliteration',
+                callback: resolve
+            });
+        };
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+};
+
+// Initialize transliteration for main input
+const initTransliteration = () => {
+    if (!window.google || !window.google.elements || !window.google.elements.transliteration) {
+        return;
+    }
+
+    const options = {
+        sourceLanguage: window.google.elements.transliteration.LanguageCode.ENGLISH,
+        destinationLanguage: [],
+        shortcutKey: 'ctrl+g',
+        transliterationEnabled: false
+    };
+
+    if (transliterationControl) {
+        transliterationControl.dispose();
+    }
+
+    transliterationControl = new window.google.elements.transliteration.TransliterationControl(options);
+    transliterationControl.makeTransliteratable(['drugNameInput']);
+};
+
+// Initialize transliteration for edit modal input
+const initEditTransliteration = () => {
+    if (!window.google || !window.google.elements || !window.google.elements.transliteration) {
+        return;
+    }
+
+    const options = {
+        sourceLanguage: window.google.elements.transliteration.LanguageCode.ENGLISH,
+        destinationLanguage: [],
+        shortcutKey: 'ctrl+g',
+        transliterationEnabled: false
+    };
+
+    if (editTransliterationControl) {
+        editTransliterationControl.dispose();
+    }
+
+    editTransliterationControl = new window.google.elements.transliteration.TransliterationControl(options);
+    editTransliterationControl.makeTransliteratable(['editDrugNameInput']);
+};
+
+// Change language for main input
+const changeLanguage = async () => {
+    await fetchDoseTimes();
+
+    if (!transliterationControl || !window.google) return;
+
+    let langCode = [];
+    if (selectedLanguage.value === 'marathi') {
+        langCode = [window.google.elements.transliteration.LanguageCode.MARATHI];
+    } else if (selectedLanguage.value === 'hindi') {
+        langCode = [window.google.elements.transliteration.LanguageCode.HINDI];
+    }
+
+    transliterationControl.setLanguagePair(
+        window.google.elements.transliteration.LanguageCode.ENGLISH,
+        langCode
+    );
+    transliterationControl.setTransliterationEnabled(selectedLanguage.value !== 'english');
+};
+
+// Change language for edit modal
+const changeEditLanguage = async () => {
+    await fetchDoseTimesForEdit();
+
+    if (!editTransliterationControl || !window.google) return;
+
+    let langCode = [];
+    if (editLanguage.value === 'marathi') {
+        langCode = [window.google.elements.transliteration.LanguageCode.MARATHI];
+    } else if (editLanguage.value === 'hindi') {
+        langCode = [window.google.elements.transliteration.LanguageCode.HINDI];
+    }
+
+    editTransliterationControl.setLanguagePair(
+        window.google.elements.transliteration.LanguageCode.ENGLISH,
+        langCode
+    );
+    editTransliterationControl.setTransliterationEnabled(editLanguage.value !== 'english');
+};
+
+onMounted(async () => {
     addDrugTypeModal = new Modal(addDrugTypeModalRef.value);
     editDrugModal = new Modal(editDrugModalRef.value);
     importModal = new Modal(importModalRef.value);
     fetchDrugTypes();
     fetchDoseTimes();
     fetchDrugs();
+
+    // Load and initialize Google Transliteration
+    try {
+        await loadGoogleTransliterate();
+        setTimeout(() => {
+            initTransliteration();
+            initEditTransliteration();
+        }, 500);
+    } catch (error) {
+        console.error('Error loading transliteration:', error);
+    }
 });
 </script>
 
@@ -607,4 +893,34 @@ onMounted(() => {
     padding: 0.25rem 0.5rem;
     font-size: 0.875rem;
 }
+
+.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.sortable:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.sortable i {
+    font-size: 0.8em;
+    margin-left: 4px;
+}
+
+.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #f8f9fa !important;
+}
+
+.pagination {
+    margin: 0;
+}
+
+.page-link {
+    cursor: pointer;
+}
+
 </style>
