@@ -39,9 +39,10 @@
                     v-model="form.drug_name"
                     ref="drugNameInput"
                     id="drugNameInput"
+                    @input="handleDrugNameInput"
                 />
                 <small v-if="selectedLanguage !== 'english'" class="text-muted">
-                    Type in English, it will convert to {{ selectedLanguage }}
+                    <i class="bi bi-info-circle"></i> Type in English, it will auto-convert to {{ selectedLanguage }}
                 </small>
             </div>
             <div class="col-md-2">
@@ -309,9 +310,10 @@
                                     id="editDrugNameInput"
                                     required
                                     maxlength="255"
+                                    @input="handleEditDrugNameInput"
                                 />
                                 <small v-if="editLanguage !== 'english'" class="text-muted">
-                                    Type in English, it will convert to {{ editLanguage }}
+                                    <i class="bi bi-info-circle"></i> Type in English, it will auto-convert to {{ editLanguage }}
                                 </small>
                             </div>
                             <div class="mb-3">
@@ -380,8 +382,6 @@ const editDrugNameInput = ref(null);
 let addDrugTypeModal = null;
 let editDrugModal = null;
 let importModal = null;
-let transliterationControl = null;
-let editTransliterationControl = null;
 
 // Search, Pagination, and Sorting refs
 const searchQuery = ref('');
@@ -542,13 +542,6 @@ const editDrug = async (drug) => {
     // Fetch dose times for the drug's language
     await fetchDoseTimesForEdit();
     editDrugModal.show();
-
-    // Set transliteration for edit modal
-    setTimeout(() => {
-        if (editTransliterationControl) {
-            changeEditLanguage();
-        }
-    }, 100);
 };
 
 const saveDrug = async () => {
@@ -748,127 +741,106 @@ const exportDrugs = async () => {
     }
 };
 
-// Load Google Transliteration API
-const loadGoogleTransliterate = () => {
-    return new Promise((resolve, reject) => {
-        if (window.google && window.google.elements && window.google.elements.transliteration) {
-            resolve();
-            return;
+// Transliterate text using Google Input Tools API
+const transliterateText = async (text, language) => {
+    if (!text || language === 'english') return text;
+
+    const langCode = language === 'marathi' ? 'mr' : 'hi';
+
+    try {
+        const response = await fetch('https://inputtools.google.com/request?text=' + encodeURIComponent(text) + '&itc=' + langCode + '-t-i0-und', {
+            method: 'GET'
+        });
+        const data = await response.json();
+
+        if (data && data[1] && data[1][0] && data[1][0][1] && data[1][0][1][0]) {
+            return data[1][0][1][0];
         }
-
-        const script = document.createElement('script');
-        script.src = 'https://www.google.com/jsapi';
-        script.onload = () => {
-            window.google.load('elements', '1', {
-                packages: 'transliteration',
-                callback: resolve
-            });
-        };
-        script.onerror = reject;
-        document.head.appendChild(script);
-    });
+        return text;
+    } catch (error) {
+        console.error('Transliteration error:', error);
+        return text;
+    }
 };
 
-// Initialize transliteration for main input
-const initTransliteration = () => {
-    if (!window.google || !window.google.elements || !window.google.elements.transliteration) {
-        return;
-    }
+// Handle input for main field
+let mainInputTimeout = null;
+const handleDrugNameInput = async (event) => {
+    if (selectedLanguage.value === 'english') return;
 
-    const options = {
-        sourceLanguage: window.google.elements.transliteration.LanguageCode.ENGLISH,
-        destinationLanguage: [],
-        shortcutKey: 'ctrl+g',
-        transliterationEnabled: false
-    };
+    clearTimeout(mainInputTimeout);
+    const inputValue = event.target.value;
+    const cursorPosition = event.target.selectionStart;
 
-    if (transliterationControl) {
-        transliterationControl.dispose();
-    }
+    mainInputTimeout = setTimeout(async () => {
+        // Get the last word being typed
+        const words = inputValue.split(' ');
+        const lastWord = words[words.length - 1];
 
-    transliterationControl = new window.google.elements.transliteration.TransliterationControl(options);
-    transliterationControl.makeTransliteratable(['drugNameInput']);
+        if (lastWord && lastWord.length > 0) {
+            const transliterated = await transliterateText(lastWord, selectedLanguage.value);
+            if (transliterated !== lastWord) {
+                words[words.length - 1] = transliterated;
+                form.value.drug_name = words.join(' ');
+
+                // Restore cursor position
+                setTimeout(() => {
+                    if (drugNameInput.value) {
+                        drugNameInput.value.setSelectionRange(form.value.drug_name.length, form.value.drug_name.length);
+                    }
+                }, 0);
+            }
+        }
+    }, 500);
 };
 
-// Initialize transliteration for edit modal input
-const initEditTransliteration = () => {
-    if (!window.google || !window.google.elements || !window.google.elements.transliteration) {
-        return;
-    }
+// Handle input for edit modal field
+let editInputTimeout = null;
+const handleEditDrugNameInput = async (event) => {
+    if (editLanguage.value === 'english') return;
 
-    const options = {
-        sourceLanguage: window.google.elements.transliteration.LanguageCode.ENGLISH,
-        destinationLanguage: [],
-        shortcutKey: 'ctrl+g',
-        transliterationEnabled: false
-    };
+    clearTimeout(editInputTimeout);
+    const inputValue = event.target.value;
 
-    if (editTransliterationControl) {
-        editTransliterationControl.dispose();
-    }
+    editInputTimeout = setTimeout(async () => {
+        // Get the last word being typed
+        const words = inputValue.split(' ');
+        const lastWord = words[words.length - 1];
 
-    editTransliterationControl = new window.google.elements.transliteration.TransliterationControl(options);
-    editTransliterationControl.makeTransliteratable(['editDrugNameInput']);
+        if (lastWord && lastWord.length > 0) {
+            const transliterated = await transliterateText(lastWord, editLanguage.value);
+            if (transliterated !== lastWord) {
+                words[words.length - 1] = transliterated;
+                editForm.value.drug_name = words.join(' ');
+
+                // Restore cursor position
+                setTimeout(() => {
+                    if (editDrugNameInput.value) {
+                        editDrugNameInput.value.setSelectionRange(editForm.value.drug_name.length, editForm.value.drug_name.length);
+                    }
+                }, 0);
+            }
+        }
+    }, 500);
 };
 
 // Change language for main input
 const changeLanguage = async () => {
     await fetchDoseTimes();
-
-    if (!transliterationControl || !window.google) return;
-
-    let langCode = [];
-    if (selectedLanguage.value === 'marathi') {
-        langCode = [window.google.elements.transliteration.LanguageCode.MARATHI];
-    } else if (selectedLanguage.value === 'hindi') {
-        langCode = [window.google.elements.transliteration.LanguageCode.HINDI];
-    }
-
-    transliterationControl.setLanguagePair(
-        window.google.elements.transliteration.LanguageCode.ENGLISH,
-        langCode
-    );
-    transliterationControl.setTransliterationEnabled(selectedLanguage.value !== 'english');
 };
 
 // Change language for edit modal
 const changeEditLanguage = async () => {
     await fetchDoseTimesForEdit();
-
-    if (!editTransliterationControl || !window.google) return;
-
-    let langCode = [];
-    if (editLanguage.value === 'marathi') {
-        langCode = [window.google.elements.transliteration.LanguageCode.MARATHI];
-    } else if (editLanguage.value === 'hindi') {
-        langCode = [window.google.elements.transliteration.LanguageCode.HINDI];
-    }
-
-    editTransliterationControl.setLanguagePair(
-        window.google.elements.transliteration.LanguageCode.ENGLISH,
-        langCode
-    );
-    editTransliterationControl.setTransliterationEnabled(editLanguage.value !== 'english');
 };
 
-onMounted(async () => {
+onMounted(() => {
     addDrugTypeModal = new Modal(addDrugTypeModalRef.value);
     editDrugModal = new Modal(editDrugModalRef.value);
     importModal = new Modal(importModalRef.value);
     fetchDrugTypes();
     fetchDoseTimes();
     fetchDrugs();
-
-    // Load and initialize Google Transliteration
-    try {
-        await loadGoogleTransliterate();
-        setTimeout(() => {
-            initTransliteration();
-            initEditTransliteration();
-        }, 500);
-    } catch (error) {
-        console.error('Error loading transliteration:', error);
-    }
 });
 </script>
 
