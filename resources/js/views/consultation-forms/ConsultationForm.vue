@@ -28,6 +28,59 @@
       </div>
     </div>
 
+    <!-- Search Bar -->
+    <div v-if="!loading" class="card mb-3">
+      <div class="card-body">
+        <div class="row g-2 align-items-center">
+          <div class="col-md-8">
+            <div class="input-group">
+              <span class="input-group-text">
+                <i class="bi bi-search"></i>
+              </span>
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Search for field name or sub-field..."
+                v-model="searchQuery"
+                @input="handleSearch"
+              />
+              <button
+                v-if="searchQuery"
+                class="btn btn-outline-secondary"
+                @click="clearSearch"
+                type="button"
+              >
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small" v-if="searchResults.length > 0">
+              Found {{ searchResults.length }} field(s)
+            </div>
+            <div class="text-muted small" v-else-if="searchQuery && searchResults.length === 0">
+              No fields found
+            </div>
+          </div>
+        </div>
+        
+        <!-- Search Results -->
+        <div v-if="searchResults.length > 0" class="mt-3">
+          <div class="d-flex flex-wrap gap-2">
+            <button
+              v-for="result in searchResults"
+              :key="result.field.field_id"
+              class="btn btn-sm btn-outline-primary"
+              @click="jumpToField(result)"
+            >
+              <i class="bi bi-arrow-right-circle me-1"></i>
+              {{ result.field.field_label }} <small class="text-muted">({{ result.section }})</small>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Loading -->
     <div v-if="loading" class="text-center py-5">
       <div class="spinner-border text-primary" role="status">
@@ -54,7 +107,9 @@
               <div
                 v-for="field in section.fields"
                 :key="field.field_id"
-                :class="getFieldColClass(field)"
+                :id="'field-' + field.field_id"
+                :class="[getFieldColClass(field), { 'highlighted-field': highlightedFieldId === field.field_id }]"
+                class="field-wrapper"
               >
                 <DynamicField
                   :field="field"
@@ -132,11 +187,13 @@ import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 import { Modal } from 'bootstrap';
+import { useAuthStore } from '../../stores/auth';
 import DynamicField from './components/DynamicField.vue';
 import PrescriptionForm from '../../components/prescription/PrescriptionForm.vue';
 
 const router = useRouter();
 const route = useRoute();
+const authStore = useAuthStore();
 
 const loading = ref(false);
 const saving = ref(false);
@@ -153,6 +210,11 @@ const formData = reactive({});
 const notes = ref('');
 const validationErrors = ref({});
 const expandedSections = ref({});
+
+// Search functionality
+const searchQuery = ref('');
+const searchResults = ref([]);
+const highlightedFieldId = ref(null);
 
 // Prescription modal
 const prescriptionModalRef = ref(null);
@@ -183,11 +245,43 @@ const fetchForm = async () => {
   loading.value = true;
 
   try {
-    // Get default form for the specified type
-    console.log('Fetching form with type:', formType.value);
-    const response = await axios.get('/api/consultation-forms/default', {
-      params: { form_type: formType.value },
-    });
+    // Try to get department_id from OPD visit or doctor
+    let departmentId = null;
+
+    // If we have an OPD ID, fetch the visit to get department
+    if (opdId.value) {
+      try {
+        const opdResponse = await axios.get(`/api/opd-visits/${opdId.value}`);
+        if (opdResponse.data.data?.department_id) {
+          departmentId = opdResponse.data.data.department_id;
+          console.log('Department from OPD visit:', departmentId);
+        }
+      } catch (error) {
+        console.log('Could not fetch OPD visit department:', error);
+      }
+    }
+
+    // If no department from OPD, try to get from logged-in doctor
+    if (!departmentId) {
+      try {
+        const doctorResponse = await axios.get('/api/doctor-workbench/current-doctor');
+        if (doctorResponse.data?.department_id) {
+          departmentId = doctorResponse.data.department_id;
+          console.log('Department from logged-in doctor:', departmentId);
+        }
+      } catch (error) {
+        console.log('Could not fetch doctor department:', error);
+      }
+    }
+
+    // Get default form for the specified type and department
+    console.log('Fetching form with type:', formType.value, 'department:', departmentId);
+    const params = { form_type: formType.value };
+    if (departmentId) {
+      params.department_id = departmentId;
+    }
+
+    const response = await axios.get('/api/consultation-forms/default', { params });
 
     console.log('Form API response:', response.data);
 
@@ -396,6 +490,121 @@ const toggleSection = (sectionName) => {
   expandedSections.value[sectionName] = !expandedSections.value[sectionName];
 };
 
+
+// Search functionality
+const handleSearch = () => {
+  if (!searchQuery.value.trim()) {
+    searchResults.value = [];
+    highlightedFieldId.value = null;
+    return;
+  }
+
+  const query = searchQuery.value.toLowerCase();
+  const results = [];
+
+  // Check if form has fields
+  if (!form.value.fields || form.value.fields.length === 0) {
+    console.log('No fields available for search');
+    return;
+  }
+
+  sections.value.forEach(section => {
+    if (!section.fields) return;
+    
+    section.fields.forEach(field => {
+      let matched = false;
+      let matchType = 'label';
+
+      // Search in field label
+      if (field.field_label && field.field_label.toLowerCase().includes(query)) {
+        matched = true;
+        matchType = 'label';
+      }
+      
+      // Search in field name
+      if (!matched && field.field_name && field.field_name.toLowerCase().includes(query)) {
+        matched = true;
+        matchType = 'name';
+      }
+      
+      // Search in field key
+      if (!matched && field.field_key && field.field_key.toLowerCase().includes(query)) {
+        matched = true;
+        matchType = 'key';
+      }
+      
+      // Search in field placeholder
+      if (!matched && field.placeholder && field.placeholder.toLowerCase().includes(query)) {
+        matched = true;
+        matchType = 'placeholder';
+      }
+
+      // Search in field options (for select, radio, checkbox)
+      if (!matched && field.field_options) {
+        try {
+          const options = JSON.parse(field.field_options);
+          if (Array.isArray(options)) {
+            const matchingOption = options.find(opt => 
+              opt && opt.toLowerCase && opt.toLowerCase().includes(query)
+            );
+            if (matchingOption) {
+              matched = true;
+              matchType = 'option';
+            }
+          }
+        } catch (e) {
+          // Invalid JSON, skip
+        }
+      }
+
+      if (matched) {
+        results.push({
+          field: field,
+          section: section.name,
+          matchType: matchType
+        });
+      }
+    });
+  });
+
+  console.log('Search results:', results.length, 'fields found');
+  searchResults.value = results;
+};
+
+const jumpToField = (result) => {
+  // Expand the section containing the field
+  expandedSections.value[result.section] = true;
+
+  // Wait for DOM update
+  setTimeout(() => {
+    // Scroll to the field
+    const fieldElement = document.getElementById(`field-${result.field.field_id}`);
+    if (fieldElement) {
+      fieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Highlight the field
+      highlightedFieldId.value = result.field.field_id;
+      
+      // Remove highlight after 3 seconds
+      setTimeout(() => {
+        highlightedFieldId.value = null;
+      }, 3000);
+
+      // Focus on the input/select within the field
+      const input = fieldElement.querySelector('input, select, textarea');
+      if (input) {
+        input.focus();
+      }
+    }
+  }, 300);
+};
+
+const clearSearch = () => {
+  searchQuery.value = '';
+  searchResults.value = [];
+  highlightedFieldId.value = null;
+};
+
 const getDefaultValueForType = (fieldType) => {
   switch (fieldType) {
     case 'checkbox':
@@ -534,6 +743,28 @@ watch(
 </script>
 
 <style scoped>
+
+/* Search and highlight styles */
+.highlighted-field {
+  animation: highlight-pulse 1.5s ease-in-out;
+  border-radius: 8px;
+  padding: 10px;
+  margin: -10px;
+}
+
+@keyframes highlight-pulse {
+  0%, 100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(255, 193, 7, 0.3);
+    box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
+  }
+}
+
+.field-wrapper {
+  transition: all 0.3s ease;
+}
 .consultation-form {
   padding: 1rem 0;
 }

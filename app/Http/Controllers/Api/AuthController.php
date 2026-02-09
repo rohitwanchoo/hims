@@ -70,13 +70,27 @@ class AuthController extends Controller
         // Include hospital info for non-super-admin users
         if ($user->hospital_id) {
             $hospital = Hospital::find($user->hospital_id);
-            $response['hospital'] = $hospital ? [
-                'hospital_id' => $hospital->hospital_id,
-                'code' => $hospital->code,
-                'name' => $hospital->name,
-                'type' => $hospital->type,
-                'logo' => $hospital->logo,
-            ] : null;
+            if ($hospital) {
+                // Get subscription plan modules
+                $subscriptionModules = [];
+                if ($hospital->subscription_plan) {
+                    $plan = \App\Models\SubscriptionPlan::where('plan_code', $hospital->subscription_plan)->first();
+                    if ($plan && $plan->modules) {
+                        $subscriptionModules = $plan->modules;
+                    }
+                }
+
+                $response['hospital'] = [
+                    'hospital_id' => $hospital->hospital_id,
+                    'code' => $hospital->code,
+                    'name' => $hospital->name,
+                    'type' => $hospital->type,
+                    'logo' => $hospital->logo,
+                    'subscription_modules' => $subscriptionModules,
+                ];
+            } else {
+                $response['hospital'] = null;
+            }
         }
 
         // For super admin, include list of hospitals they can switch to
@@ -143,9 +157,27 @@ class AuthController extends Controller
 
         $hospital = Hospital::find($request->hospital_id);
 
+        // Get subscription plan modules
+        $subscriptionModules = [];
+        if ($hospital && $hospital->subscription_plan) {
+            $plan = \App\Models\SubscriptionPlan::where('plan_code', $hospital->subscription_plan)->first();
+            if ($plan && $plan->modules) {
+                $subscriptionModules = $plan->modules;
+            }
+        }
+
+        $hospitalData = [
+            'hospital_id' => $hospital->hospital_id,
+            'code' => $hospital->code,
+            'name' => $hospital->name,
+            'type' => $hospital->type,
+            'logo' => $hospital->logo,
+            'subscription_modules' => $subscriptionModules,
+        ];
+
         return response()->json([
             'message' => 'Hospital switched successfully',
-            'hospital' => $hospital,
+            'hospital' => $hospitalData,
         ]);
     }
 
@@ -178,6 +210,27 @@ class AuthController extends Controller
             'permissions' => $user->getPermissionCodes(),
             'roles' => $user->getRoleNames(),
             'is_super_admin' => $user->isSuperAdmin(),
+        ]);
+    }
+
+    public function refreshPermissions(Request $request)
+    {
+        $user = $request->user();
+
+        // Clear permissions cache
+        \Illuminate\Support\Facades\Cache::forget("user_permissions_{$user->user_id}");
+
+        return response()->json([
+            'user' => [
+                'user_id' => $user->user_id,
+                'username' => $user->username,
+                'full_name' => $user->full_name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'is_super_admin' => $user->isSuperAdmin(),
+            ],
+            'permissions' => $user->getPermissionCodes(),
+            'roles' => $user->getRoleNames(),
         ]);
     }
 }

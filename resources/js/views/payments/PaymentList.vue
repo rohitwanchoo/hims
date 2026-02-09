@@ -87,9 +87,77 @@
                 </div>
             </transition>
         </div>
+        <!-- Tabs -->
+        <ul class="nav nav-tabs mb-3">
+            <li class="nav-item">
+                <a class="nav-link" :class="{ active: activeTab === 'payments' }" @click="activeTab = 'payments'" style="cursor: pointer;">
+                    <i class="bi bi-cash-coin me-1"></i>Payment Records
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" :class="{ active: activeTab === 'outstanding' }" @click="activeTab = 'outstanding'" style="cursor: pointer;">
+                    <i class="bi bi-exclamation-circle me-1"></i>Outstanding Bills
+                    <span v-if="unpaidBills.length > 0" class="badge bg-danger ms-1">{{ unpaidBills.length }}</span>
+                </a>
+            </li>
+        </ul>
+
+        <!-- Outstanding Bills Table -->
+        <div v-if="activeTab === 'outstanding'" class="modern-card">
+            <div class="modern-card-header">
+                <h6 class="mb-0"><i class="bi bi-exclamation-circle me-2"></i>Outstanding Bills</h6>
+            </div>
+            <div class="modern-card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0 modern-table">
+                        <thead>
+                            <tr>
+                                <th>Bill #</th>
+                                <th>Date</th>
+                                <th>Patient</th>
+                                <th>Bill Amount</th>
+                                <th>Paid</th>
+                                <th>Outstanding</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="bill in unpaidBills" :key="bill.bill_id">
+                                <td class="fw-semibold">{{ bill.bill_number }}</td>
+                                <td>{{ formatDate(bill.bill_date) }}</td>
+                                <td>{{ bill.patient?.first_name }} {{ bill.patient?.last_name }}</td>
+                                <td class="fw-semibold">{{ formatCurrency(bill.total_amount) }}</td>
+                                <td class="text-success">{{ formatCurrency(bill.paid_amount) }}</td>
+                                <td class="fw-semibold text-danger">{{ formatCurrency(bill.due_amount) }}</td>
+                                <td>
+                                    <span class="badge" :class="{
+                                        'bg-warning': bill.payment_status === 'partial',
+                                        'bg-danger': bill.payment_status === 'pending'
+                                    }">
+                                        {{ bill.payment_status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" @click="recordPaymentForBill(bill)" title="Record Payment">
+                                        <i class="bi bi-cash-coin"></i> Pay
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr v-if="unpaidBills.length === 0">
+                                <td colspan="8" class="text-center py-4 text-muted">
+                                    <i class="bi bi-check-circle fs-3 d-block mb-2 text-success"></i>
+                                    No outstanding bills
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
 
         <!-- Payments Table -->
-        <div class="modern-card">
+        <div v-if="activeTab === 'payments'" class="modern-card">
             <div class="modern-card-header">
                 <h6 class="mb-0"><i class="bi bi-list-ul me-2"></i>Payment Records</h6>
             </div>
@@ -157,37 +225,124 @@
                             <div class="mb-3" v-if="selectedBill">
                                 <div class="alert alert-info mb-0">
                                     <div class="d-flex justify-content-between">
-                                        <span>Bill Total:</span>
+                                        <span>Subtotal:</span>
+                                        <strong>{{ formatCurrency(selectedBill.subtotal) }}</strong>
+                                    </div>
+                                    <div v-if="selectedBill.discount_amount > 0" class="d-flex justify-content-between text-success">
+                                        <span>Discount:</span>
+                                        <strong>- {{ formatCurrency(selectedBill.discount_amount) }}</strong>
+                                    </div>
+                                    <div v-if="selectedBill.tax_amount > 0" class="d-flex justify-content-between">
+                                        <span>Tax/GST:</span>
+                                        <strong>{{ formatCurrency(selectedBill.tax_amount) }}</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between border-top pt-2 mt-1">
+                                        <span><strong>Bill Total:</strong></span>
                                         <strong>{{ formatCurrency(selectedBill.total_amount) }}</strong>
                                     </div>
                                     <div class="d-flex justify-content-between">
                                         <span>Paid:</span>
-                                        <strong>{{ formatCurrency(selectedBill.paid_amount) }}</strong>
+                                        <strong class="text-success">{{ formatCurrency(selectedBill.paid_amount) }}</strong>
                                     </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Due:</span>
+                                    <div class="d-flex justify-content-between border-top pt-2 mt-1">
+                                        <span><strong>Amount Due:</strong></span>
                                         <strong class="text-danger">{{ formatCurrency(selectedBill.due_amount) }}</strong>
                                     </div>
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Amount <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" v-model="form.amount" step="0.01" required>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="multiModeCheck" v-model="form.isMultiMode" @change="toggleMultiMode">
+                                    <label class="form-check-label" for="multiModeCheck">
+                                        <strong>Split Payment (Multiple Modes)</strong>
+                                    </label>
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Payment Mode <span class="text-danger">*</span></label>
-                                <select class="form-select" v-model="form.payment_mode" required>
-                                    <option value="cash">Cash</option>
-                                    <option value="card">Card</option>
-                                    <option value="upi">UPI</option>
-                                    <option value="bank_transfer">Bank Transfer</option>
-                                    <option value="insurance">Insurance</option>
-                                </select>
+
+                            <!-- Single Mode Payment -->
+                            <div v-if="!form.isMultiMode">
+                                <div class="mb-3">
+                                    <label class="form-label">Amount <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" v-model="form.amount" step="0.01" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Payment Mode <span class="text-danger">*</span></label>
+                                    <select class="form-select" v-model="form.payment_mode" required>
+                                        <option value="cash">Cash</option>
+                                        <option value="card">Card</option>
+                                        <option value="upi">UPI</option>
+                                        <option value="cheque">Cheque</option>
+                                        <option value="bank_transfer">Bank Transfer</option>
+                                        <option value="insurance">Insurance</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Reference Number</label>
+                                    <input type="text" class="form-control" v-model="form.reference_number" placeholder="Transaction/Cheque number">
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Reference Number</label>
-                                <input type="text" class="form-control" v-model="form.reference_number" placeholder="Transaction/Cheque number">
+
+                            <!-- Multi Mode Payment -->
+                            <div v-else>
+                                <div class="mb-3">
+                                    <label class="form-label">Total Amount <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" v-model="form.totalAmount" step="0.01" required readonly>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label mb-0">Payment Modes</label>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" @click="addPaymentMode">
+                                            <i class="bi bi-plus-lg"></i> Add Mode
+                                        </button>
+                                    </div>
+
+                                    <div v-for="(mode, index) in form.paymentModes" :key="index" class="card mb-2">
+                                        <div class="card-body p-2">
+                                            <div class="row g-2">
+                                                <div class="col-md-5">
+                                                    <select class="form-select form-select-sm" v-model="mode.payment_mode" required>
+                                                        <option value="">Select Mode</option>
+                                                        <option value="cash">Cash</option>
+                                                        <option value="card">Card</option>
+                                                        <option value="upi">UPI</option>
+                                                        <option value="cheque">Cheque</option>
+                                                        <option value="bank_transfer">Bank Transfer</option>
+                                                        <option value="insurance">Insurance</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <input type="number" class="form-control form-control-sm" v-model="mode.amount"
+                                                           placeholder="Amount" step="0.01" required @input="calculateMultiModeTotal">
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <input type="text" class="form-control form-control-sm" v-model="mode.reference_number"
+                                                           placeholder="Ref #">
+                                                </div>
+                                            </div>
+                                            <button v-if="form.paymentModes.length > 1" type="button"
+                                                    class="btn btn-sm btn-link text-danger p-0 mt-1"
+                                                    @click="removePaymentMode(index)">
+                                                <i class="bi bi-trash"></i> Remove
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="alert alert-info mt-2 p-2 small">
+                                        <div class="d-flex justify-content-between">
+                                            <span>Total Entered:</span>
+                                            <strong :class="{'text-danger': multiModeTotal !== parseFloat(form.totalAmount)}">
+                                                {{ formatCurrency(multiModeTotal) }}
+                                            </strong>
+                                        </div>
+                                        <div v-if="multiModeTotal !== parseFloat(form.totalAmount)" class="text-danger small mt-1">
+                                            <i class="bi bi-exclamation-triangle"></i>
+                                            Amount mismatch! Difference: {{ formatCurrency(Math.abs(parseFloat(form.totalAmount) - multiModeTotal)) }}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+
                             <div class="mb-3">
                                 <label class="form-label">Notes</label>
                                 <textarea class="form-control" v-model="form.notes" rows="2"></textarea>
@@ -221,6 +376,7 @@ const unpaidBills = ref([]);
 const showModal = ref(false);
 const saving = ref(false);
 const showFilters = ref(false);
+const activeTab = ref('payments');
 
 const filters = reactive({
     from_date: '',
@@ -235,7 +391,10 @@ const form = reactive({
     payment_mode: 'cash',
     reference_number: '',
     notes: '',
-    opd_id: null // Track OPD ID if payment is from OPD
+    opd_id: null, // Track OPD ID if payment is from OPD
+    isMultiMode: false,
+    totalAmount: '',
+    paymentModes: [{ payment_mode: '', amount: '', reference_number: '' }]
 });
 
 const summary = reactive({
@@ -253,6 +412,31 @@ const hasActiveFilters = computed(() => {
            filters.payment_mode !== '' ||
            filters.search !== '';
 });
+
+const multiModeTotal = computed(() => {
+    return form.paymentModes.reduce((sum, mode) => sum + (parseFloat(mode.amount) || 0), 0);
+});
+
+const toggleMultiMode = () => {
+    if (form.isMultiMode) {
+        form.totalAmount = form.amount || (selectedBill.value ? selectedBill.value.due_amount : '');
+        form.paymentModes = [{ payment_mode: '', amount: '', reference_number: '' }];
+    }
+};
+
+const addPaymentMode = () => {
+    form.paymentModes.push({ payment_mode: '', amount: '', reference_number: '' });
+};
+
+const removePaymentMode = (index) => {
+    if (form.paymentModes.length > 1) {
+        form.paymentModes.splice(index, 1);
+    }
+};
+
+const calculateMultiModeTotal = () => {
+    // Trigger reactivity
+};
 
 const fetchPayments = async () => {
     try {
@@ -295,48 +479,77 @@ const fetchUnpaidBills = async () => {
 const onBillSelect = () => {
     if (selectedBill.value) {
         form.amount = selectedBill.value.due_amount;
+        form.totalAmount = selectedBill.value.due_amount;
     }
 };
 
 const closeModal = () => {
     showModal.value = false;
-    Object.assign(form, { bill_id: '', amount: '', payment_mode: 'cash', reference_number: '', notes: '', opd_id: null });
+    Object.assign(form, {
+        bill_id: '',
+        amount: '',
+        payment_mode: 'cash',
+        reference_number: '',
+        notes: '',
+        opd_id: null,
+        isMultiMode: false,
+        totalAmount: '',
+        paymentModes: [{ payment_mode: '', amount: '', reference_number: '' }]
+    });
 };
 
 const savePayment = async () => {
     saving.value = true;
     try {
-        const paymentResponse = await axios.post('/api/payments', {
-            ...form,
-            payment_date: new Date().toISOString().split('T')[0]
-        });
+        const paymentDate = new Date().toISOString().split('T')[0];
 
-        // If payment is from OPD bill, update OPD payment status
-        if (form.opd_id) {
-            try {
-                await axios.post(`/api/opd-visits/${form.opd_id}/payment`, {
-                    amount: form.amount,
-                    payment_mode: form.payment_mode,
-                    reference_number: paymentResponse.data.receipt_number || form.reference_number
-                });
-                console.log('OPD payment status updated successfully');
-            } catch (opdError) {
-                console.error('Error updating OPD payment status:', opdError);
-                // Don't fail the whole operation if OPD update fails
+        if (form.isMultiMode) {
+            // Validate total amounts match
+            if (multiModeTotal.value !== parseFloat(form.totalAmount)) {
+                alert('Total amount mismatch! Please ensure the sum of all payment modes equals the total amount.');
+                saving.value = false;
+                return;
             }
-        }
 
-        alert('Payment recorded successfully!');
+            // Validate all modes are selected
+            const invalidModes = form.paymentModes.filter(m => !m.payment_mode || !m.amount || parseFloat(m.amount) <= 0);
+            if (invalidModes.length > 0) {
+                alert('Please fill in all payment modes with valid amounts.');
+                saving.value = false;
+                return;
+            }
 
-        // If this was from OPD, redirect back to OPD list with refresh
-        if (form.opd_id) {
-            closeModal();
-            router.push(`/opd?refresh=${Date.now()}`);
+            // Create single payment with multiple modes
+            await axios.post('/api/payments', {
+                bill_id: form.bill_id,
+                amount: parseFloat(form.totalAmount),
+                payment_mode: 'multi',
+                payment_modes: form.paymentModes.map(mode => ({
+                    payment_mode: mode.payment_mode,
+                    amount: parseFloat(mode.amount),
+                    reference_number: mode.reference_number || ''
+                })),
+                notes: form.notes || 'Multi-mode payment',
+                payment_date: paymentDate
+            });
+            alert('Multi-mode payment recorded successfully!');
         } else {
-            await fetchPayments();
-            await fetchUnpaidBills();
-            closeModal();
+            // Single mode payment
+            await axios.post('/api/payments', {
+                bill_id: form.bill_id,
+                amount: form.amount,
+                payment_mode: form.payment_mode,
+                reference_number: form.reference_number,
+                notes: form.notes,
+                payment_date: paymentDate
+            });
+            alert('Payment recorded successfully!');
         }
+
+        // Refresh data
+        await fetchPayments();
+        await fetchUnpaidBills();
+        closeModal();
     } catch (error) {
         alert(error.response?.data?.message || 'Error recording payment');
     }
@@ -355,6 +568,13 @@ const formatDate = (date) => new Date(date).toLocaleDateString('en-IN');
 const formatCurrency = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount || 0);
 const printReceipt = (payment) => {
     window.open(`/print/payment-receipt/${payment.payment_id}`, '_blank');
+};
+
+const recordPaymentForBill = (bill) => {
+    form.bill_id = bill.bill_id;
+    form.amount = bill.due_amount;
+    form.totalAmount = bill.due_amount;
+    showModal.value = true;
 };
 
 onMounted(async () => {

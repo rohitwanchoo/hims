@@ -13,7 +13,7 @@ class NotificationController extends Controller
 {
     protected function getNotificationService(): NotificationService
     {
-        return new NotificationService(auth()->user()->hospital_id);
+        return new NotificationService(app('current_hospital_id') ?? auth()->user()->hospital_id);
     }
 
     // SMS Gateways
@@ -183,7 +183,7 @@ class NotificationController extends Controller
             ->firstOrFail();
 
         $this->getNotificationService()->sendFromTemplate(
-            auth()->user()->hospital_id,
+            app('current_hospital_id') ?? auth()->user()->hospital_id,
             $template,
             $validated['recipient_name'],
             $validated['recipient_mobile'] ?? '',

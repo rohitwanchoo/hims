@@ -19,6 +19,7 @@ class Payment extends Model
         'amount',
         'payment_date',
         'payment_mode',
+        'payment_modes',
         'reference_number',
         'transaction_id',
         'status',
@@ -29,6 +30,7 @@ class Payment extends Model
     protected $casts = [
         'payment_date' => 'date',
         'amount' => 'decimal:2',
+        'payment_modes' => 'array',
     ];
 
     public function bill()

@@ -93,7 +93,7 @@ class LabOrderController extends Controller
         DB::beginTransaction();
         try {
             // Generate order number
-            $lastOrder = LabOrder::where('hospital_id', auth()->user()->hospital_id)
+            $lastOrder = LabOrder::where('hospital_id', app('current_hospital_id') ?? auth()->user()->hospital_id)
                 ->orderBy('order_id', 'desc')
                 ->first();
 
@@ -119,7 +119,7 @@ class LabOrderController extends Controller
 
             // Create lab order
             $order = LabOrder::create([
-                'hospital_id' => auth()->user()->hospital_id,
+                'hospital_id' => app('current_hospital_id') ?? auth()->user()->hospital_id,
                 'order_number' => $orderNumber,
                 'patient_id' => $request->patient_id,
                 'referred_by' => $request->referred_by,

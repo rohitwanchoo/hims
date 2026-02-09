@@ -5,7 +5,7 @@
 @section('content')
     <!-- Header -->
     <div class="header">
-        <div class="hospital-name">{{ $hospital->hospital_name ?? 'Hospital Management System' }}</div>
+        <div class="hospital-name">{{ $hospital->name ?? 'Hospital Management System' }}</div>
         <div class="hospital-address">
             {{ $hospital->address ?? '' }}
             @if($hospital->city || $hospital->state || $hospital->pincode)
@@ -50,7 +50,7 @@
             </div>
             <div class="info-cell">
                 <div class="info-label">Patient ID</div>
-                <div class="info-value">{{ $payment->patient->patient_code ?? 'N/A' }}</div>
+                <div class="info-value">{{ $payment->patient->pcd ?? 'N/A' }}</div>
             </div>
             <div class="info-cell">
                 <div class="info-label">Mobile</div>
@@ -159,6 +159,24 @@
     <div class="section">
         <div class="section-title">Payment Details</div>
         <table class="data-table">
+            @if($payment->payment_mode === 'multi' && $payment->payment_modes)
+            <tr>
+                <td colspan="2" style="font-weight: 600; background: #f5f5f5;">Payment Modes (Multiple):</td>
+            </tr>
+            @foreach($payment->payment_modes as $mode)
+            <tr>
+                <td style="width: 200px; padding-left: 20px;">
+                    <i class="bi bi-arrow-right"></i> {{ ucfirst(str_replace('_', ' ', $mode['payment_mode'])) }}
+                </td>
+                <td>
+                    ₹{{ number_format($mode['amount'], 2) }}
+                    @if(!empty($mode['reference_number']))
+                        <small class="text-muted">(Ref: {{ $mode['reference_number'] }})</small>
+                    @endif
+                </td>
+            </tr>
+            @endforeach
+            @else
             <tr>
                 <td style="width: 200px; font-weight: 600;">Payment Mode:</td>
                 <td style="text-transform: capitalize;">{{ str_replace('_', ' ', $payment->payment_mode) }}</td>
@@ -168,6 +186,7 @@
                 <td style="font-weight: 600;">Reference Number:</td>
                 <td>{{ $payment->reference_number }}</td>
             </tr>
+            @endif
             @endif
             @if($payment->transaction_id)
             <tr>

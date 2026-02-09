@@ -17,7 +17,7 @@
             <div class="sidebar-menu">
                 <ul class="nav">
                     <!-- Dashboard (No submenu) -->
-                    <li class="nav-item">
+                    <li class="nav-item" v-if="isSuperAdmin() || can('dashboard.view')">
                         <router-link class="nav-link" to="/" exact-active-class="active">
                             <i class="bi bi-grid-1x2"></i>
                             <span>Dashboard</span>
@@ -25,7 +25,7 @@
                     </li>
 
                     <!-- Doctor Workbench (No submenu) -->
-                    <li class="nav-item">
+                    <li class="nav-item" v-if="isSuperAdmin() || can('doctor_workbench.view')">
                         <router-link class="nav-link" to="/doctor-workbench" active-class="active">
                             <i class="bi bi-clipboard2-pulse"></i>
                             <span>Doctor Workbench</span>
@@ -84,15 +84,21 @@
                         </a>
                         <ul class="submenu" :class="{ 'show': expandedMenus.includes('superadmin') }">
                             <li class="nav-item">
+                                <router-link class="nav-link" to="/subscription-plans" active-class="active">
+                                    <span>Subscription Plans</span>
+                                </router-link>
+                            </li>
+                            <li class="nav-item">
                                 <router-link class="nav-link" to="/hospitals" active-class="active">
                                     <span>Hospitals</span>
                                 </router-link>
                             </li>
-                            <li class="nav-item">
+                            <!-- Temporarily hidden AI Assistant -->
+                            <!-- <li class="nav-item">
                                 <router-link class="nav-link" to="/admin/claude-chat" active-class="active">
                                     <span>AI Assistant</span>
                                 </router-link>
-                            </li>
+                            </li> -->
                         </ul>
                     </li>
                 </ul>
@@ -228,18 +234,17 @@ const menuSections = [
         items: [
             { path: '/patients', label: 'Patients', permission: 'patient.view' },
             { path: '/appointments', label: 'Appointments', permission: 'appointment.view' },
-            { path: '/calendar', label: 'Calendar', permission: 'appointment.view' }
+            { path: '/calendar', label: 'Calendar', permission: 'calendar.view' }
         ]
     },
     {
         id: 'clinical',
         title: 'Clinical',
         icon: 'bi bi-clipboard2-pulse',
-        module: 'clinical',
         items: [
             { path: '/opd', label: 'OPD Visits', permission: 'opd.view' },
             { path: '/ipd', label: 'IPD Admissions', permission: 'ipd.view' },
-            { path: '/discharge-summary', label: 'Discharge Summary', permission: 'ipd.view' }
+            { path: '/discharge-summary', label: 'Discharge Summary', permission: 'discharge_summary.view' }
         ]
     },
     {
@@ -249,7 +254,7 @@ const menuSections = [
         module: 'billing',
         items: [
             { path: '/billing', label: 'Bills', permission: 'billing.view' },
-            { path: '/payments', label: 'Payments', permission: 'billing.view' }
+            { path: '/payments', label: 'Payments', permission: 'payment.view' }
         ]
     },
     /* Temporarily hidden sections
@@ -325,7 +330,7 @@ const menuSections = [
         icon: 'bi bi-shield-check',
         module: 'abha',
         items: [
-            { path: '/abha', label: 'ABHA Management', permission: 'patient.view' }
+            { path: '/abha', label: 'ABHA Management', permission: 'abha.link_patient' }
         ]
     },
     {
@@ -352,56 +357,56 @@ const menuSections = [
                 id: 'common-master',
                 label: 'Common Master',
                 items: [
-                    { path: '/doctors', label: 'Doctors' },
-                    { path: '/departments', label: 'Departments' },
-                    { path: '/masters/reception/prefix', label: 'Prefix' },
-                    { path: '/masters/reception/gender', label: 'Gender' },
-                    { path: '/masters/reception/age-group', label: 'Age Group' },
-                    { path: '/masters/reception/blood-group', label: 'Blood Group' },
-                    { path: '/masters/reception/patient-type', label: 'Patient Type' },
-                    { path: '/masters/reception/marital-status', label: 'Marital Status' },
-                    { path: '/masters/reception/reference-doctor', label: 'Reference Master' },
-                    { path: '/masters/reception/insurance-company', label: 'Insurance Company' },
-                    { path: '/masters/reception/qualification', label: 'Qualification' },
-                    { path: '/masters/reception/consult-master', label: 'Consult Master' },
-                    { path: '/masters/prescription', label: 'Prescription Master' },
-                    { path: '/masters/bed-allocation', label: 'Bed Allocation' },
-                    { path: '/masters/hospital-services', label: 'Hospital Services' },
-                    { path: '/masters/gst-plan', label: 'GST Plan Master' }
+                    { path: '/doctors', label: 'Doctors', permission: 'doctor.view' },
+                    { path: '/departments', label: 'Departments', permission: 'department.view' },
+                    { path: '/masters/reception/prefix', label: 'Prefix', permission: 'prefix.view' },
+                    { path: '/masters/reception/gender', label: 'Gender', permission: 'gender.view' },
+                    { path: '/masters/reception/age-group', label: 'Age Group', permission: 'age_group.view' },
+                    { path: '/masters/reception/blood-group', label: 'Blood Group', permission: 'blood_group.view' },
+                    { path: '/masters/reception/patient-type', label: 'Patient Type', permission: 'patient_type.view' },
+                    { path: '/masters/reception/marital-status', label: 'Marital Status', permission: 'marital_status.view' },
+                    { path: '/masters/reception/reference-doctor', label: 'Reference Master', permission: 'reference_doctor.view' },
+                    { path: '/masters/reception/insurance-company', label: 'Insurance Company', permission: 'insurance_company.view' },
+                    { path: '/masters/reception/qualification', label: 'Qualification', permission: 'qualification.view' },
+                    { path: '/masters/reception/consult-master', label: 'Consult Master', permission: 'consult_master.view' },
+                    { path: '/masters/prescription', label: 'Prescription Master', permission: 'prescription_master.view' },
+                    { path: '/masters/bed-allocation', label: 'Bed Allocation', permission: 'bed_allocation.view' },
+                    { path: '/masters/hospital-services', label: 'Hospital Services', permission: 'hospital_services.view' },
+                    { path: '/masters/gst-plan', label: 'GST Plan Master', permission: 'gst_plan.view' }
                 ]
             },
             {
                 id: 'address-masters',
                 label: 'Address Masters',
                 items: [
-                    { path: '/masters/address/country', label: 'Country' },
-                    { path: '/masters/address/state', label: 'State' },
-                    { path: '/masters/address/district', label: 'District' },
-                    { path: '/masters/address/city', label: 'City/Taluka' },
-                    { path: '/masters/address/area', label: 'Area/Village' }
+                    { path: '/masters/address/country', label: 'Country', permission: 'country.view' },
+                    { path: '/masters/address/state', label: 'State', permission: 'state.view' },
+                    { path: '/masters/address/district', label: 'District', permission: 'district.view' },
+                    { path: '/masters/address/city', label: 'City/Taluka', permission: 'city.view' },
+                    { path: '/masters/address/area', label: 'Area/Village', permission: 'area.view' }
                 ]
             },
             {
                 id: 'pathology-masters',
                 label: 'Pathology Masters',
                 items: [
-                    { path: '/masters/pathology/analyzer', label: 'Analyzer Master' },
-                    { path: '/masters/pathology/external-lab', label: 'External Lab Center' },
-                    { path: '/masters/pathology/test-method', label: 'Test Method Master' },
-                    { path: '/masters/pathology/test-unit', label: 'Test Unit Master' },
-                    { path: '/masters/pathology/container', label: 'Container Master' },
-                    { path: '/masters/pathology/faculty', label: 'Faculty Master' },
-                    { path: '/masters/pathology/sample-type', label: 'Sample Type' },
-                    { path: '/masters/pathology/race', label: 'Race Master' },
-                    { path: '/masters/pathology/sensitivity', label: 'Sensitivity Master' },
-                    { path: '/masters/pathology/pathologist-map', label: 'Pathologist Doctor Map' },
-                    { path: '/masters/pathology/test', label: 'Test Master' },
-                    { path: '/masters/pathology/test-note', label: 'Test Note Master' },
-                    { path: '/masters/pathology/test-category', label: 'Test Category' },
-                    { path: '/masters/pathology/test-group', label: 'Test Group' },
-                    { path: '/masters/pathology/skill-test-map', label: 'Skill Test Map' },
-                    { path: '/masters/pathology/test-report', label: 'Test Report Master' },
-                    { path: '/masters/pathology/instruction', label: 'Instruction Master' }
+                    { path: '/masters/pathology/analyzer', label: 'Analyzer Master', permission: 'analyzer.view' },
+                    { path: '/masters/pathology/external-lab', label: 'External Lab Center', permission: 'external_lab.view' },
+                    { path: '/masters/pathology/test-method', label: 'Test Method Master', permission: 'test_method.view' },
+                    { path: '/masters/pathology/test-unit', label: 'Test Unit Master', permission: 'test_unit.view' },
+                    { path: '/masters/pathology/container', label: 'Container Master', permission: 'container.view' },
+                    { path: '/masters/pathology/faculty', label: 'Faculty Master', permission: 'faculty.view' },
+                    { path: '/masters/pathology/sample-type', label: 'Sample Type', permission: 'sample_type.view' },
+                    { path: '/masters/pathology/race', label: 'Race Master', permission: 'race.view' },
+                    { path: '/masters/pathology/sensitivity', label: 'Sensitivity Master', permission: 'sensitivity.view' },
+                    { path: '/masters/pathology/pathologist-map', label: 'Pathologist Doctor Map', permission: 'pathologist_map.view' },
+                    { path: '/masters/pathology/test', label: 'Test Master', permission: 'test.view' },
+                    { path: '/masters/pathology/test-note', label: 'Test Note Master', permission: 'test_note.view' },
+                    { path: '/masters/pathology/test-category', label: 'Test Category', permission: 'test_category.view' },
+                    { path: '/masters/pathology/test-group', label: 'Test Group', permission: 'test_group.view' },
+                    { path: '/masters/pathology/skill-test-map', label: 'Skill Test Map', permission: 'skill_test_map.view' },
+                    { path: '/masters/pathology/test-report', label: 'Test Report Master', permission: 'test_report.view' },
+                    { path: '/masters/pathology/instruction', label: 'Instruction Master', permission: 'instruction.view' }
                 ]
             }
         ]
@@ -433,29 +438,43 @@ const visibleMenuSections = computed(() => {
         }
 
         // Filter items within the section
-        const visibleItems = filterMenuItems(section.items);
+        // Pass flag indicating if section has module (to skip sub-module checks)
+        const visibleItems = filterMenuItems(section.items, !!section.module);
 
         // Only show section if it has visible items
         return visibleItems.length > 0;
     }).map(section => ({
         ...section,
-        items: filterMenuItems(section.items)
+        items: filterMenuItems(section.items, !!section.module)
     }));
 });
 
 // Recursively filter menu items based on permissions
-function filterMenuItems(items) {
+// skipModuleCheck: if true, only check permissions (parent section already checked module)
+function filterMenuItems(items, skipModuleCheck = false) {
     if (!items) return [];
 
     return items.filter(item => {
         // If item has nested items, filter them recursively
         if (item.items) {
-            const visibleSubItems = filterMenuItems(item.items);
+            const visibleSubItems = filterMenuItems(item.items, skipModuleCheck);
             return visibleSubItems.length > 0;
         }
 
         // If item has permission requirement, check it
         if (item.permission) {
+            // Only check module if parent section didn't have module check
+            if (!skipModuleCheck) {
+                // Extract module name from permission (e.g., "ipd.view" -> "ipd")
+                const moduleName = item.permission.split('.')[0];
+
+                // Check if module is enabled in subscription plan
+                if (!canAccessModule(moduleName)) {
+                    return false; // Module not enabled in subscription
+                }
+            }
+
+            // Check user permission
             return can(item.permission);
         }
 
@@ -466,7 +485,7 @@ function filterMenuItems(items) {
         if (item.items) {
             return {
                 ...item,
-                items: filterMenuItems(item.items)
+                items: filterMenuItems(item.items, skipModuleCheck)
             };
         }
         return item;
@@ -549,7 +568,7 @@ const pageTitle = computed(() => {
         '/settings/rate-requests': 'Rate Change Requests',
         '/discharge-summary-custom-fields': 'Discharge Summary Custom Fields',
         '/hospitals': 'Hospitals',
-        '/admin/claude-chat': 'AI Assistant',
+        // '/admin/claude-chat': 'AI Assistant', // Temporarily hidden
     };
     return titles[route.path] || 'HIMS';
 });

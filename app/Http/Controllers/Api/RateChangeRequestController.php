@@ -59,7 +59,7 @@ class RateChangeRequestController extends Controller
             'reason' => 'required|string|max:255',
         ]);
 
-        $validated['hospital_id'] = auth()->user()->hospital_id;
+        $validated['hospital_id'] = app('current_hospital_id') ?? auth()->user()->hospital_id;
         $validated['requested_by'] = auth()->user()->user_id;
         $validated['status'] = 'pending';
 

@@ -171,14 +171,23 @@ class AppointmentController extends Controller
                     ->count() + 1;
             }
 
-            // Generate appointment number
+            // Generate appointment number with hospital-specific prefix
+            $hospitalId = app('current_hospital_id') ?? auth()->user()->hospital_id ?? $request->user()->hospital_id;
             $today = now()->format('Ymd');
-            $prefix = 'APT' . $today;
 
-            // Find the last appointment number for today
-            $lastAppointment = Appointment::where('appointment_number', 'like', $prefix . '%')
-                ->orderBy('appointment_number', 'desc')
-                ->first();
+            // Hospital-specific prefix: H1-APT or H2-APT (Hospital 1 uses APT for legacy compatibility)
+            if ($hospitalId && $hospitalId != 1) {
+                $prefix = 'H' . $hospitalId . '-APT' . $today;
+            } else {
+                $prefix = 'APT' . $today;
+            }
+
+            // Find the last appointment number for today and this hospital
+            $query = Appointment::where('appointment_number', 'like', $prefix . '%');
+            if ($hospitalId) {
+                $query->where('hospital_id', $hospitalId);
+            }
+            $lastAppointment = $query->orderBy('appointment_number', 'desc')->first();
 
             if ($lastAppointment) {
                 // Extract the sequence number and increment
@@ -188,7 +197,25 @@ class AppointmentController extends Controller
                 $nextNumber = 1;
             }
 
-            $appointmentNumber = $prefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+            // Retry logic to handle race conditions
+            $maxAttempts = 10;
+            $attempts = 0;
+            do {
+                $appointmentNumber = $prefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+                $exists = Appointment::where('appointment_number', $appointmentNumber)->exists();
+
+                if (!$exists) {
+                    break;
+                }
+
+                $nextNumber++;
+                $attempts++;
+            } while ($attempts < $maxAttempts);
+
+            if ($attempts >= $maxAttempts) {
+                // Fallback to timestamp-based unique number
+                $appointmentNumber = $prefix . '-' . time() . '-' . rand(100, 999);
+            }
 
             // Create appointment
             $appointment = Appointment::create([
@@ -388,9 +415,50 @@ class AppointmentController extends Controller
         ]);
 
         return DB::transaction(function () use ($appointment, $validated, $request) {
-            // Generate OPD number
-            $todayCount = OpdVisit::whereDate('visit_date', now()->toDateString())->count();
-            $opdNumber = 'OPD' . now()->format('Ymd') . str_pad($todayCount + 1, 4, '0', STR_PAD_LEFT);
+            // Generate OPD number with hospital-specific prefix
+            $hospitalId = app('current_hospital_id') ?? auth()->user()->hospital_id ?? $request->user()->hospital_id;
+            $today = now()->format('Ymd');
+
+            // Hospital-specific prefix: H1-OPD or H2-OPD (Hospital 1 uses OPD for legacy compatibility)
+            if ($hospitalId && $hospitalId != 1) {
+                $prefix = 'H' . $hospitalId . '-OPD' . $today;
+            } else {
+                $prefix = 'OPD' . $today;
+            }
+
+            // Find the last OPD number for today and this hospital
+            $query = OpdVisit::where('opd_number', 'like', $prefix . '%');
+            if ($hospitalId) {
+                $query->where('hospital_id', $hospitalId);
+            }
+            $lastOpd = $query->orderBy('opd_number', 'desc')->first();
+
+            if ($lastOpd) {
+                $lastNumber = intval(substr($lastOpd->opd_number, -4));
+                $nextNumber = $lastNumber + 1;
+            } else {
+                $nextNumber = 1;
+            }
+
+            // Retry logic to handle race conditions
+            $maxAttempts = 10;
+            $attempts = 0;
+            do {
+                $opdNumber = $prefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+                $exists = OpdVisit::where('opd_number', $opdNumber)->exists();
+
+                if (!$exists) {
+                    break;
+                }
+
+                $nextNumber++;
+                $attempts++;
+            } while ($attempts < $maxAttempts);
+
+            if ($attempts >= $maxAttempts) {
+                // Fallback to timestamp-based unique number
+                $opdNumber = $prefix . '-' . time() . '-' . rand(100, 999);
+            }
 
             // Generate token number
             $tokenNumber = OpdVisit::whereDate('visit_date', now()->toDateString())
@@ -656,9 +724,32 @@ class AppointmentController extends Controller
         return DB::transaction(function () use ($validated, $request, &$created, &$errors) {
             foreach ($validated['appointments'] as $index => $appointmentData) {
                 try {
-                    // Generate appointment number
-                    $todayCount = Appointment::whereDate('created_at', now()->toDateString())->count() + count($created);
-                    $appointmentNumber = 'APT' . now()->format('Ymd') . str_pad($todayCount + 1, 4, '0', STR_PAD_LEFT);
+                    // Generate appointment number with hospital-specific prefix
+                    $hospitalId = app('current_hospital_id') ?? auth()->user()->hospital_id ?? $request->user()->hospital_id;
+                    $today = now()->format('Ymd');
+
+                    // Hospital-specific prefix
+                    if ($hospitalId && $hospitalId != 1) {
+                        $prefix = 'H' . $hospitalId . '-APT' . $today;
+                    } else {
+                        $prefix = 'APT' . $today;
+                    }
+
+                    // Find the last appointment number for today and this hospital
+                    $query = Appointment::where('appointment_number', 'like', $prefix . '%');
+                    if ($hospitalId) {
+                        $query->where('hospital_id', $hospitalId);
+                    }
+                    $lastAppointment = $query->orderBy('appointment_number', 'desc')->first();
+
+                    if ($lastAppointment) {
+                        $lastNumber = intval(substr($lastAppointment->appointment_number, -4));
+                        $nextNumber = $lastNumber + 1 + count($created);
+                    } else {
+                        $nextNumber = 1 + count($created);
+                    }
+
+                    $appointmentNumber = $prefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
                     // Get doctor's department
                     $doctor = Doctor::find($appointmentData['doctor_id']);

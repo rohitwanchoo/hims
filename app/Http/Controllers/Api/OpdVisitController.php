@@ -171,9 +171,50 @@ class OpdVisitController extends Controller
                 ], 422);
             }
 
-            // Generate OPD number
-            $todayCount = OpdVisit::whereDate('visit_date', now()->toDateString())->count();
-            $opdNumber = 'OPD' . now()->format('Ymd') . str_pad($todayCount + 1, 4, '0', STR_PAD_LEFT);
+            // Generate OPD number with hospital-specific prefix
+            $hospitalId = app('current_hospital_id') ?? auth()->user()->hospital_id ?? $request->user()->hospital_id;
+            $today = now()->format('Ymd');
+
+            // Hospital-specific prefix: H1-OPD or H2-OPD (Hospital 1 uses OPD for legacy compatibility)
+            if ($hospitalId && $hospitalId != 1) {
+                $prefix = 'H' . $hospitalId . '-OPD' . $today;
+            } else {
+                $prefix = 'OPD' . $today;
+            }
+
+            // Find the last OPD number for today and this hospital
+            $query = OpdVisit::where('opd_number', 'like', $prefix . '%');
+            if ($hospitalId) {
+                $query->where('hospital_id', $hospitalId);
+            }
+            $lastOpd = $query->orderBy('opd_number', 'desc')->first();
+
+            if ($lastOpd) {
+                $lastNumber = intval(substr($lastOpd->opd_number, -4));
+                $nextNumber = $lastNumber + 1;
+            } else {
+                $nextNumber = 1;
+            }
+
+            // Retry logic to handle race conditions
+            $maxAttempts = 10;
+            $attempts = 0;
+            do {
+                $opdNumber = $prefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+                $exists = OpdVisit::where('opd_number', $opdNumber)->exists();
+
+                if (!$exists) {
+                    break;
+                }
+
+                $nextNumber++;
+                $attempts++;
+            } while ($attempts < $maxAttempts);
+
+            if ($attempts >= $maxAttempts) {
+                // Fallback to timestamp-based unique number
+                $opdNumber = $prefix . '-' . time() . '-' . rand(100, 999);
+            }
 
             // Generate token number
             $tokenNumber = $todayCount + 1;

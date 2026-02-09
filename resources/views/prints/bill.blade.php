@@ -5,7 +5,7 @@
 @section('content')
     <!-- Header -->
     <div class="header">
-        <div class="hospital-name">{{ $hospital->hospital_name ?? 'Hospital Management System' }}</div>
+        <div class="hospital-name">{{ $hospital->name ?? 'Hospital Management System' }}</div>
         <div class="hospital-address">
             {{ $hospital->address ?? '' }}
             @if($hospital->city || $hospital->state || $hospital->pincode)
@@ -35,6 +35,10 @@
                 <div class="info-value">{{ \Carbon\Carbon::parse($bill->bill_date)->format('d-m-Y') }}</div>
             </div>
             <div class="info-cell">
+                <div class="info-label">Bill Time</div>
+                <div class="info-value">{{ \Carbon\Carbon::parse($bill->created_at)->format('h:i A') }}</div>
+            </div>
+            <div class="info-cell">
                 <div class="info-label">Bill Type</div>
                 <div class="info-value">{{ strtoupper($bill->bill_type) }}</div>
             </div>
@@ -50,7 +54,7 @@
             </div>
             <div class="info-cell">
                 <div class="info-label">Patient ID</div>
-                <div class="info-value">{{ $bill->patient->patient_code ?? 'N/A' }}</div>
+                <div class="info-value">{{ $bill->patient->pcd ?? 'N/A' }}</div>
             </div>
             <div class="info-cell">
                 <div class="info-label">Mobile</div>
@@ -58,17 +62,18 @@
             </div>
         </div>
         <div class="info-row">
+            @if($bill->patient->insuranceCompanyRelation)
             <div class="info-cell">
-                <div class="info-label">Payment Mode</div>
-                <div class="info-value" style="text-transform: capitalize;">{{ str_replace('_', ' ', $bill->payment_mode) }}</div>
-            </div>
-            @if($bill->insurance_company)
-            <div class="info-cell">
-                <div class="info-label">Insurance Company</div>
-                <div class="info-value">{{ $bill->insurance_company }}</div>
+                <div class="info-label">Patient Class</div>
+                <div class="info-value">{{ $bill->patient->insuranceCompanyRelation->company_name }}</div>
             </div>
             @endif
-            @if($bill->policy_number)
+            @if($bill->patient->insurance_policy_no)
+            <div class="info-cell">
+                <div class="info-label">Policy Number</div>
+                <div class="info-value">{{ $bill->patient->insurance_policy_no }}</div>
+            </div>
+            @elseif($bill->policy_number)
             <div class="info-cell">
                 <div class="info-label">Policy Number</div>
                 <div class="info-value">{{ $bill->policy_number }}</div>

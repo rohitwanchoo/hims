@@ -13,7 +13,7 @@ class BillController extends Controller
 {
     public function index(Request $request)
     {
-        $hospitalId = auth()->user()->hospital_id;
+        $hospitalId = app('current_hospital_id') ?? auth()->user()->hospital_id;
 
         $query = Bill::where('hospital_id', $hospitalId)
             ->with(['patient.insuranceCompanyRelation', 'details', 'payments']);
@@ -61,7 +61,7 @@ class BillController extends Controller
 
     public function store(Request $request)
     {
-        $hospitalId = auth()->user()->hospital_id;
+        $hospitalId = app('current_hospital_id') ?? auth()->user()->hospital_id;
 
         $validated = $request->validate([
             'patient_id' => 'required|exists:patients,patient_id',
@@ -92,10 +92,27 @@ class BillController extends Controller
         ]);
 
         return DB::transaction(function () use ($validated, $hospitalId) {
-            // Generate bill number
-            $lastBill = Bill::where('hospital_id', $hospitalId)
-                ->whereDate('created_at', today())->count();
-            $billNumber = 'BILL-' . date('Ymd') . '-' . str_pad($lastBill + 1, 4, '0', STR_PAD_LEFT);
+            // Generate bill number with hospital-specific prefix
+            $today = date('Ymd');
+            if ($hospitalId && $hospitalId != 1) {
+                $prefix = 'H' . $hospitalId . '-BILL-' . $today . '-';
+            } else {
+                $prefix = 'BILL-' . $today . '-';
+            }
+
+            $lastBill = Bill::where('bill_number', 'like', $prefix . '%')
+                ->where('hospital_id', $hospitalId)
+                ->orderBy('bill_number', 'desc')
+                ->first();
+
+            if ($lastBill) {
+                $lastNumber = intval(substr($lastBill->bill_number, -4));
+                $nextNumber = $lastNumber + 1;
+            } else {
+                $nextNumber = 1;
+            }
+
+            $billNumber = $prefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
             // Calculate amounts
             $subtotal = collect($validated['items'])->sum('amount');

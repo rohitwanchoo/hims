@@ -79,6 +79,8 @@ class PatientController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
+            // Hospital (required for superadmin, auto-assigned for regular users)
+            'hospital_id' => 'nullable|integer|exists:hospitals,hospital_id',
             'patient_name' => 'required|string|max:100',
             'first_name' => 'nullable|string|max:50',
             'middle_name' => 'nullable|string|max:50',
@@ -180,7 +182,20 @@ class PatientController extends Controller
             }
         }
 
-        $validatedData['hospital_id'] = auth()->user()->hospital_id;
+        // Set hospital_id: use provided value (for superadmin) or user's hospital_id
+        if (!isset($validatedData['hospital_id']) || empty($validatedData['hospital_id'])) {
+            $validatedData['hospital_id'] = app('current_hospital_id') ?? auth()->user()->hospital_id;
+        }
+
+        // Validate that hospital_id is set
+        if (empty($validatedData['hospital_id'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hospital is required. Please select a hospital before creating a patient.',
+                'errors' => ['hospital_id' => ['Hospital selection is required']]
+            ], 422);
+        }
+
         $validatedData['pcd'] = $this->generatePatientCode();
         $validatedData['registration_date'] = now()->toDateString();
         $validatedData['is_active'] = true;
@@ -205,7 +220,7 @@ class PatientController extends Controller
                 $filePath = $document->storeAs('patient_documents/' . $patient->patient_id, $fileName, 'public');
 
                 PatientDocument::create([
-                    'hospital_id' => auth()->user()->hospital_id,
+                    'hospital_id' => app('current_hospital_id') ?? auth()->user()->hospital_id,
                     'patient_id' => $patient->patient_id,
                     'document_type' => 'other',
                     'document_category' => 'patient',
@@ -387,7 +402,7 @@ class PatientController extends Controller
                 $filePath = $document->storeAs('patient_documents/' . $patient->patient_id, $fileName, 'public');
 
                 PatientDocument::create([
-                    'hospital_id' => auth()->user()->hospital_id,
+                    'hospital_id' => app('current_hospital_id') ?? auth()->user()->hospital_id,
                     'patient_id' => $patient->patient_id,
                     'document_type' => 'other',
                     'document_category' => 'patient',
@@ -574,7 +589,7 @@ class PatientController extends Controller
         $filePath = $file->storeAs('patient_documents/' . $patient->patient_id, $fileName, 'public');
 
         $document = PatientDocument::create([
-            'hospital_id' => auth()->user()->hospital_id,
+            'hospital_id' => app('current_hospital_id') ?? auth()->user()->hospital_id,
             'patient_id' => $patient->patient_id,
             'document_type' => $request->document_type,
             'document_category' => $request->document_category ?? 'general',
@@ -648,19 +663,51 @@ class PatientController extends Controller
 
     private function generatePatientCode()
     {
-        $hospitalId = auth()->user()->hospital_id;
-        $lastPatient = Patient::where('hospital_id', $hospitalId)
-            ->orderBy('patient_id', 'desc')
-            ->first();
+        $hospitalId = app('current_hospital_id') ?? auth()->user()->hospital_id;
+
+        // Determine hospital prefix
+        // Hospital 1 (City General) keeps legacy format: PAT-XXXXXX
+        // Other hospitals use: HX-PAT-XXXXXX for uniqueness
+        $hospitalPrefix = 'PAT';
+        if ($hospitalId && $hospitalId != 1) {
+            $hospitalPrefix = 'H' . $hospitalId . '-PAT';
+        }
+
+        // For superadmin or users without hospital, check globally
+        // For regular users, check within their hospital
+        $query = Patient::query();
+
+        if ($hospitalId) {
+            $query->where('hospital_id', $hospitalId);
+        }
+
+        $lastPatient = $query->orderBy('patient_id', 'desc')->first();
 
         if ($lastPatient && $lastPatient->pcd) {
-            // Extract numeric part from existing PCD (e.g., PAT-0001 -> 1)
+            // Extract numeric part from existing PCD (e.g., H2-PAT-000001 -> 1)
             preg_match('/\d+$/', $lastPatient->pcd, $matches);
             $nextNumber = isset($matches[0]) ? (int)$matches[0] + 1 : 1;
         } else {
             $nextNumber = 1;
         }
 
-        return 'PAT-' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+        // Keep trying until we find a unique code (handle race conditions)
+        $maxAttempts = 10;
+        $attempts = 0;
+
+        do {
+            $pcd = $hospitalPrefix . '-' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+            $exists = Patient::where('pcd', $pcd)->exists();
+
+            if (!$exists) {
+                return $pcd;
+            }
+
+            $nextNumber++;
+            $attempts++;
+        } while ($attempts < $maxAttempts);
+
+        // Fallback: use timestamp-based unique code
+        return $hospitalPrefix . '-' . time() . '-' . rand(100, 999);
     }
 }

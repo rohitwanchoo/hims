@@ -232,7 +232,7 @@ class MrdController extends Controller
         ]);
 
         // Map Vue form fields to model fields
-        $requestNumber = MedicalRecordRequest::generateRequestNumber(auth()->user()->hospital_id ?? 1);
+        $requestNumber = MedicalRecordRequest::generateRequestNumber(app('current_hospital_id') ?? auth()->user()->hospital_id ?? 1);
 
         // Map Vue request types to valid database enum values
         $requestTypeMap = [
@@ -259,7 +259,7 @@ class MrdController extends Controller
         $consentType = $consentTypeMap[$validated['requester_relation'] ?? 'self'] ?? 'patient';
 
         $recordRequest = MedicalRecordRequest::create([
-            'hospital_id' => auth()->user()->hospital_id ?? 1,
+            'hospital_id' => app('current_hospital_id') ?? auth()->user()->hospital_id ?? 1,
             'patient_id' => $validated['patient_id'],
             'request_number' => $requestNumber,
             'requester_type' => $requesterType,
@@ -447,7 +447,7 @@ class MrdController extends Controller
         }
 
         $consent = PatientConsent::create([
-            'hospital_id' => auth()->user()->hospital_id ?? 1,
+            'hospital_id' => app('current_hospital_id') ?? auth()->user()->hospital_id ?? 1,
             'patient_id' => $patient->patient_id,
             'consent_type' => $validated['consent_type'],
             'consent_for' => $validated['consent_for'] ?? null,

@@ -48,6 +48,15 @@ export const useAuthStore = defineStore('auth', {
 
         canAccessModule: (state) => (module) => {
             if (state.user?.is_super_admin) return true;
+
+            // Check if module is enabled in subscription plan
+            if (state.hospital?.subscription_modules) {
+                const isModuleEnabledInPlan = state.hospital.subscription_modules[module] === true;
+                if (!isModuleEnabledInPlan) {
+                    return false; // Module not enabled in subscription plan
+                }
+            }
+
             // Check if user has any permission for this module
             return state.permissions.some(permission => permission.startsWith(`${module}.`));
         },

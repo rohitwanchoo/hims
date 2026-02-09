@@ -217,10 +217,10 @@ class PrintController extends Controller
         // Find bill first to get hospital_id from the record
         $bill = \App\Models\Bill::where('bill_id', $id)
             ->with([
-                'patient',
+                'patient.insuranceCompanyRelation',
                 'details.doctor',
                 'details.costHead',
-                'opdVisit',
+                'opdVisit.patientClass',
                 'ipdAdmission'
             ])
             ->first();
