@@ -12,11 +12,21 @@ use Illuminate\Support\Facades\DB;
 class PaymentController extends Controller
 {
     /**
+     * Get the current hospital ID based on user context
+     * For superadmin: use selected hospital from context
+     * For regular users: use their assigned hospital
+     */
+    private function getHospitalId()
+    {
+        $user = Auth::user();
+        return app('current_hospital_id') ?? $user->hospital_id;
+    }
+    /**
      * Display a listing of payments
      */
     public function index(Request $request)
     {
-        $hospitalId = Auth::user()->hospital_id;
+        $hospitalId = $this->getHospitalId();
 
         $query = Payment::where('hospital_id', $hospitalId)
             ->with(['bill.patient', 'patient', 'receivedByUser']);
@@ -69,13 +79,17 @@ class PaymentController extends Controller
      */
     public function store(Request $request)
     {
-        $hospitalId = Auth::user()->hospital_id;
+        $hospitalId = $this->getHospitalId();
 
         $validated = $request->validate([
             'bill_id' => 'required|exists:bills,bill_id',
             'amount' => 'required|numeric|min:0.01',
             'payment_date' => 'required|date',
-            'payment_mode' => 'required|in:cash,card,upi,cheque,bank_transfer,insurance',
+            'payment_mode' => 'nullable|in:cash,card,upi,cheque,bank_transfer,insurance,multi',
+            'payment_modes' => 'nullable|array',
+            'payment_modes.*.payment_mode' => 'required_with:payment_modes|in:cash,card,upi,cheque,bank_transfer,insurance',
+            'payment_modes.*.amount' => 'required_with:payment_modes|numeric|min:0.01',
+            'payment_modes.*.reference_number' => 'nullable|string|max:50',
             'reference_number' => 'nullable|string|max:50',
             'transaction_id' => 'nullable|string|max:100',
             'notes' => 'nullable|string',
@@ -92,11 +106,30 @@ class PaymentController extends Controller
                 ], 400);
             }
 
-            // Generate payment number
-            $lastPayment = Payment::where('hospital_id', $hospitalId)
-                ->whereDate('created_at', today())
-                ->count();
-            $paymentNumber = 'PMT-' . date('Ymd') . '-' . str_pad($lastPayment + 1, 4, '0', STR_PAD_LEFT);
+            // Generate payment number with hospital-specific prefix
+            $today = date('Ymd');
+            if ($hospitalId && $hospitalId != 1) {
+                $prefix = 'H' . $hospitalId . '-PMT-' . $today . '-';
+            } else {
+                $prefix = 'PMT-' . $today . '-';
+            }
+
+            $lastPayment = Payment::where('payment_number', 'like', $prefix . '%')
+                ->where('hospital_id', $hospitalId)
+                ->orderBy('payment_number', 'desc')
+                ->first();
+
+            if ($lastPayment) {
+                $lastNumber = intval(substr($lastPayment->payment_number, -4));
+                $nextNumber = $lastNumber + 1;
+            } else {
+                $nextNumber = 1;
+            }
+
+            $paymentNumber = $prefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+
+            // Determine if multi-mode payment
+            $isMultiMode = isset($validated['payment_modes']) && is_array($validated['payment_modes']) && count($validated['payment_modes']) > 0;
 
             // Create payment
             $payment = Payment::create([
@@ -106,7 +139,8 @@ class PaymentController extends Controller
                 'patient_id' => $bill->patient_id,
                 'amount' => $validated['amount'],
                 'payment_date' => $validated['payment_date'],
-                'payment_mode' => $validated['payment_mode'],
+                'payment_mode' => $isMultiMode ? 'multi' : ($validated['payment_mode'] ?? 'cash'),
+                'payment_modes' => $isMultiMode ? $validated['payment_modes'] : null,
                 'reference_number' => $validated['reference_number'] ?? null,
                 'transaction_id' => $validated['transaction_id'] ?? null,
                 'status' => 'success',
@@ -126,6 +160,26 @@ class PaymentController extends Controller
             }
 
             $bill->save();
+
+            // Update OPD visit if this bill is linked to an OPD visit
+            if ($bill->opd_id) {
+                $opdVisit = \App\Models\OpdVisit::find($bill->opd_id);
+                if ($opdVisit) {
+                    $opdVisit->paid_amount = $bill->paid_amount;
+                    $opdVisit->payment_status = $bill->payment_status;
+                    $opdVisit->save();
+                }
+            }
+
+            // Update IPD admission if this bill is linked to an IPD admission
+            if ($bill->ipd_id) {
+                $ipdAdmission = \App\Models\IpdAdmission::find($bill->ipd_id);
+                if ($ipdAdmission) {
+                    $ipdAdmission->paid_amount = $bill->paid_amount;
+                    $ipdAdmission->payment_status = $bill->payment_status;
+                    $ipdAdmission->save();
+                }
+            }
 
             // Create bill history record for payment
             \App\Models\BillHistory::create([
